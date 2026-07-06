@@ -59,45 +59,23 @@ function fileKindLabel(file: DesktopFileRecord): string {
   return file.extension?.replace(".", "").toUpperCase() || file.category;
 }
 function zoneStyle(container: ContainerWithFiles, index: number): Record<string, string> {
-  const fallbackLeft = 32 + (index % 4) * 324;
-  const fallbackTop = 96 + Math.floor(index / 4) * 330;
-  const hasPos = container.positionX > 0 || container.positionY > 0;
-  const left = Math.max(18, Math.min(hasPos ? container.positionX : fallbackLeft, window.innerWidth - 280));
-  const top = Math.max(60, Math.min(hasPos ? container.positionY : fallbackTop, window.innerHeight - 240));
-  return { left: `${left}px`, top: `${top}px`, width: `${Math.max(260, Math.min(container.width, 600))}px`, height: `${Math.max(210, Math.min(container.height, 800))}px` };
+  return { '--zone-index': String(index) } as Record<string, string>;
 }
 
 // Drag state
 interface DragInfo { el: HTMLElement; startX: number; startY: number; origLeft: number; origTop: number; cid: number }
 let dragData: DragInfo | null = null;
 
-function onHeaderDown(event: PointerEvent, container: ContainerWithFiles): void {
-  const el = (event.currentTarget as HTMLElement).closest('.overlay-zone') as HTMLElement;
-  if (!el) return;
-  el.setPointerCapture(event.pointerId);
-  dragData = {
-    el, cid: container.id,
-    startX: event.clientX, startY: event.clientY,
-    origLeft: parseFloat(el.style.left) || 0,
-    origTop: parseFloat(el.style.top) || 0
-  };
+function onHeaderDown(_event: PointerEvent, _container: ContainerWithFiles): void {
+  return;
 }
 
-function onZonePointerMove(event: PointerEvent): void {
-  if (!dragData) return;
-  const dx = event.clientX - dragData.startX;
-  const dy = event.clientY - dragData.startY;
-  dragData.el.style.left = `${Math.max(18, Math.min(window.innerWidth - 260, dragData.origLeft + dx))}px`;
-  dragData.el.style.top = `${Math.max(60, Math.min(window.innerHeight - 220, dragData.origTop + dy))}px`;
+function onZonePointerMove(_event: PointerEvent): void {
+  return;
 }
 
 async function onZonePointerUp(_event: PointerEvent): Promise<void> {
-  const data = dragData;
-  if (!data) return;
-  dragData = null;
-  const left = parseFloat(data.el.style.left) || 0;
-  const top = parseFloat(data.el.style.top) || 0;
-  await window.projectD.updateContainerPosition(data.cid, left, top, 300, 400);
+  return;
 }
 
 async function switchWallpaper(dir: -1 | 1): Promise<void> {
@@ -140,20 +118,19 @@ onUnmounted(() => { unsubscribeDesktopUpdate?.(); });
     </header>
     <p v-if="status?.message" class="overlay-message">{{ status.message }}</p>
 
-    <section class="overlay-desktop">
+    <section class="overlay-desktop desktop-grid">
       <article
         v-for="(container, index) in containers"
         :key="container.id"
-        class="overlay-zone"
-        :class="{ 'is-dragging': (dragData as any)?.cid === container.id }"
+        class="overlay-zone zone-card"
         :style="zoneStyle(container, index)"
-        @pointermove="onZonePointerMove"
-        @pointerup="onZonePointerUp"
-        @pointercancel="onZonePointerUp"
       >
-        <header @pointerdown="onHeaderDown($event, container)">
-          <strong>{{ container.name }}</strong>
-          <span>{{ container.files.length }}</span>
+        <header class="zone-titlebar">
+          <div class="zone-titlebar-left">
+            <span class="zone-dot" />
+            <strong>{{ container.name }}</strong>
+          </div>
+          <span class="zone-count">{{ container.files.length }}</span>
         </header>
         <div class="overlay-icon-grid">
           <button v-for="file in container.files" :key="file.id"
