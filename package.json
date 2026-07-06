@@ -1,0 +1,39 @@
+{
+  "name": "project-d",
+  "version": "0.1.0",
+  "description": "Project D desktop organizer and ambient desktop shell.",
+  "author": "Project D",
+  "private": true,
+  "main": "dist/main/main.js",
+  "scripts": {
+    "dev": "pnpm build:main && concurrently -k -n vite,electron -c cyan,green \"vite --host 127.0.0.1\" \"wait-on tcp:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
+    "build": "pnpm typecheck && vite build && pnpm build:main",
+    "build:main": "tsc -p tsconfig.node.json",
+    "typecheck": "vue-tsc --noEmit && tsc -p tsconfig.node.json --noEmit",
+    "verify:db": "node scripts/verify-db.cjs",
+    "configure:providers": "node scripts/configure-providers.cjs",
+    "verify:weather": "node scripts/verify-weather.cjs",
+    "verify:ai": "node scripts/verify-ai.cjs",
+    "preview": "vite preview --host 127.0.0.1",
+    "dist": "pnpm build && electron-builder"
+  },
+  "dependencies": {
+    "@vitejs/plugin-vue": "^6.0.3",
+    "lucide-vue-next": "^0.562.0",
+    "pixi.js": "^8.19.0",
+    "sql.js": "^1.14.1",
+    "vue": "^3.5.25"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.0",
+    "@types/sql.js": "^1.4.11",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^28.3.3",
+    "electron-builder": "^24.13.3",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.7",
+    "vue-tsc": "^3.1.8",
+    "wait-on": "^9.0.3"
+  }
+}
