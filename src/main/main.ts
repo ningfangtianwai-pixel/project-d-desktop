@@ -31,7 +31,7 @@ import { ExplorerProcessMonitor, probeWindowsExplorerProcess } from "./explorer-
 import { getPrivacyNetworkState, setPrivacyNetworkPaused } from "./privacy-network.js";
 import { inspectInterruptedAction } from "./actions/action-recovery.js";
 import { runWithDeadline } from "./shutdown-deadline.js";
-import { WindowResilienceSupervisor, type RendererRecoveryEvent, type WindowRole } from "./window-resilience.js";
+import { isMostlyWhiteBitmap, WindowResilienceSupervisor, type RendererRecoveryEvent, type WindowRole } from "./window-resilience.js";
 import { UpdateService, validateUpdateFeedUrl } from "./update-service.js";
 import { IPC_CHANNELS, MENU_COMMANDS, type MenuCommand } from "../shared/ipc.js";
 import { registerAllIpcHandlers, type ServiceDeps } from "./ipc/register-all.js";
@@ -54,6 +54,7 @@ const wallpaperStartupAttachments = new Map<string, {
   window: BrowserWindow;
   settled: boolean;
   attached: boolean;
+  renderReady: boolean;
   promise: Promise<WallpaperAttachResult>;
   resolve: (result: WallpaperAttachResult) => void;
 }>();
@@ -546,6 +547,7 @@ function createWallpaperWindowForDisplay(displayId: string, bounds: Electron.Rec
     window,
     settled: false,
     attached: false,
+    renderReady: false,
     promise: new Promise<WallpaperAttachResult>((resolve) => { resolveStartup = resolve; }),
     resolve: (result: WallpaperAttachResult) => resolveStartup(result)
   };
@@ -557,31 +559,69 @@ function createWallpaperWindowForDisplay(displayId: string, bounds: Electron.Rec
     void (async () => {
       presentWallpaperWindow(window, startup);
       const result = await attachWallpaperWindow(window, 3);
-      startup.attached = result.attached;
+      if (!app.isPackaged && process.env.PROJECTD_QA_FORCE_WHITE_WALLPAPER === "1") {
+        await window.webContents.executeJavaScript(`(() => {
+          document.documentElement.style.background = "#fff";
+          document.body.style.background = "#fff";
+          const appRoot = document.querySelector("#app");
+          if (appRoot) appRoot.innerHTML = '<div class="wallpaper-page" style="position:fixed;inset:0;background:#fff"></div>';
+        })()`);
+        writeBootstrapLog("QA white wallpaper frame injected", { displayId });
+      }
+      let renderReady = result.attached && await waitForWallpaperRendererReady(window);
+      const verifiedResult: WallpaperAttachResult = renderReady
+        ? result
+        : { ...result, attached: false, error: result.error ?? "Wallpaper renderer remained blank or uniformly white" };
+      startup.attached = verifiedResult.attached;
+      startup.renderReady = renderReady;
       if (!startup.settled) {
         startup.settled = true;
-        startup.resolve(result);
+        startup.resolve(verifiedResult);
       }
       if (window.isDestroyed()) return;
-      if (result.attached) {
+      if (verifiedResult.attached && renderReady) {
         window.setIgnoreMouseEvents(true, { forward: true });
         presentWallpaperWindow(window, startup);
-        database?.setAppState("wallpaper_host", result.parentKind ?? "attached");
-        logger?.info("app", "wallpaper window shown on desktop host", { displayId, ...result });
+        renderReady = await verifyVisibleWallpaperFrame(window);
+        startup.renderReady = renderReady;
+        if (!renderReady) {
+          presentWallpaperWindow(window, startup);
+          database?.setAppState("wallpaper_host", "fallback-window-hidden");
+          logger?.error("error", "wallpaper window hidden after visible frame validation failed", { displayId, ...verifiedResult });
+          return;
+        }
+        database?.setAppState("wallpaper_host", verifiedResult.parentKind ?? "attached");
+        logger?.info("app", "wallpaper window shown on desktop host", { displayId, ...verifiedResult, renderReady });
         return;
       }
 
       presentWallpaperWindow(window, startup);
       database?.setAppState("wallpaper_host", "fallback-window-hidden");
-      logger?.error("error", "wallpaper window hidden after attach retries exhausted", { displayId, ...result });
-    })();
+      logger?.error("error", "wallpaper window hidden after startup validation failed", { displayId, ...verifiedResult, renderReady });
+    })().catch((error: unknown) => {
+      startup.attached = false;
+      startup.renderReady = false;
+      if (!startup.settled) {
+        startup.settled = true;
+        startup.resolve({
+          attached: false,
+          childHwnd: "0",
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+      if (!window.isDestroyed()) presentWallpaperWindow(window, startup);
+      logger?.error("error", "wallpaper startup pipeline failed safely", {
+        displayId,
+        message: error instanceof Error ? error.message : String(error)
+      });
+    });
   });
 
   superviseRendererWindow(window, "wallpaper", ".wallpaper-page", async () => {
     if (startup.settled && !window.isDestroyed()) {
       await repairWallpaperHost(`renderer-reloaded:${displayId}`);
     }
-  });
+  }, true);
 
   window.on("closed", () => {
     if (wallpaperWindows.get(displayId) === window) wallpaperWindows.delete(displayId);
@@ -591,6 +631,7 @@ function createWallpaperWindowForDisplay(displayId: string, bounds: Electron.Rec
       if (!pendingStartup.settled) {
         pendingStartup.settled = true;
         pendingStartup.attached = false;
+        pendingStartup.renderReady = false;
         pendingStartup.resolve({ attached: false, childHwnd: "0", error: "Wallpaper window closed before desktop attachment" });
       }
     }
@@ -616,6 +657,52 @@ async function attachWallpaperWindow(window: BrowserWindow, attempts = 1): Promi
     attempts,
     attach: () => wallpaperHost!.attachToDesktop(window)
   }));
+}
+
+async function waitForWallpaperRendererReady(window: BrowserWindow, timeoutMs = 3_500): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (!window.isDestroyed() && !window.webContents.isDestroyed() && Date.now() < deadline) {
+    try {
+      const ready = await window.webContents.executeJavaScript(`(() => {
+        const stage = document.querySelector(".wallpaper-stage");
+        if (!stage) return false;
+        const activeImage = stage.querySelector(".wallpaper-bg-img.is-active");
+        const activeVideo = stage.querySelector("video.wallpaper-bg-video.is-active");
+        const canvas = stage.querySelector("canvas");
+        if (activeImage && getComputedStyle(activeImage).backgroundImage !== "none") return true;
+        if (activeVideo && activeVideo.readyState >= 2 && activeVideo.videoWidth > 0) return true;
+        if (canvas && canvas.width > 0 && canvas.height > 0) return true;
+        return stage.getAttribute("data-fallback") === "true";
+      })()`, true);
+      if (ready === true) return true;
+    } catch {
+      // The renderer may still be applying its first settings snapshot.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+  return false;
+}
+
+async function verifyVisibleWallpaperFrame(window: BrowserWindow, timeoutMs = 2_000): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (!window.isDestroyed() && !window.webContents.isDestroyed() && Date.now() < deadline) {
+    try {
+      const image = await Promise.race([
+        window.webContents.capturePage(),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 500))
+      ]);
+      if (image && !image.isEmpty()) {
+        const size = image.getSize();
+        if (size.width > 0 && size.height > 0 && !isMostlyWhiteBitmap(image.toBitmap(), size.width, size.height)) {
+          return true;
+        }
+      }
+    } catch {
+      // Retry briefly while the newly shown compositor surface becomes available.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 120));
+  }
+  return false;
 }
 
 function defaultPetBounds(): PetWindowBounds {
@@ -799,6 +886,7 @@ function closeWallpaperWindow(): void {
     if (!startup.settled) {
       startup.settled = true;
       startup.attached = false;
+      startup.renderReady = false;
       startup.resolve({ attached: false, childHwnd: "0", error: "Wallpaper stages were closed" });
     }
   }
@@ -830,6 +918,7 @@ async function repairWallpaperHost(reason = "manual"): Promise<void> {
     const startup = wallpaperStartupAttachments.get(displayId);
     if (startup?.window === window && startup.settled) {
       startup.attached = false;
+      startup.renderReady = false;
       presentWallpaperWindow(window, startup);
     }
     let result = startup && startup.window === window && !startup.settled
@@ -838,13 +927,28 @@ async function repairWallpaperHost(reason = "manual"): Promise<void> {
     if (startup?.window === window) {
       startup.settled = true;
       startup.attached = result.attached;
+      startup.renderReady = false;
     }
     if (result.attached) {
-      attachedCount += 1;
-      window.setIgnoreMouseEvents(true, { forward: true });
-      presentWallpaperWindow(window, startup);
-      database?.setAppState("wallpaper_host", result.parentKind ?? "attached");
-      logger?.info("app", "wallpaper host repair completed", { reason, displayId, ...result });
+      let renderReady = await waitForWallpaperRendererReady(window);
+      if (startup?.window === window) startup.renderReady = renderReady;
+      if (renderReady) {
+        window.setIgnoreMouseEvents(true, { forward: true });
+        presentWallpaperWindow(window, startup);
+        renderReady = await verifyVisibleWallpaperFrame(window);
+        if (startup?.window === window) startup.renderReady = renderReady;
+        if (renderReady) {
+          attachedCount += 1;
+          database?.setAppState("wallpaper_host", result.parentKind ?? "attached");
+          logger?.info("app", "wallpaper host repair completed", { reason, displayId, ...result, renderReady });
+        } else {
+          presentWallpaperWindow(window, startup);
+          logger?.error("error", "wallpaper host repair rejected a visible blank frame", { reason, displayId, ...result });
+        }
+      } else {
+        presentWallpaperWindow(window, startup);
+        logger?.error("error", "wallpaper host repair rejected a blank frame", { reason, displayId, ...result });
+      }
     } else {
       presentWallpaperWindow(window, startup);
       logger?.warn("app", "wallpaper host repair skipped", { reason, displayId, ...result });
@@ -929,6 +1033,23 @@ function syncWindowsFromSettings(settings: SettingsSnapshot): void {
   } else {
     closeWallpaperWindow();
   }
+}
+
+async function emergencyRestoreDesktop(reason: string): Promise<void> {
+  logger?.warn("desktop-state", "emergency desktop restore requested", { reason });
+  closeOverlayWindow();
+  closeWallpaperWindow();
+  database?.setAppState("clean_desktop_mode", "false");
+  try {
+    desktopStatus = (await desktopController?.deactivate()) ?? updateDesktopStatus("idle");
+  } catch (error) {
+    logger?.error("desktop-state", "emergency desktop restore failed", {
+      reason,
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }
+  showMainWindow();
+  sendMenuCommand(MENU_COMMANDS.DEACTIVATE_DESKTOP);
 }
 
 async function enterCleanDesktop(): Promise<DesktopStatus> {
@@ -1053,6 +1174,17 @@ function registerGlobalShortcuts(): void {
   if (accelerator !== savedAccelerator) database?.setAppState("shortcut_peek", accelerator);
   database?.setAppState("shortcut_peek_status", registered ? "ready" : "conflict");
   logger?.[registered ? "info" : "warn"]("app", "workspace shortcut registration", { accelerator, registered });
+
+  const emergencyAccelerator = "Control+Alt+Shift+Escape";
+  globalShortcut.unregister(emergencyAccelerator);
+  const emergencyRegistered = globalShortcut.register(emergencyAccelerator, () => {
+    void emergencyRestoreDesktop("emergency-shortcut");
+  });
+  database?.setAppState("shortcut_emergency_status", emergencyRegistered ? "ready" : "conflict");
+  logger?.[emergencyRegistered ? "info" : "warn"]("app", "emergency desktop shortcut registration", {
+    accelerator: emergencyAccelerator,
+    registered: emergencyRegistered
+  });
 }
 
 function broadcastDesktopFilesUpdated(): void {
@@ -1429,6 +1561,12 @@ function createTray(): Tray {
       label: "恢复桌面",
       click: async () => {
         await exitCleanDesktop();
+      }
+    },
+    {
+      label: "紧急安全归位",
+      click: async () => {
+        await emergencyRestoreDesktop("tray-menu");
       }
     },
     { type: "separator" },

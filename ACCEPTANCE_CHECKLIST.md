@@ -581,3 +581,17 @@
 - [x] NSIS installer rebuild succeeds and its SHA-256 is recorded.
 - [ ] Installer is Authenticode-signed and timestamped.
 - [ ] Clean-account Windows 10/11 installer acceptance is recorded.
+
+## Stage 36 Wallpaper Host P0 Repair
+
+- [x] An unattached wallpaper window can never be forced visible by the Win32 host script.
+- [x] The wallpaper HWND is converted to `WS_CHILD` and its real Explorer parent is verified before presentation.
+- [x] Wallpaper presentation requires renderer readiness and a non-white visible frame.
+- [x] Deliberate all-white renderer injection remains hidden and does not block applications.
+- [x] Emergency desktop recovery is registered at `Ctrl+Alt+Shift+Escape` and exposed in the tray.
+- [x] Normal Electron wallpaper startup records `renderReady: true` and exits cleanly.
+- [x] Final screen, Explorer, desktop icon state, and Project D process cleanup are healthy.
+- [x] Automated suite passes 112/112 and the production build passes.
+- [x] A new Stage 36 installer is built and its packaged runtime passes 33/33 module loads.
+- [x] Twenty-four distinct packaged-product screenshots are captured and indexed.
+- [ ] The Stage 36 installer is signed and accepted on clean Windows 10/11 accounts.

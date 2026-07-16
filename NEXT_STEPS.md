@@ -97,3 +97,9 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 3. Complete physical 1/2/3-display tests at 100/125/150/200 percent scaling, including unplug/reconnect and primary-display changes.
 4. Complete real sleep/wake, lock/unlock, fullscreen pause, and four-hour/24-hour stability evidence.
 5. Configure a real HTTPS update endpoint before enabling production auto-update checks; the placeholder domain must not be treated as a release service.
+
+## After Stage 36
+
+1. Obtain an Authenticode certificate and sign the rebuilt Stage 36 installer; the functional artifact is current but remains unsigned.
+2. Repeat the wallpaper-host validation on Windows 10 and on physical 125/150/200 percent DPI configurations.
+3. Run sleep/wake, Explorer restart, display hot-plug, and four-hour/24-hour soak evidence with the Stage 36 host implementation.

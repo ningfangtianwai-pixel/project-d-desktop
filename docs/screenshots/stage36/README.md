@@ -1,0 +1,28 @@
+# Project D Stage 36 Product Screenshots
+
+Captured from the packaged Electron application on 2026-07-16T12:29:24.867Z.
+
+1. [01-main-onboarding-welcome.png](./01-main-onboarding-welcome.png)
+2. [02-main-onboarding-step-2.png](./02-main-onboarding-step-2.png)
+3. [03-main-onboarding-step-3.png](./03-main-onboarding-step-3.png)
+4. [04-main-onboarding-step-4.png](./04-main-onboarding-step-4.png)
+5. [05-main-desktop-workspace.png](./05-main-desktop-workspace.png)
+6. [06-main-wallpaper-cycle-1.png](./06-main-wallpaper-cycle-1.png)
+7. [07-main-wallpaper-cycle-2.png](./07-main-wallpaper-cycle-2.png)
+8. [08-main-search-panel.png](./08-main-search-panel.png)
+9. [09-main-search-results.png](./09-main-search-results.png)
+10. [10-main-desktop-inbox.png](./10-main-desktop-inbox.png)
+11. [11-main-action-plan-preview.png](./11-main-action-plan-preview.png)
+12. [12-settings-general.png](./12-settings-general.png)
+13. [13-settings-layout.png](./13-settings-layout.png)
+14. [14-settings-auto-rules.png](./14-settings-auto-rules.png)
+15. [15-settings-portals.png](./15-settings-portals.png)
+16. [16-settings-privacy.png](./16-settings-privacy.png)
+17. [17-settings-wallpaper.png](./17-settings-wallpaper.png)
+18. [18-settings-weather.png](./18-settings-weather.png)
+19. [19-settings-pet.png](./19-settings-pet.png)
+20. [20-settings-ai-chat.png](./20-settings-ai-chat.png)
+21. [21-settings-recovery.png](./21-settings-recovery.png)
+22. [22-settings-about.png](./22-settings-about.png)
+23. [23-wallpaper-host-live.png](./23-wallpaper-host-live.png)
+24. [24-pet-live.png](./24-pet-live.png)

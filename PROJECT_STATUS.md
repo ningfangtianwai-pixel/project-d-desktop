@@ -845,3 +845,14 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Automated verification: `pnpm test` passed 111/111; the production NSIS build completed; packaged runtime verification loaded 33/33 modules.
 - Current installer: `release/ProjectD-0.1.0-Setup.exe`, SHA-256 `3CF02E83C1129EB1993D295C3F0E1B4FD94717D5CC7F8D2FCE210F8DFE36ABA8`.
 - Distribution caveat: the installer is functional but unsigned, so Windows SmartScreen may warn until a code-signing certificate and timestamp service are configured.
+
+## Stage 36 - Wallpaper Host P0 Root-Cause Fix (Complete)
+
+- Confirmed the white desktop was an unattached Electron top-level window: `SetParent` had not created an Explorer child, but `SWP_SHOWWINDOW` still forced the fullscreen window visible.
+- The Win32 host now converts the wallpaper window from `WS_POPUP` to `WS_CHILD`, aligns the caller DPI context, verifies the actual parent handle, places the child at the host bottom, and never shows it from PowerShell.
+- Presentation now requires attachment, renderer media/canvas readiness, and a post-show non-white pixel check. Every failure path hides the wallpaper window.
+- Added emergency desktop recovery through `Ctrl+Alt+Shift+Escape` and the tray menu.
+- Real Electron validation passed for a normal wallpaper (`renderReady: true`) and a deliberately injected all-white renderer (never presented). Final screen capture was normal, `HideIcons=0`, and no Project D process remained.
+- Verification: `pnpm test` 112/112 passed; `pnpm build` passed with 2420 modules transformed.
+- Stage 36 NSIS installer rebuilt and packaged-runtime verification loaded 33/33 modules. SHA-256: `8E188A3714514E082B9B7FC6A70A66EAB25130925FEF74C277127349E2C14848`.
+- Captured and pixel-checked 24 screenshots from the packaged Electron application under `docs/screenshots/stage36`; no files are empty or hash-duplicates.

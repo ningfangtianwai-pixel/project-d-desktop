@@ -1250,3 +1250,17 @@
 - Installer: `D:\桌面操作系统\release\ProjectD-0.1.0-Setup.exe`.
 - SHA-256: `3CF02E83C1129EB1993D295C3F0E1B4FD94717D5CC7F8D2FCE210F8DFE36ABA8`.
 - Authenticode: `NotSigned`; code signing remains an external release requirement.
+
+## 2026-07-16 Stage 36 P0 White-Screen Root-Cause Repair
+
+- Reproduced the exact E-drive failure from runtime logs and verified that `SetParent` returned an ambiguous zero while the actual parent remained zero.
+- Removed `SWP_SHOWWINDOW`; added `WS_CHILD`, DPI-awareness alignment, `GetParent` verification, and bottom z-order placement.
+- Added pre-presentation renderer readiness, post-presentation pixel validation, fail-closed startup handling, an emergency recovery shortcut, and a tray recovery command.
+- Normal Electron run: parent verification passed, wallpaper displayed with `renderReady: true`, and shutdown restored the desktop.
+- White-frame injection run: host attachment passed, the frame was never presented, shutdown completed, `HideIcons=0`, and the physical screen remained usable.
+- `pnpm typecheck`: passed. `pnpm test`: passed, 112/112. `pnpm build`: passed.
+- `pnpm dist`: passed; Stage 36 installer size 226,411,086 bytes.
+- `pnpm verify:packaged`: passed, 33/33 packaged modules.
+- Packaged Electron screenshot run captured 24 distinct PNG files covering onboarding, workspace, search, inbox, ActionPlan, all 11 settings sections, live wallpaper host, and live pet.
+- Emergency shortcut was invoked during the packaged run; the recovery request was logged and final `HideIcons` was `0`.
+- Installer SHA-256: `8E188A3714514E082B9B7FC6A70A66EAB25130925FEF74C277127349E2C14848`; Authenticode remains `NotSigned`.

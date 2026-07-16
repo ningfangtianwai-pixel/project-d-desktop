@@ -15,6 +15,7 @@ interface WallpaperHostSupervisorOptions {
 export interface WallpaperAttachmentPresentationState {
   settled: boolean;
   attached: boolean;
+  renderReady: boolean;
 }
 
 interface WallpaperPresentationWindow {
@@ -26,7 +27,7 @@ export function presentWallpaperWindow(
   window: WallpaperPresentationWindow,
   state: WallpaperAttachmentPresentationState | null | undefined
 ): "shown" | "hidden" {
-  if (state?.settled === true && state.attached === true) {
+  if (state?.settled === true && state.attached === true && state.renderReady === true) {
     window.showInactive();
     return "shown";
   }

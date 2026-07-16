@@ -152,6 +152,24 @@ public static class ProjectDUser32 {
   public static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
 
   [DllImport("user32.dll", SetLastError=true)]
+  public static extern IntPtr GetParent(IntPtr hWnd);
+
+  [DllImport("user32.dll", SetLastError=true)]
+  public static extern bool IsWindow(IntPtr hWnd);
+
+  [DllImport("user32.dll", EntryPoint="GetWindowLongPtr", SetLastError=true)]
+  public static extern IntPtr GetWindowLongPtr(IntPtr hWnd, int index);
+
+  [DllImport("user32.dll", EntryPoint="SetWindowLongPtr", SetLastError=true)]
+  public static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int index, IntPtr value);
+
+  [DllImport("user32.dll")]
+  public static extern IntPtr GetWindowDpiAwarenessContext(IntPtr hWnd);
+
+  [DllImport("user32.dll")]
+  public static extern IntPtr SetThreadDpiAwarenessContext(IntPtr dpiContext);
+
+  [DllImport("user32.dll", SetLastError=true)]
   public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 }
 "@
@@ -201,12 +219,39 @@ if ($script:parent -eq [IntPtr]::Zero) {
 }
 
 $child = [IntPtr]::new([Int64]$ChildHwnd)
-$previous = [ProjectDUser32]::SetParent($child, $script:parent)
-if ($previous -eq [IntPtr]::Zero -and [Runtime.InteropServices.Marshal]::GetLastWin32Error() -ne 0) {
-  throw "SetParent failed with Win32 error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())"
+if (-not [ProjectDUser32]::IsWindow($child)) {
+  throw "Wallpaper child window is no longer valid"
+}
+$GWL_STYLE = -16
+$WS_CHILD = [Int64]0x40000000
+$WS_POPUP = [Int64]0x80000000
+$style = [ProjectDUser32]::GetWindowLongPtr($child, $GWL_STYLE).ToInt64()
+$childStyle = ($style -band (-bnot $WS_POPUP)) -bor $WS_CHILD
+[void][ProjectDUser32]::SetWindowLongPtr($child, $GWL_STYLE, [IntPtr]::new($childStyle))
+
+$windowDpiContext = [ProjectDUser32]::GetWindowDpiAwarenessContext($child)
+$previousDpiContext = [IntPtr]::Zero
+if ($windowDpiContext -ne [IntPtr]::Zero) {
+  $previousDpiContext = [ProjectDUser32]::SetThreadDpiAwarenessContext($windowDpiContext)
+}
+try {
+  [void][ProjectDUser32]::SetParent($child, $script:parent)
+} finally {
+  if ($previousDpiContext -ne [IntPtr]::Zero) {
+    [void][ProjectDUser32]::SetThreadDpiAwarenessContext($previousDpiContext)
+  }
 }
 
-[ProjectDUser32]::SetWindowPos($child, [IntPtr]::Zero, 0, 0, 0, 0, 0x0010 -bor 0x0001 -bor 0x0002 -bor 0x0040) | Out-Null
+# Keep the hidden wallpaper at the bottom of its desktop host. Do not use
+# SWP_SHOWWINDOW here: Electron reveals it only after renderer validation.
+$positioned = [ProjectDUser32]::SetWindowPos($child, [IntPtr]::new(1), 0, 0, 0, 0, 0x0010 -bor 0x0001 -bor 0x0002 -bor 0x0020)
+if (-not $positioned) {
+  throw "SetWindowPos failed with Win32 error $([Runtime.InteropServices.Marshal]::GetLastWin32Error())"
+}
+$actualParent = [ProjectDUser32]::GetParent($child)
+if ($actualParent.ToInt64() -ne $script:parent.ToInt64()) {
+  throw "Wallpaper parent verification failed: expected $($script:parent.ToInt64()), actual $($actualParent.ToInt64())"
+}
 
 [pscustomobject]@{
   attached = $true

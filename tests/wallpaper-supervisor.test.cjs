@@ -10,11 +10,21 @@ test("wallpaper presentation stays hidden until desktop attachment is confirmed"
     showInactive: () => calls.push("show")
   };
 
-  assert.equal(presentWallpaperWindow(window, { settled: false, attached: false }), "hidden");
-  assert.equal(presentWallpaperWindow(window, { settled: true, attached: false }), "hidden");
+  assert.equal(presentWallpaperWindow(window, { settled: false, attached: false, renderReady: false }), "hidden");
+  assert.equal(presentWallpaperWindow(window, { settled: true, attached: false, renderReady: false }), "hidden");
+  assert.equal(presentWallpaperWindow(window, { settled: true, attached: true, renderReady: false }), "hidden");
   assert.equal(presentWallpaperWindow(window, null), "hidden");
-  assert.equal(presentWallpaperWindow(window, { settled: true, attached: true }), "shown");
-  assert.deepEqual(calls, ["hide", "hide", "hide", "show"]);
+  assert.equal(presentWallpaperWindow(window, { settled: true, attached: true, renderReady: true }), "shown");
+  assert.deepEqual(calls, ["hide", "hide", "hide", "hide", "show"]);
+});
+
+test("wallpaper host attachment never forces a hidden window visible", () => {
+  const source = require("node:fs").readFileSync("src/main/wallpaper-host.ts", "utf8");
+  assert.doesNotMatch(source, /0x0040/);
+  assert.match(source, /SetWindowPos\(\$child, \[IntPtr\]::new\(1\)/);
+  assert.match(source, /GetParent\(\$child\)/);
+  assert.match(source, /WS_CHILD/);
+  assert.match(source, /SetThreadDpiAwarenessContext/);
 });
 
 test("wallpaper attach retries a transient failure and returns the recovered result", async () => {
