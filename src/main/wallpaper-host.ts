@@ -4,6 +4,7 @@ import type { BrowserWindow } from "electron";
 import type { AppLogger } from "./logger.js";
 
 const execFileAsync = promisify(execFile);
+const WALLPAPER_ATTACH_TIMEOUT_MS = 20_000;
 
 export interface WallpaperAttachResult {
   attached: boolean;
@@ -29,14 +30,15 @@ export class WallpaperHost {
 
     const childHwnd = this.readNativeWindowHandle(window);
     const script = this.createAttachScript(childHwnd);
+    const encodedScript = Buffer.from(script, "utf16le").toString("base64");
 
     try {
       const { stdout, stderr } = await execFileAsync(
         "powershell.exe",
-        ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
+        ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", encodedScript],
         {
           encoding: "utf8",
-          timeout: 8000,
+          timeout: WALLPAPER_ATTACH_TIMEOUT_MS,
           windowsHide: true,
           maxBuffer: 1024 * 1024
         }
@@ -46,17 +48,45 @@ export class WallpaperHost {
         this.logger.warn("app", "wallpaper host attach stderr", { stderr: stderr.trim() });
       }
 
-      const parsed = JSON.parse(stdout.trim()) as WallpaperAttachResult;
-      this.logger.info("app", "wallpaper host attach result", parsed);
-      return parsed;
+      const jsonLine = stdout
+        ? this.parseAttachResult(stdout)
+        : null;
+      if (!jsonLine) {
+        throw new Error(`Wallpaper host returned no JSON result: ${stdout.trim().slice(-600)}`);
+      }
+      this.logger.info("app", "wallpaper host attach result", jsonLine);
+      return jsonLine;
     } catch (error) {
+      const commandError = error as { stdout?: unknown };
+      const recovered = typeof commandError.stdout === "string" ? this.parseAttachResult(commandError.stdout) : null;
+      if (recovered?.attached) {
+        this.logger.warn("app", "wallpaper host recovered valid result from PowerShell non-zero exit", recovered);
+        return recovered;
+      }
       const result: WallpaperAttachResult = {
         attached: false,
         childHwnd: childHwnd.toString(),
         error: this.summarizeError(error)
       };
-      this.logger.error("error", "wallpaper host attach failed", result);
+      this.logger.warn("app", "wallpaper host attach attempt failed", result);
       return result;
+    }
+  }
+
+  private parseAttachResult(output: string): WallpaperAttachResult | null {
+    const jsonLine = output
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.startsWith("{") && line.endsWith("}"))
+      .at(-1);
+    if (!jsonLine) {
+      return null;
+    }
+    try {
+      const parsed = JSON.parse(jsonLine) as WallpaperAttachResult;
+      return typeof parsed.attached === "boolean" && typeof parsed.childHwnd === "string" ? parsed : null;
+    } catch {
+      return null;
     }
   }
 
@@ -70,7 +100,17 @@ export class WallpaperHost {
   }
 
   private summarizeError(error: unknown): string {
-    const raw = error instanceof Error ? error.message : String(error);
+    const details = error as { stderr?: unknown; stdout?: unknown; message?: unknown; killed?: unknown; code?: unknown };
+    const diagnosticOutput = [details?.stderr, details?.stdout]
+      .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+      .join("\n");
+    const raw = diagnosticOutput || (error instanceof Error ? error.message : String(error));
+    if (details.killed === true || details.code === "ETIMEDOUT") {
+      return `PowerShell wallpaper attachment exceeded ${WALLPAPER_ATTACH_TIMEOUT_MS / 1000} seconds.`;
+    }
+    if (!diagnosticOutput && raw.includes("Command failed: powershell.exe") && raw.includes("-EncodedCommand")) {
+      return "PowerShell host process exited with a non-zero status before returning JSON.";
+    }
     const meaningfulLines = raw
       .split(/\r?\n/)
       .map((line) => line.trim())
@@ -87,6 +127,7 @@ export class WallpaperHost {
   private createAttachScript(childHwnd: bigint): string {
     return `
 $ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
 $ChildHwnd = [UInt64]${childHwnd.toString()}
 Add-Type @"
 using System;

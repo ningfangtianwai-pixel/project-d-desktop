@@ -11,9 +11,16 @@ import type {
   DesktopFileRecord,
   FileCategory,
   ChatMessage,
+  ActionExecution,
+  ActionPlan,
+  PortalConfig,
+  WorkspaceScene,
   SettingsPatch,
   SettingsSnapshot
 } from "../shared/types.js";
+import { normalizeContainerAccent, type ContainerAccent } from "../shared/container-accents.js";
+import type { AutoRule } from "../shared/auto-rules.js";
+import { autoRuleToRow, rowToAutoRule, type AutoRuleRow } from "./auto-rules/auto-rules-service.js";
 
 export interface UpsertDesktopFileInput {
   filename: string;
@@ -25,6 +32,8 @@ export interface UpsertDesktopFileInput {
   isShortcut: boolean;
   fingerprint: string;
 }
+
+const LATEST_SCHEMA_VERSION = 4;
 
 const SCHEMA_SQL = `
 PRAGMA journal_mode = WAL;
@@ -66,6 +75,7 @@ CREATE TABLE IF NOT EXISTS containers (
     is_collapsed    INTEGER DEFAULT 0,
     is_visible      INTEGER DEFAULT 1,
     layout_group    INTEGER DEFAULT 0,
+    accent_color    TEXT NOT NULL DEFAULT 'neutral',
     created_at      TEXT DEFAULT (datetime('now'))
 );
 
@@ -169,16 +179,89 @@ CREATE TABLE IF NOT EXISTS user_account (
     display_name    TEXT DEFAULT '用户',
     created_at      TEXT DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    version         INTEGER PRIMARY KEY,
+    applied_at      TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS action_plans (
+    id              TEXT PRIMARY KEY,
+    source          TEXT NOT NULL,
+    risk_level      TEXT NOT NULL,
+    status          TEXT NOT NULL,
+    summary         TEXT NOT NULL,
+    payload_json    TEXT NOT NULL,
+    created_at      TEXT NOT NULL,
+    updated_at      TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS action_executions (
+    id              TEXT PRIMARY KEY,
+    plan_id         TEXT NOT NULL,
+    status          TEXT NOT NULL,
+    undoable        INTEGER NOT NULL DEFAULT 0,
+    summary         TEXT NOT NULL,
+    payload_json    TEXT NOT NULL,
+    started_at      TEXT NOT NULL,
+    completed_at    TEXT,
+    updated_at      TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_action_executions_updated ON action_executions(updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS workspace_scenes (
+    id              TEXT PRIMARY KEY,
+    name            TEXT NOT NULL COLLATE NOCASE UNIQUE,
+    payload_json    TEXT NOT NULL,
+    created_at      TEXT NOT NULL,
+    updated_at      TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS portal_configs (
+    id              TEXT PRIMARY KEY,
+    name            TEXT NOT NULL,
+    path            TEXT NOT NULL UNIQUE,
+    real_path       TEXT,
+    is_enabled      INTEGER NOT NULL DEFAULT 1,
+    created_at      TEXT NOT NULL,
+    updated_at      TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS consent_scopes (
+    id              TEXT PRIMARY KEY,
+    scope_type      TEXT NOT NULL,
+    path            TEXT NOT NULL,
+    is_granted      INTEGER NOT NULL DEFAULT 1,
+    created_at      TEXT NOT NULL,
+    updated_at      TEXT NOT NULL,
+    UNIQUE(scope_type, path)
+);
+
+CREATE TABLE IF NOT EXISTS auto_rules (
+    id              TEXT PRIMARY KEY,
+    name            TEXT NOT NULL,
+    conditions_json TEXT NOT NULL,
+    action_type     TEXT NOT NULL,
+    action_target   TEXT NOT NULL DEFAULT '',
+    priority        INTEGER NOT NULL DEFAULT 0,
+    enabled         INTEGER NOT NULL DEFAULT 1,
+    run_count       INTEGER NOT NULL DEFAULT 0,
+    last_run_at     TEXT,
+    created_at      TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_auto_rules_priority ON auto_rules(priority, created_at);
 `;
 
 const DEFAULT_CONTAINERS = [
-  { name: "程序与快捷方式", icon: "app-window", filter: ["program"], x: 32, y: 80, order: 0 },
-  { name: "文档", icon: "file-text", filter: ["document"], x: 356, y: 80, order: 1 },
-  { name: "图片与媒体", icon: "image", filter: ["image", "media"], x: 680, y: 80, order: 2 },
-  { name: "代码与脚本", icon: "code-2", filter: ["code"], x: 1004, y: 80, order: 3 },
-  { name: "压缩包", icon: "archive", filter: ["archive"], x: 32, y: 520, order: 4 },
-  { name: "文件夹", icon: "folder", filter: ["folder"], x: 356, y: 520, order: 5 },
-  { name: "其他", icon: "circle-help", filter: ["other"], x: 680, y: 520, order: 6 }
+  { name: "程序与快捷方式", icon: "app-window", filter: ["program"], x: 32, y: 80, order: 0, accent: "sky" },
+  { name: "文档", icon: "file-text", filter: ["document"], x: 356, y: 80, order: 1, accent: "mint" },
+  { name: "图片与媒体", icon: "image", filter: ["image", "media"], x: 680, y: 80, order: 2, accent: "rose" },
+  { name: "代码与脚本", icon: "code-2", filter: ["code"], x: 1004, y: 80, order: 3, accent: "violet" },
+  { name: "压缩包", icon: "archive", filter: ["archive"], x: 32, y: 520, order: 4, accent: "amber" },
+  { name: "文件夹", icon: "folder", filter: ["folder"], x: 356, y: 520, order: 5, accent: "teal" },
+  { name: "其他", icon: "circle-help", filter: ["other"], x: 680, y: 520, order: 6, accent: "neutral" }
 ];
 
 const SAFE_SECRET_PREFIX = "safe:v1:";
@@ -204,10 +287,38 @@ export class DatabaseService {
       locateFile: (file) => this.locateSqlJsFile(file)
     });
 
-    const data = fs.existsSync(this.dbPath) ? fs.readFileSync(this.dbPath) : undefined;
-    this.db = data ? new this.SQL.Database(data) : new this.SQL.Database();
+    if (this.createdNow) {
+      this.db = new this.SQL.Database();
+      this.db.run(SCHEMA_SQL);
+      this.db.run("INSERT OR REPLACE INTO app_state(key, value) VALUES ('schema_version', ?)", [String(LATEST_SCHEMA_VERSION)]);
+      this.db.run("INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (?, ?)", [LATEST_SCHEMA_VERSION, new Date().toISOString()]);
+      this.seedDefaults();
+      this.migrateSecretsToSafeStorage();
+      this.setAppState("last_boot_time", new Date().toISOString());
+      this.persist();
+      const status = this.getStatus();
+      this.logger.info("app", "database initialized (fresh)", status);
+      return status;
+    }
+
+    const rawBytes = fs.readFileSync(this.dbPath);
+    const currentVersion = this.peekVersionFromBytes(rawBytes);
+    const backupPath = `${this.dbPath}.pre-v${currentVersion}.backup`;
+    if (!fs.existsSync(backupPath)) {
+      fs.writeFileSync(backupPath, rawBytes);
+    }
+
+    const migrated = this.migrateInTempDb(rawBytes, currentVersion);
+
+    if (migrated) {
+      const tmpPath = this.dbPath + ".tmp";
+      try { fs.unlinkSync(tmpPath); } catch { /* ok */ }
+      fs.writeFileSync(tmpPath, Buffer.from(migrated));
+      fs.renameSync(tmpPath, this.dbPath);
+    }
+
+    this.db = new this.SQL.Database(fs.readFileSync(this.dbPath));
     this.db.run(SCHEMA_SQL);
-    this.runMigrations();
     this.seedDefaults();
     this.migrateSecretsToSafeStorage();
     this.setAppState("last_boot_time", new Date().toISOString());
@@ -228,6 +339,142 @@ export class DatabaseService {
     };
   }
 
+  saveActionPlan(plan: ActionPlan): void {
+    const now = new Date().toISOString();
+    this.getDb().run(
+      `INSERT INTO action_plans(id, source, risk_level, status, summary, payload_json, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET status = excluded.status, summary = excluded.summary, payload_json = excluded.payload_json, updated_at = excluded.updated_at`,
+      [plan.id, plan.source, plan.riskLevel, plan.status, plan.summary, JSON.stringify(plan), plan.createdAt, now]
+    );
+    this.persist();
+  }
+
+  getActionPlan(planId: string): ActionPlan | null {
+    const row = this.selectRows("SELECT payload_json FROM action_plans WHERE id = ?", [planId])[0];
+    return row ? this.parseJson<ActionPlan>(row.payload_json) : null;
+  }
+
+  saveActionExecution(execution: ActionExecution): void {
+    const now = new Date().toISOString();
+    this.getDb().run(
+      `INSERT INTO action_executions(id, plan_id, status, undoable, summary, payload_json, started_at, completed_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET status = excluded.status, undoable = excluded.undoable, summary = excluded.summary,
+          payload_json = excluded.payload_json, completed_at = excluded.completed_at, updated_at = excluded.updated_at`,
+      [execution.id, execution.planId, execution.status, execution.undoable ? 1 : 0, execution.summary, JSON.stringify(execution), execution.startedAt, execution.completedAt, now]
+    );
+    this.persist();
+  }
+
+  getActionExecution(executionId: string): ActionExecution | null {
+    const row = this.selectRows("SELECT payload_json FROM action_executions WHERE id = ?", [executionId])[0];
+    return row ? this.parseJson<ActionExecution>(row.payload_json) : null;
+  }
+
+  getActionHistory(limit = 30): ActionExecution[] {
+    const rows = this.selectRows(
+      "SELECT payload_json FROM action_executions ORDER BY updated_at DESC LIMIT ?",
+      [Math.max(1, Math.min(100, Math.round(limit)))]
+    );
+    return rows.flatMap((row) => {
+      const execution = this.parseJson<ActionExecution>(row.payload_json);
+      return execution ? [execution] : [];
+    });
+  }
+
+  saveWorkspaceScene(scene: WorkspaceScene): void {
+    this.getDb().run(
+      `INSERT INTO workspace_scenes(id, name, payload_json, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET name = excluded.name, payload_json = excluded.payload_json, updated_at = excluded.updated_at`,
+      [scene.id, scene.name, JSON.stringify(scene), scene.createdAt, scene.updatedAt]
+    );
+    this.persist();
+  }
+
+  getWorkspaceScenes(): WorkspaceScene[] {
+    return this.selectRows("SELECT payload_json FROM workspace_scenes ORDER BY updated_at DESC").flatMap((row) => {
+      const scene = this.parseJson<WorkspaceScene>(row.payload_json);
+      return scene ? [scene] : [];
+    });
+  }
+
+  getWorkspaceScene(sceneId: string): WorkspaceScene | null {
+    const row = this.selectRows("SELECT payload_json FROM workspace_scenes WHERE id = ?", [sceneId])[0];
+    return row ? this.parseJson<WorkspaceScene>(row.payload_json) : null;
+  }
+
+  getAutoRules(): AutoRule[] {
+    return this.selectRows("SELECT * FROM auto_rules ORDER BY priority ASC, created_at ASC").flatMap((row) => {
+      try {
+        return [rowToAutoRule(row as unknown as AutoRuleRow)];
+      } catch {
+        return [];
+      }
+    });
+  }
+
+  saveAutoRule(rule: AutoRule): AutoRule {
+    const row = autoRuleToRow(rule);
+    this.getDb().run(
+      `INSERT INTO auto_rules(id, name, conditions_json, action_type, action_target, priority, enabled, run_count, last_run_at, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET name = excluded.name, conditions_json = excluded.conditions_json,
+         action_type = excluded.action_type, action_target = excluded.action_target, priority = excluded.priority,
+         enabled = excluded.enabled, run_count = excluded.run_count, last_run_at = excluded.last_run_at`,
+      [row.id, row.name, row.conditions_json, row.action_type, row.action_target, row.priority, row.enabled, row.run_count, row.last_run_at, row.created_at]
+    );
+    this.persist();
+    return rule;
+  }
+
+  deleteAutoRule(ruleId: string): void {
+    this.getDb().run("DELETE FROM auto_rules WHERE id = ?", [ruleId]);
+    this.persist();
+  }
+
+  savePortalConfig(portal: PortalConfig): void {
+    this.getDb().run(
+      `INSERT INTO portal_configs(id, name, path, real_path, is_enabled, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET name = excluded.name, path = excluded.path, real_path = excluded.real_path,
+          is_enabled = excluded.is_enabled, updated_at = excluded.updated_at`,
+      [portal.id, portal.name, portal.path, portal.realPath, portal.isEnabled ? 1 : 0, portal.createdAt, portal.updatedAt]
+    );
+    this.getDb().run(
+      `INSERT INTO consent_scopes(id, scope_type, path, is_granted, created_at, updated_at)
+       VALUES (?, 'portal-read', ?, 1, ?, ?)
+       ON CONFLICT(scope_type, path) DO UPDATE SET is_granted = 1, updated_at = excluded.updated_at`,
+      [`portal-read:${portal.path.toLowerCase()}`, portal.path, portal.createdAt, portal.updatedAt]
+    );
+    this.persist();
+  }
+
+  getPortalConfigs(): PortalConfig[] {
+    return this.selectRows("SELECT id, name, path, real_path, is_enabled, created_at, updated_at FROM portal_configs ORDER BY updated_at DESC").map((row) => ({
+      id: String(row.id),
+      name: String(row.name),
+      path: String(row.path),
+      realPath: row.real_path ? String(row.real_path) : String(row.path),
+      isEnabled: Boolean(row.is_enabled),
+      createdAt: String(row.created_at),
+      updatedAt: String(row.updated_at)
+    }));
+  }
+
+  getPortalConfig(portalId: string): PortalConfig | null {
+    return this.getPortalConfigs().find((portal) => portal.id === portalId) ?? null;
+  }
+
+  removePortalConfig(portalId: string): void {
+    const portal = this.getPortalConfig(portalId);
+    if (!portal) return;
+    this.getDb().run("DELETE FROM portal_configs WHERE id = ?", [portalId]);
+    this.getDb().run("UPDATE consent_scopes SET is_granted = 0, updated_at = ? WHERE scope_type = 'portal-read' AND path = ?", [new Date().toISOString(), portal.path]);
+    this.persist();
+  }
+
   getAppState(key: string): string | null {
     const row = this.getDb().exec("SELECT value FROM app_state WHERE key = ?", [key])[0]?.values[0];
     return typeof row?.[0] === "string" ? row[0] : null;
@@ -246,7 +493,7 @@ export class DatabaseService {
   getContainers(): ContainerRecord[] {
     const rows = this.selectRows(
       `SELECT id, name, icon, category_filter, position_x, position_y, width, height,
-              sort_order, is_collapsed, is_visible, layout_group
+              sort_order, is_collapsed, is_visible, layout_group, accent_color
        FROM containers
        WHERE is_visible = 1
        ORDER BY sort_order ASC`
@@ -264,7 +511,8 @@ export class DatabaseService {
       sortOrder: Number(row.sort_order),
       isCollapsed: Boolean(row.is_collapsed),
       isVisible: Boolean(row.is_visible),
-      layoutGroup: Number(row.layout_group)
+      layoutGroup: Number(row.layout_group),
+      accentColor: normalizeContainerAccent(row.accent_color)
     }));
   }
 
@@ -416,11 +664,30 @@ export class DatabaseService {
     this.persist();
   }
 
-  updateContainerPosition(containerId: number, x: number, y: number, width: number, height: number): void {
+  updateContainerPosition(containerId: number, x: number, y: number, width: number, height: number, isCollapsed?: boolean): void {
+    const params: Array<number> = [
+      x,
+      y,
+      Math.max(180, Math.min(800, width)),
+      Math.max(120, Math.min(1000, height))
+    ];
+    let sql = "UPDATE containers SET position_x = ?, position_y = ?, width = ?, height = ?";
+    if (typeof isCollapsed === "boolean") {
+      sql += ", is_collapsed = ?";
+      params.push(isCollapsed ? 1 : 0);
+    }
+    sql += " WHERE id = ?";
+    params.push(containerId);
+
     this.getDb().run(
-      "UPDATE containers SET position_x = ?, position_y = ?, width = ?, height = ? WHERE id = ?",
-      [x, y, Math.max(220, Math.min(600, width)), Math.max(180, Math.min(800, height)), containerId]
+      sql,
+      params
     );
+    this.persist();
+  }
+
+  updateContainerAccent(containerId: number, accentColor: ContainerAccent): void {
+    this.getDb().run("UPDATE containers SET accent_color = ? WHERE id = ?", [accentColor, containerId]);
     this.persist();
   }
 
@@ -433,10 +700,55 @@ export class DatabaseService {
     }));
   }
 
-  applyLayout(layoutId: number): void {
+  applyLayout(layoutId: number, workAreaWidth = 1920, workAreaHeight = 1080): void {
     const db = this.getDb();
-    db.run("UPDATE layouts SET is_active = 0");
-    db.run("UPDATE layouts SET is_active = 1 WHERE id = ?", [layoutId]);
+    const layout = this.selectRows("SELECT columns FROM layouts WHERE id = ? LIMIT 1", [layoutId])[0];
+    if (!layout) {
+      throw new Error("Layout was not found");
+    }
+
+    const requestedColumns = Math.max(1, Math.min(8, Number(layout.columns)));
+    const gap = requestedColumns >= 6 ? 14 : 18;
+    const left = 24;
+    const top = 88;
+    const bottom = 24;
+    const maxColumns = Math.max(1, Math.floor((workAreaWidth - left * 2 + gap) / (180 + gap)));
+    const columns = Math.min(requestedColumns, maxColumns);
+    const containerWidth = Math.max(
+      180,
+      Math.min(420, Math.floor((workAreaWidth - left * 2 - gap * (columns - 1)) / columns))
+    );
+    const containers = this.selectRows("SELECT id FROM containers WHERE is_visible = 1 ORDER BY sort_order ASC");
+    const rows = Math.max(1, Math.ceil(containers.length / columns));
+    const availableHeight = workAreaHeight - top - bottom - gap * (rows - 1);
+    const containerHeight = Math.max(180, Math.min(420, Math.floor(availableHeight / rows)));
+
+    db.run("BEGIN TRANSACTION");
+    try {
+      containers.forEach((container, index) => {
+        const column = index % columns;
+        const row = Math.floor(index / columns);
+        db.run(
+          `UPDATE containers
+           SET position_x = ?, position_y = ?, width = ?, height = ?, is_collapsed = 0
+           WHERE id = ?`,
+          [
+            left + column * (containerWidth + gap),
+            top + row * (containerHeight + gap),
+            containerWidth,
+            containerHeight,
+            Number(container.id)
+          ]
+        );
+      });
+
+      db.run("UPDATE layouts SET is_active = 0");
+      db.run("UPDATE layouts SET is_active = 1 WHERE id = ?", [layoutId]);
+      db.run("COMMIT");
+    } catch (error) {
+      db.run("ROLLBACK");
+      throw error;
+    }
     this.setAppState("current_layout_id", String(layoutId));
     this.persist();
   }
@@ -667,10 +979,62 @@ export class DatabaseService {
       }));
   }
 
+  exportUserData(): Record<string, unknown> {
+    const parsePayloads = (table: "action_plans" | "action_executions" | "workspace_scenes") => (
+      this.selectRows(`SELECT payload_json FROM ${table} ORDER BY rowid ASC`).flatMap((row) => {
+        const parsed = this.parseJson<unknown>(row.payload_json);
+        return parsed === null ? [] : [parsed];
+      })
+    );
+    const appState = Object.fromEntries(
+      this.selectRows("SELECT key, value FROM app_state ORDER BY key ASC")
+        .filter((row) => !/(api[_-]?key|token|secret)/i.test(String(row.key)))
+        .map((row) => [String(row.key), row.value === null ? null : String(row.value)])
+    );
+    const chatHistory = this.selectRows("SELECT id, role, content, personality, weather_context, created_at FROM chat_history ORDER BY id ASC").map((row) => ({
+      id: Number(row.id),
+      role: String(row.role),
+      content: String(row.content),
+      personality: row.personality === null ? null : String(row.personality),
+      weatherContext: row.weather_context === null ? null : String(row.weather_context),
+      createdAt: String(row.created_at)
+    }));
+    const consentScopes = this.selectRows("SELECT scope_type, path, is_granted, created_at, updated_at FROM consent_scopes ORDER BY created_at ASC").map((row) => ({
+      scopeType: String(row.scope_type),
+      path: String(row.path),
+      granted: Boolean(row.is_granted),
+      createdAt: String(row.created_at),
+      updatedAt: String(row.updated_at)
+    }));
+
+    return {
+      settings: this.getSettings(),
+      appState,
+      containers: this.getContainers(),
+      layouts: this.getLayouts(),
+      desktopFiles: this.getDesktopFiles(),
+      chatHistory,
+      actionPlans: parsePayloads("action_plans"),
+      actionExecutions: parsePayloads("action_executions"),
+      scenes: parsePayloads("workspace_scenes"),
+      portals: this.getPortalConfigs(),
+      consentScopes,
+      autoRules: this.getAutoRules()
+    };
+  }
+
+  clearChatHistory(): void {
+    this.getDb().run("DELETE FROM chat_history");
+    this.persist();
+  }
+
   persist(): void {
     const db = this.getDb();
     const data = db.export();
-    fs.writeFileSync(this.dbPath, Buffer.from(data));
+    const tmpPath = this.dbPath + ".tmp";
+    try { fs.unlinkSync(tmpPath); } catch { /* ok */ }
+    fs.writeFileSync(tmpPath, Buffer.from(data));
+    fs.renameSync(tmpPath, this.dbPath);
   }
 
   close(): void {
@@ -689,8 +1053,8 @@ export class DatabaseService {
     try {
       if (this.count("containers") === 0) {
         const statement = db.prepare(
-          `INSERT INTO containers(name, icon, category_filter, position_x, position_y, width, height, sort_order)
-           VALUES (?, ?, ?, ?, ?, 300, 400, ?)`
+          `INSERT INTO containers(name, icon, category_filter, position_x, position_y, width, height, sort_order, accent_color)
+           VALUES (?, ?, ?, ?, ?, 300, 400, ?, ?)`
         );
         for (const container of DEFAULT_CONTAINERS) {
           statement.run([
@@ -699,17 +1063,27 @@ export class DatabaseService {
             JSON.stringify(container.filter),
             container.x,
             container.y,
-            container.order
+            container.order,
+            container.accent
           ]);
         }
         statement.free();
       }
 
-      if (this.count("layouts") === 0) {
-        db.run(
-          "INSERT INTO layouts(name, columns, grid_template, is_active) VALUES (?, ?, ?, 1)",
-          ["默认 4 列布局", 4, JSON.stringify({ columns: 4, gap: 24, containerWidth: 300 })]
-        );
+      const defaultLayouts = [
+        { name: "舒展 2 列", columns: 2 },
+        { name: "默认 4 列", columns: 4 },
+        { name: "紧凑 6 列", columns: 6 },
+        { name: "高密 8 列", columns: 8 }
+      ];
+      for (const layout of defaultLayouts) {
+        const existing = this.selectRows("SELECT id FROM layouts WHERE columns = ? LIMIT 1", [layout.columns])[0];
+        if (!existing) {
+          db.run(
+            "INSERT INTO layouts(name, columns, grid_template, is_active) VALUES (?, ?, ?, ?)",
+            [layout.name, layout.columns, JSON.stringify({ columns: layout.columns, gap: layout.columns >= 6 ? 14 : 18 }), layout.columns === 4 ? 1 : 0]
+          );
+        }
       }
 
       this.insertSingleton("wallpaper_config");
@@ -720,6 +1094,13 @@ export class DatabaseService {
       if (this.getAppState("wallpaper_default_enabled_applied") === null) {
         db.run("UPDATE wallpaper_config SET is_dynamic = 1 WHERE id = (SELECT id FROM wallpaper_config ORDER BY id LIMIT 1)");
         this.seedState("wallpaper_default_enabled_applied", "true");
+      }
+
+      if (this.getAppState("wallpaper_real_library_default_applied") === null) {
+        db.run(
+          "UPDATE wallpaper_config SET current_style = 'user', dynamic_id = 'anime-lakeside-station' WHERE id = (SELECT id FROM wallpaper_config ORDER BY id LIMIT 1) AND dynamic_id IS NULL"
+        );
+        this.seedState("wallpaper_real_library_default_applied", "true");
       }
 
       if (this.count("user_account") === 0) {
@@ -744,11 +1125,137 @@ export class DatabaseService {
     }
   }
 
-  private runMigrations(): void {
-    this.ensureColumn("desktop_files", "display_name", "TEXT");
-    this.ensureColumn("desktop_files", "is_hidden", "INTEGER DEFAULT 0");
-    this.ensureColumn("desktop_files", "is_missing", "INTEGER DEFAULT 0");
-    this.ensureColumn("desktop_files", "fingerprint", "TEXT");
+  private peekVersionFromBytes(rawBytes: Buffer): number {
+    try {
+      const tempDb = new this.SQL!.Database(rawBytes);
+      try {
+        const result = tempDb.exec("SELECT value FROM app_state WHERE key = 'schema_version'");
+        const version = result.length > 0 && result[0].values.length > 0 ? Number(result[0].values[0][0]) : 0;
+        return Number.isFinite(version) ? version : 0;
+      } finally {
+        tempDb.close();
+      }
+    } catch {
+      return 0;
+    }
+  }
+
+  private migrateInTempDb(rawBytes: Buffer, currentVersion: number): Uint8Array | null {
+    const SQL = this.SQL!;
+    const tempDb = new SQL.Database(rawBytes);
+    let modified = false;
+
+    try {
+      tempDb.run(SCHEMA_SQL);
+
+      if (currentVersion < 2) {
+        tempDb.run("BEGIN");
+        try {
+          for (const col of [
+            ["desktop_files", "display_name", "TEXT"],
+            ["desktop_files", "is_hidden", "INTEGER DEFAULT 0"],
+            ["desktop_files", "is_missing", "INTEGER DEFAULT 0"],
+            ["desktop_files", "fingerprint", "TEXT"],
+            ["portal_configs", "real_path", "TEXT"]
+          ] as const) {
+            if (!this.columnExistsInDb(tempDb, col[0], col[1])) {
+              tempDb.run(`ALTER TABLE ${col[0]} ADD COLUMN ${col[1]} ${col[2]}`);
+            }
+          }
+          tempDb.run("INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (2, ?)", [new Date().toISOString()]);
+          tempDb.run("DELETE FROM app_state WHERE key = 'schema_version'");
+          tempDb.run("INSERT OR REPLACE INTO app_state(key, value) VALUES ('schema_version', '2')");
+          tempDb.run("COMMIT");
+          modified = true;
+        } catch {
+          tempDb.run("ROLLBACK");
+          throw new Error("v2 migration failed");
+        }
+      }
+
+      if (currentVersion < 3) {
+        tempDb.run("BEGIN");
+        try {
+          tempDb.run(`CREATE TABLE IF NOT EXISTS auto_rules (
+            id TEXT PRIMARY KEY, name TEXT NOT NULL, conditions_json TEXT NOT NULL,
+            action_type TEXT NOT NULL, action_target TEXT NOT NULL DEFAULT '',
+            priority INTEGER NOT NULL DEFAULT 0, enabled INTEGER NOT NULL DEFAULT 1,
+            run_count INTEGER NOT NULL DEFAULT 0, last_run_at TEXT, created_at TEXT NOT NULL
+          )`);
+          tempDb.run("CREATE INDEX IF NOT EXISTS idx_auto_rules_priority ON auto_rules(priority, created_at)");
+          tempDb.run("INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (3, ?)", [new Date().toISOString()]);
+          tempDb.run("INSERT OR REPLACE INTO app_state(key, value) VALUES ('schema_version', '3')");
+          tempDb.run("COMMIT");
+          modified = true;
+        } catch {
+          tempDb.run("ROLLBACK");
+          throw new Error("v3 migration failed");
+        }
+      }
+
+      if (currentVersion < 4) {
+        tempDb.run("BEGIN");
+        try {
+          if (!this.columnExistsInDb(tempDb, "containers", "accent_color")) {
+            tempDb.run("ALTER TABLE containers ADD COLUMN accent_color TEXT NOT NULL DEFAULT 'neutral'");
+          }
+          tempDb.run("INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (4, ?)", [new Date().toISOString()]);
+          tempDb.run("INSERT OR REPLACE INTO app_state(key, value) VALUES ('schema_version', '4')");
+          tempDb.run("COMMIT");
+          modified = true;
+        } catch {
+          tempDb.run("ROLLBACK");
+          throw new Error("v4 migration failed");
+        }
+      }
+
+      const integrity = tempDb.exec("PRAGMA integrity_check");
+      const integrityOk = integrity.length === 1
+        && integrity[0].values.length === 1
+        && String(integrity[0].values[0][0]).toLowerCase() === "ok";
+      if (!integrityOk) {
+        throw new Error(`Database integrity check failed: ${JSON.stringify(integrity)}`);
+      }
+
+      if (modified) {
+        const exported = tempDb.export();
+        this.cleanupOldBackups(LATEST_SCHEMA_VERSION);
+        return exported;
+      }
+      return null;
+
+    } catch (error) {
+      this.logger.error("app", "migration failed, keeping original database", {
+        currentVersion,
+        message: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    } finally {
+      try { tempDb.close(); } catch { /* ok */ }
+    }
+  }
+
+  private columnExistsInDb(db: Database, table: string, column: string): boolean {
+    try {
+      const result = db.exec(`PRAGMA table_info(${table})`);
+      return result.length > 0 && result[0].values.some((row) => String(row[1]) === column);
+    } catch {
+      return false;
+    }
+  }
+
+  private cleanupOldBackups(keep: number): void {
+    try {
+      const dir = path.dirname(this.dbPath);
+      const base = path.basename(this.dbPath);
+      const backups = fs.readdirSync(dir)
+        .filter((f) => f.startsWith(base + ".pre-v") && f.endsWith(".backup"))
+        .map((f) => ({ name: f, full: path.join(dir, f) }))
+        .sort((a, b) => b.name.localeCompare(a.name));
+      for (let i = keep; i < backups.length; i++) {
+        try { fs.unlinkSync(backups[i].full); } catch { /* ok */ }
+      }
+    } catch { /* non-critical */ }
   }
 
   private migrateSecretsToSafeStorage(): void {
@@ -884,13 +1391,6 @@ export class DatabaseService {
     return Math.max(min, Math.min(max, value));
   }
 
-  private ensureColumn(table: string, column: string, definition: string): void {
-    const columns = this.selectRows(`PRAGMA table_info(${table})`).map((row) => String(row.name));
-    if (!columns.includes(column)) {
-      this.getDb().run(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
-    }
-  }
-
   private seedState(key: string, value: string): void {
     if (this.getAppState(key) === null) {
       this.getDb().run("INSERT INTO app_state(key, value) VALUES (?, ?)", [key, value]);
@@ -921,6 +1421,18 @@ export class DatabaseService {
       throw new Error(`No row returned for query: ${sql}`);
     }
     return row;
+  }
+
+  private parseJson<T>(value: unknown): T | null {
+    if (typeof value !== "string") {
+      return null;
+    }
+    try {
+      return JSON.parse(value) as T;
+    } catch {
+      this.logger.warn("app", "discarded malformed persisted json payload");
+      return null;
+    }
   }
 
   private selectRows(sql: string, params: Array<string | number | null> = []): Array<Record<string, unknown>> {

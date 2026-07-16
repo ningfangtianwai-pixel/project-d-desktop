@@ -2,6 +2,16 @@ node_modules/
 dist/
 release/
 logs/*.log
+artifacts/
+.codex-remote-attachments/
+*.log
+*_out.txt
+*_err.txt
+*.bak
+recordings/*.png
+vite_log.txt
+public/pet/**/_grid.*
+public/pet/**/_preview.*
 *.local
 .env
 .env.*

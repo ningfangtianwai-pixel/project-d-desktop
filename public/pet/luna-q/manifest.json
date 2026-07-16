@@ -1,0 +1,57 @@
+{
+  "id": "luna-q",
+  "name": "Luna Q",
+  "source": "/pet/luna-q/",
+  "states": {
+    "idle": {
+      "image": "idle.png",
+      "animation": "breathe",
+      "bubble": "我在这里陪你。"
+    },
+    "happy": {
+      "image": "waving.png",
+      "animation": "hop",
+      "bubble": "好耶，今天也很棒！"
+    },
+    "cheerful": {
+      "image": "waving.png",
+      "animation": "jumpy",
+      "bubble": "收到，我来陪你一起整理。"
+    },
+    "thinking": {
+      "image": "sitting.png",
+      "animation": "think",
+      "bubble": "我想想怎么安排更舒服。"
+    },
+    "sitting": {
+      "image": "sitting.png",
+      "animation": "breathe",
+      "bubble": "我坐在桌面边上看着。"
+    },
+    "sleepy": {
+      "image": "pajamas.png",
+      "animation": "sleepy",
+      "bubble": "有点困了，慢慢来。"
+    },
+    "sleeping": {
+      "image": "sleeping.png",
+      "animation": "sleep",
+      "bubble": "晚安，桌面交给我守着。"
+    },
+    "rain": {
+      "image": "raincoat.png",
+      "animation": "rain",
+      "bubble": "下雨啦，我穿好雨衣了。"
+    },
+    "winter": {
+      "image": "winter.png",
+      "animation": "shiver",
+      "bubble": "今天有点冷，围巾准备好了。"
+    },
+    "summer": {
+      "image": "summer.png",
+      "animation": "sway",
+      "bubble": "天气很好，适合轻快一点。"
+    }
+  }
+}

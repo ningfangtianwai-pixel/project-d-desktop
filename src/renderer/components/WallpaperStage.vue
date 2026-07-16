@@ -1,27 +1,130 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from "vue";
 import { Application, Container, Graphics } from "pixi.js";
-import type { CurrentWeather, SettingsSnapshot } from "@shared/types";
+import type { CurrentWeather, SettingsSnapshot, WallpaperLibraryItem } from "@shared/types";
+import { WallpaperPlayer, type WallpaperAsset } from "@shared/wallpaper-player";
 
 const host = ref<HTMLDivElement | null>(null);
 let app: Application | null = null;
 let rafReady = false;
 let settings: SettingsSnapshot | null = null;
 let currentWeather: CurrentWeather | null = null;
+let wallpaperLibrary: WallpaperLibraryItem[] = [];
+let performanceMode = "auto";
 let fallbackFrame = 0;
 let runtimeTimer = 0;
-let pointer = { x: 0.5, y: 0.5 };
-const showUserBg = ref(false);
-const showUserVideo = ref(false);
-const userBgStyle = ref<Record<string, string>>({});
-const userVideoSrc = ref("");
+let wallpaperTransitionTimer = 0;
+let unsubscribeSettingsUpdated: (() => void) | null = null;
+const wallpaperLayers = ref<Array<WallpaperAsset & { active: boolean }>>([]);
+const weatherMode = ref<WeatherVisualMode>("clear");
+const weatherIntensity = ref(0.55);
+const performanceProfile = ref("auto");
 
-const USER_WALLPAPER_MAP: Record<string, { type: "image" | "video"; file: string }> = {
-  "cloud-light": { type: "video", file: "cloud-light.mp4" },
-  calligraphy: { type: "image", file: "calligraphy.png" },
-  earth: { type: "image", file: "earth.png" },
-  "evening-cloud": { type: "image", file: "evening-cloud.png" }
-};
+function loadBrowserWallpaper(asset: WallpaperAsset): Promise<void> {
+  if (asset.type === "image") {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error(`壁纸图片加载失败: ${asset.id}`));
+      image.src = asset.src;
+    });
+  }
+
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    let settled = false;
+    const finish = (handler: () => void) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      video.onloadeddata = null;
+      video.onerror = null;
+      video.removeAttribute("src");
+      video.load();
+      handler();
+    };
+    const timeout = window.setTimeout(
+      () => finish(() => reject(new Error(`壁纸视频加载超时: ${asset.id}`))),
+      12_000
+    );
+    video.preload = "metadata";
+    video.muted = true;
+    video.onloadeddata = () => finish(resolve);
+    video.onerror = () => finish(() => reject(new Error(`壁纸视频加载失败: ${asset.id}`)));
+    video.src = asset.src;
+    video.load();
+  });
+}
+
+const wallpaperPlayer = new WallpaperPlayer(loadBrowserWallpaper);
+
+function wallpaperAsset(item: WallpaperLibraryItem): WallpaperAsset {
+  const basePath = window.location.protocol === "file:" ? "./wallpapers/" : "/wallpapers/";
+  return { id: item.id, type: item.type, src: basePath + item.file };
+}
+
+async function selectWallpaper(item: WallpaperLibraryItem): Promise<void> {
+  const result = await wallpaperPlayer.select(wallpaperAsset(item));
+  if (result.stale) return;
+  if (result.error) {
+    if (host.value) host.value.dataset.wallpaperError = result.error;
+    return;
+  }
+  if (!result.current) return;
+
+  if (host.value) delete host.value.dataset.wallpaperError;
+  if (result.changed) {
+    if (wallpaperTransitionTimer) window.clearTimeout(wallpaperTransitionTimer);
+    wallpaperLayers.value = [
+      ...(result.previous ? [{ ...result.previous, active: false }] : []),
+      { ...result.current, active: true }
+    ];
+    wallpaperTransitionTimer = window.setTimeout(() => {
+      wallpaperLayers.value = result.current ? [{ ...result.current, active: true }] : [];
+    }, 900);
+  } else if (wallpaperLayers.value.length === 0) {
+    wallpaperLayers.value = [{ ...result.current, active: true }];
+  }
+
+  const currentIndex = wallpaperLibrary.findIndex((wallpaper) => wallpaper.id === item.id);
+  const next = wallpaperLibrary[(currentIndex + 1) % wallpaperLibrary.length];
+  if (next && next.id !== item.id) {
+    void wallpaperPlayer.preload(wallpaperAsset(next)).catch(() => undefined);
+  }
+}
+
+const fogBanks = Array.from({ length: 7 }, (_, index) => ({
+  id: `fog-${index}`,
+  style: {
+    "--fog-y": `${8 + index * 12}%`,
+    "--fog-scale": `${0.78 + index * 0.08}`,
+    "--fog-delay": `${index * -8}s`,
+    "--fog-duration": `${54 + index * 9}s`,
+    "--fog-alpha": `${0.13 - index * 0.008}`
+  }
+}));
+const leafSprites = Array.from({ length: 34 }, (_, index) => ({
+  id: `leaf-${index}`,
+  style: {
+    "--leaf-x": `${(index * 31) % 100}%`,
+    "--leaf-size": `${9 + (index % 6) * 2}px`,
+    "--leaf-delay": `${index * -0.78}s`,
+    "--leaf-duration": `${10 + (index % 7) * 1.6}s`,
+    "--leaf-drift": `${(index % 2 === 0 ? 1 : -1) * (70 + (index % 8) * 18)}px`,
+    "--leaf-rotate": `${(index % 2 === 0 ? 1 : -1) * (160 + index * 17)}deg`,
+    "--leaf-alpha": `${0.34 + (index % 5) * 0.08}`
+  }
+}));
+const lightOrbs = Array.from({ length: 18 }, (_, index) => ({
+  id: `light-${index}`,
+  style: {
+    "--light-x": `${(index * 23) % 100}%`,
+    "--light-y": `${18 + (index * 17) % 64}%`,
+    "--light-size": `${24 + (index % 7) * 9}px`,
+    "--light-delay": `${index * -1.35}s`,
+    "--light-duration": `${9 + (index % 5) * 2}s`
+  }
+}));
 
 const styleIds = ["anime", "aurora", "ink", "garden", "ocean", "sunset", "user"] as const;
 type WallpaperStyleId = (typeof styleIds)[number];
@@ -87,42 +190,78 @@ function currentPalette() {
   return stylePalettes[currentStyleId()];
 }
 
+function performanceFactor(): number {
+  if (performanceMode === "quality") return 1;
+  if (performanceMode === "batterySaver") return 0.38;
+  if (performanceMode === "balanced") return 0.62;
+  return 0.72;
+}
+
+function particleBudget(maximum: number): number {
+  return Math.max(12, Math.round(maximum * performanceFactor()));
+}
+
+type WeatherVisualMode = "clear" | "rain" | "snow" | "fog" | "leaves" | "light";
+
+function weatherPreviewOverride(): WeatherVisualMode | null {
+  const params = new URLSearchParams(window.location.search);
+  const value = params.get("weather");
+  if (value === "clear" || value === "rain" || value === "snow" || value === "fog" || value === "leaves" || value === "light") {
+    return value;
+  }
+  return null;
+}
+
+function currentWeatherMode(): WeatherVisualMode {
+  const override = weatherPreviewOverride();
+  if (override) {
+    return override;
+  }
+  const raw = (currentWeather?.condition ?? settings?.weather.manualWeather ?? "clear").toLowerCase();
+  if (raw.includes("rain") || raw.includes("drizzle") || raw.includes("thunder")) {
+    return "rain";
+  }
+  if (raw.includes("snow") || raw.includes("sleet")) {
+    return "snow";
+  }
+  if (raw.includes("fog") || raw.includes("mist") || raw.includes("haze") || raw.includes("smoke") || raw.includes("cloud")) {
+    return "fog";
+  }
+  if (raw.includes("leaves") || raw.includes("leaf")) {
+    return "leaves";
+  }
+  if (raw.includes("light") || raw.includes("clear")) {
+    return "light";
+  }
+  return "clear";
+}
+
 async function refreshRuntime(): Promise<void> {
-  settings = await window.projectD.getSettings();
-  currentWeather = await window.projectD.getCurrentWeather();
+  const [nextSettings, nextWeather, nextLibrary, nextPerformanceMode] = await Promise.all([
+    window.projectD.getSettings(),
+    window.projectD.getCurrentWeather(),
+    window.projectD.getWallpaperLibrary(),
+    window.projectD.getState("performance_mode")
+  ]);
+  settings = nextSettings;
+  currentWeather = nextWeather;
+  wallpaperLibrary = nextLibrary;
+  performanceMode = nextPerformanceMode ?? "auto";
+  performanceProfile.value = performanceMode;
+  weatherMode.value = currentWeatherMode();
+  weatherIntensity.value = Math.max(0.2, Math.min(1.2, settings?.weather.particleIntensity ?? 0.55));
   const styleId = currentStyleId();
   if (host.value) {
     host.value.style.background = currentPalette().css;
   }
 
-  // 处理用户壁纸资源
   const dynamicId = settings?.wallpaper.dynamicId ?? "";
-  const userWallpaper = USER_WALLPAPER_MAP[dynamicId];
+  const userWallpaper = wallpaperLibrary.find((item) => item.id === dynamicId);
   if (styleId === "user" && userWallpaper) {
-    const basePath = window.location.origin.startsWith("http") ? "/wallpapers/" : "./assets/wallpapers/user/";
-    if (userWallpaper.type === "video") {
-      showUserBg.value = false;
-      showUserVideo.value = true;
-      userVideoSrc.value = basePath + userWallpaper.file;
-    } else {
-      showUserVideo.value = false;
-      showUserBg.value = true;
-      userBgStyle.value = { backgroundImage: `url(${basePath + userWallpaper.file})` };
-    }
+    await selectWallpaper(userWallpaper);
   } else {
-    showUserBg.value = false;
-    showUserVideo.value = false;
-    userVideoSrc.value = "";
+    wallpaperLayers.value = [];
   }
-}
-
-function updatePointer(event: PointerEvent): void {
-  const width = window.innerWidth || 1;
-  const height = window.innerHeight || 1;
-  pointer = {
-    x: Math.max(0, Math.min(1, event.clientX / width)),
-    y: Math.max(0, Math.min(1, event.clientY / height))
-  };
 }
 
 onMounted(async () => {
@@ -130,11 +269,12 @@ onMounted(async () => {
     return;
   }
 
-  window.addEventListener("pointermove", updatePointer);
-
   try {
     await refreshRuntime();
     window.addEventListener("projectd:settings-changed", refreshRuntime);
+    unsubscribeSettingsUpdated = window.projectD.onSettingsUpdated(() => {
+      void refreshRuntime();
+    });
     runtimeTimer = window.setInterval(() => {
       void refreshRuntime();
     }, 30_000);
@@ -150,18 +290,14 @@ onMounted(async () => {
     app = pixiApp;
     rafReady = true;
 
-    const layer = new Container();
-    pixiApp.stage.addChild(layer);
+    const weatherLayer = new Container();
+    pixiApp.stage.addChild(weatherLayer);
+    const veil = new Graphics();
+    weatherLayer.addChild(veil);
     const particleLayer = new Container();
     pixiApp.stage.addChild(particleLayer);
 
-    const ribbons = Array.from({ length: 7 }, (_, index) => {
-      const graphic = new Graphics();
-      graphic.alpha = 0.22;
-      layer.addChild(graphic);
-      return { graphic, index };
-    });
-    const particles = Array.from({ length: 72 }, (_, index) => {
+    const particles = Array.from({ length: 116 }, (_, index) => {
       const graphic = new Graphics();
       particleLayer.addChild(graphic);
       return {
@@ -169,60 +305,102 @@ onMounted(async () => {
         index,
         xSeed: Math.random(),
         ySeed: Math.random(),
-        speed: 0.35 + Math.random() * 0.9,
-        size: 1.5 + Math.random() * 3
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.35 + Math.random() * 1.15,
+        size: 1.2 + Math.random() * 3.6,
+        depth: 0.45 + Math.random() * 0.9,
+        spin: Math.random() > 0.5 ? 1 : -1
       };
     });
 
     pixiApp.ticker.add((ticker) => {
-      if (!rafReady || !host.value) {
+      if (!rafReady || !host.value || document.hidden) {
         return;
       }
 
       const width = host.value.clientWidth;
       const height = host.value.clientHeight;
       const time = ticker.lastTime / 1000;
-      const weather = currentWeather?.condition ?? settings?.weather.manualWeather ?? "clear";
+      const weather = currentWeatherMode();
       const intensity = Math.max(0.2, Math.min(1.2, settings?.weather.particleIntensity ?? 0.55));
       const palette = currentPalette();
 
-      for (const ribbon of ribbons) {
-        const pointerOffset = (pointer.y - 0.5) * 42 + (pointer.x - 0.5) * 22;
-        const y = (height / ribbons.length) * ribbon.index + Math.sin(time * 0.35 + ribbon.index) * 26 + pointerOffset;
-        ribbon.graphic.clear();
-        ribbon.graphic.moveTo(-80, y);
-        ribbon.graphic.bezierCurveTo(width * 0.25, y - 90, width * 0.55, y + 96, width + 80, y - 18);
-        ribbon.graphic.stroke({
-          width: 18 + ribbon.index * 2,
-          color: ribbon.index % 2 === 0 ? palette.primary : palette.secondary,
-          alpha: 0.16
-        });
+      veil.clear();
+      if (weather === "rain") {
+        veil.rect(0, 0, width, height);
+        veil.fill({ color: 0x0f2630, alpha: 0.06 * intensity });
+        for (let index = 0; index < 3; index += 1) {
+          const mistY = height * (0.66 + index * 0.1) + Math.sin(time * 0.28 + index) * 16;
+          veil.ellipse(width * (0.22 + index * 0.28), mistY, width * 0.32, 18 + index * 7);
+          veil.fill({ color: 0xb7d7df, alpha: 0.025 * intensity });
+        }
+      } else if (weather === "fog") {
+        for (let index = 0; index < 6; index += 1) {
+          const x = ((time * (10 + index * 2) + index * width * 0.22) % (width + 260)) - 130;
+          const y = height * (0.18 + index * 0.13) + Math.sin(time * 0.23 + index) * 20;
+          veil.ellipse(x, y, width * (0.18 + index * 0.025), 18 + index * 5);
+          veil.fill({ color: palette.haze, alpha: (0.075 - index * 0.006) * intensity });
+        }
+      } else if (weather === "light") {
+        for (let index = 0; index < 5; index += 1) {
+          const glow = Math.sin(time * 0.5 + index) * 0.5 + 0.5;
+          veil.circle(width * (0.18 + index * 0.18), height * (0.22 + (index % 2) * 0.36), 80 + glow * 38);
+          veil.fill({ color: palette.accent, alpha: 0.018 * intensity });
+        }
       }
 
       for (const particle of particles) {
         particle.graphic.clear();
+        if (particle.index >= particleBudget(particles.length)) {
+          continue;
+        }
         particle.graphic.rotation = 0;
-        const drift = weather === "rain" ? time * 280 * particle.speed : time * 34 * particle.speed;
-        const x = (particle.xSeed * width + Math.sin(time * 0.2 + particle.index) * 24 + (weather === "rain" ? drift * 0.28 : 0)) % (width + 60);
-        const y = (particle.ySeed * height + drift) % (height + 60);
+        const rainSpeed = time * 360 * particle.speed * particle.depth;
+        const softSpeed = time * 42 * particle.speed * particle.depth;
+        const drift = weather === "rain" ? rainSpeed : softSpeed;
+        const sway = Math.sin(time * 0.9 + particle.phase + particle.index) * (weather === "snow" ? 28 : 18);
+        const x = (particle.xSeed * width + sway + (weather === "rain" ? drift * 0.34 : 0)) % (width + 90);
+        const y = (particle.ySeed * height + drift) % (height + 90);
+        const alphaDepth = Math.max(0.25, Math.min(1, particle.depth));
 
         if (weather === "rain") {
+          const length = 22 + particle.size * 5 + particle.depth * 12;
           particle.graphic.moveTo(x, y);
-          particle.graphic.lineTo(x - 10, y + 28);
-          particle.graphic.stroke({ width: 1.4, color: 0x9fd7ed, alpha: 0.18 * intensity });
+          particle.graphic.lineTo(x - 12 - particle.depth * 5, y + length);
+          particle.graphic.stroke({ width: 0.8 + particle.depth * 0.8, color: 0xa8def0, alpha: 0.13 * intensity * alphaDepth });
+          if (y > height - 46 && particle.index % 5 === 0) {
+            particle.graphic.ellipse(x - 10, height - 12 - (particle.index % 4) * 8, 5 + particle.depth * 3, 1.2);
+            particle.graphic.fill({ color: 0xc7edf7, alpha: 0.08 * intensity });
+          }
         } else if (weather === "snow") {
-          particle.graphic.circle(x, y, particle.size);
-          particle.graphic.fill({ color: 0xf6f3ec, alpha: 0.2 * intensity });
+          const size = particle.size * (0.8 + particle.depth * 0.4);
+          particle.graphic.circle(x, y, size);
+          particle.graphic.fill({ color: 0xf6f3ec, alpha: 0.22 * intensity * alphaDepth });
+          if (particle.index % 4 === 0) {
+            particle.graphic.moveTo(x - size * 2, y);
+            particle.graphic.lineTo(x + size * 2, y);
+            particle.graphic.moveTo(x, y - size * 2);
+            particle.graphic.lineTo(x, y + size * 2);
+            particle.graphic.stroke({ width: 0.7, color: 0xf6f3ec, alpha: 0.12 * intensity });
+          }
         } else if (weather === "fog") {
-          particle.graphic.ellipse(x, y, particle.size * 9, particle.size * 1.8);
-          particle.graphic.fill({ color: palette.haze, alpha: 0.1 * intensity });
+          continue;
         } else if (weather === "leaves") {
-          particle.graphic.rotation = Math.sin(time + particle.index) * 0.65;
-          particle.graphic.ellipse(x, y, particle.size * 2.1, particle.size * 0.9);
-          particle.graphic.fill({ color: palette.secondary, alpha: 0.18 * intensity });
+          particle.graphic.rotation = Math.sin(time * 1.8 + particle.phase) * 0.9 * particle.spin;
+          particle.graphic.ellipse(x, y, particle.size * 2.5, particle.size * 0.95);
+          particle.graphic.fill({ color: particle.index % 3 === 0 ? palette.primary : palette.secondary, alpha: 0.18 * intensity * alphaDepth });
+          particle.graphic.moveTo(x - particle.size * 1.4, y);
+          particle.graphic.lineTo(x + particle.size * 1.4, y);
+          particle.graphic.stroke({ width: 0.6, color: palette.accent, alpha: 0.08 * intensity });
+        } else if (weather === "light") {
+          const pulse = 0.65 + (Math.sin(time * 1.7 + particle.phase) * 0.5 + 0.5) * 0.75;
+          particle.graphic.circle(x, y, particle.size * pulse * 1.4);
+          particle.graphic.fill({ color: palette.accent, alpha: 0.13 * intensity * alphaDepth });
+          particle.graphic.circle(x, y, particle.size * pulse * 3.6);
+          particle.graphic.fill({ color: palette.accent, alpha: 0.025 * intensity });
         } else {
-          particle.graphic.circle(x, y, particle.size * (weather === "light" ? 1.6 : 0.9));
-          particle.graphic.fill({ color: palette.accent, alpha: (weather === "light" ? 0.16 : 0.1) * intensity });
+          particle.graphic.circle(x, y, particle.size * 0.8);
+          particle.graphic.fill({ color: palette.accent, alpha: 0.08 * intensity });
         }
       }
     });
@@ -233,14 +411,18 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   rafReady = false;
-  window.removeEventListener("pointermove", updatePointer);
   if (fallbackFrame) {
     cancelAnimationFrame(fallbackFrame);
   }
   if (runtimeTimer) {
     window.clearInterval(runtimeTimer);
   }
+  if (wallpaperTransitionTimer) {
+    window.clearTimeout(wallpaperTransitionTimer);
+  }
   window.removeEventListener("projectd:settings-changed", refreshRuntime);
+  unsubscribeSettingsUpdated?.();
+  unsubscribeSettingsUpdated = null;
   app?.destroy(true);
   app = null;
 });
@@ -262,31 +444,24 @@ function startCanvasFallback(container: HTMLDivElement): void {
     canvas.width = width;
     canvas.height = height;
     context.clearRect(0, 0, width, height);
-    context.globalAlpha = 0.22;
-    const weather = currentWeather?.condition ?? settings?.weather.manualWeather ?? "clear";
+    const weather = currentWeatherMode();
     const palette = currentPalette();
     container.style.background = palette.css;
 
-    for (let index = 0; index < 8; index += 1) {
-      const y = (height / 8) * index + Math.sin(time / 1800 + index) * 28;
-      const pointerOffset = (pointer.y - 0.5) * 36 + (pointer.x - 0.5) * 18;
-      context.beginPath();
-      context.moveTo(-80, y + pointerOffset);
-      context.bezierCurveTo(width * 0.25, y - 80 + pointerOffset, width * 0.58, y + 92 + pointerOffset, width + 80, y - 16 + pointerOffset);
-      context.lineWidth = 16 + index * 2;
-      context.strokeStyle = index % 2 === 0 ? `#${palette.primary.toString(16).padStart(6, "0")}` : `#${palette.secondary.toString(16).padStart(6, "0")}`;
-      context.stroke();
-    }
-
-    if (weather === "rain" || weather === "snow" || weather === "fog" || weather === "leaves" || weather === "light") {
-      context.globalAlpha = weather === "fog" ? 0.08 : 0.18;
-      for (let index = 0; index < 48; index += 1) {
-        const x = (index * 97 + time / (weather === "rain" ? 8 : 22)) % (width + 80);
-        const y = (index * 53 + time / (weather === "rain" ? 3 : 18)) % (height + 80);
+    if (weather === "rain" || weather === "snow" || weather === "leaves" || weather === "light") {
+      if (weather === "rain") {
+        context.globalAlpha = 0.08;
+        context.fillStyle = "#0f2630";
+        context.fillRect(0, 0, width, height);
+      }
+      context.globalAlpha = 0.2;
+      for (let index = 0; index < particleBudget(78); index += 1) {
+        const x = (index * 97 + time / (weather === "rain" ? 6 : 20) + Math.sin(time / 1000 + index) * 18) % (width + 100);
+        const y = (index * 53 + time / (weather === "rain" ? 2.4 : 17)) % (height + 100);
         context.beginPath();
         if (weather === "rain") {
           context.moveTo(x, y);
-          context.lineTo(x - 8, y + 24);
+          context.lineTo(x - 12, y + 34);
           context.strokeStyle = "#9fd7ed";
           context.lineWidth = 1.3;
           context.stroke();
@@ -294,17 +469,13 @@ function startCanvasFallback(container: HTMLDivElement): void {
           context.fillStyle = "#f6f3ec";
           context.arc(x, y, 2, 0, Math.PI * 2);
           context.fill();
-        } else if (weather === "fog") {
-          context.fillStyle = "#d6dde2";
-          context.ellipse(x, y, 24, 5, 0, 0, Math.PI * 2);
-          context.fill();
         } else if (weather === "leaves") {
           context.fillStyle = `#${palette.secondary.toString(16).padStart(6, "0")}`;
           context.ellipse(x, y, 5, 2, Math.sin(time / 900 + index), 0, Math.PI * 2);
           context.fill();
         } else {
           context.fillStyle = `#${palette.accent.toString(16).padStart(6, "0")}`;
-          context.arc(x, y, 3, 0, Math.PI * 2);
+          context.arc(x, y, 2 + Math.sin(time / 500 + index) * 1.2, 0, Math.PI * 2);
           context.fill();
         }
       }
@@ -319,15 +490,41 @@ function startCanvasFallback(container: HTMLDivElement): void {
 
 <template>
   <div ref="host" class="wallpaper-stage" :data-style="currentStyleId()" aria-hidden="true">
-    <div v-if="showUserBg" class="wallpaper-bg-img" :style="userBgStyle"></div>
-    <video
-      v-if="showUserVideo"
-      class="wallpaper-bg-video"
-      :src="userVideoSrc"
-      autoplay
-      loop
-      muted
-      playsinline
-    ></video>
+    <template v-for="layer in wallpaperLayers" :key="layer.id">
+      <div
+        v-if="layer.type === 'image'"
+        class="wallpaper-bg-media wallpaper-bg-img"
+        :class="{ 'is-active': layer.active }"
+        :style="{ backgroundImage: `url(${layer.src})` }"
+      ></div>
+      <video
+        v-else
+        class="wallpaper-bg-media wallpaper-bg-video"
+        :class="{ 'is-active': layer.active }"
+        :src="layer.src"
+        autoplay
+        loop
+        muted
+        playsinline
+      ></video>
+    </template>
+    <div
+      class="real-weather-layer"
+      :data-weather="weatherMode"
+      :data-performance="performanceProfile"
+      :style="{ '--weather-intensity': String(weatherIntensity) }"
+    >
+      <div class="weather-fog" aria-hidden="true">
+        <span v-for="bank in fogBanks" :key="bank.id" class="fog-bank" :style="bank.style"></span>
+      </div>
+      <div class="weather-leaves" aria-hidden="true">
+        <span v-for="leaf in leafSprites" :key="leaf.id" class="leaf-sprite" :style="leaf.style"></span>
+      </div>
+      <div class="weather-light" aria-hidden="true">
+        <span class="light-beam light-beam-primary"></span>
+        <span class="light-beam light-beam-secondary"></span>
+        <span v-for="orb in lightOrbs" :key="orb.id" class="light-orb" :style="orb.style"></span>
+      </div>
+    </div>
   </div>
 </template>

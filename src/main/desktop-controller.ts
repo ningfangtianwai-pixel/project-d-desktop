@@ -1,15 +1,17 @@
 import { app } from "electron";
-import { execFile } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { promisify } from "node:util";
 import type { DatabaseService } from "./database.js";
 import type { AppLogger } from "./logger.js";
 import type { DesktopStatus } from "../shared/types.js";
-
-const execFileAsync = promisify(execFile);
+import {
+  createDesktopIconRecoveryBatch,
+  setWindowsDesktopIconsVisible,
+  startDesktopIconRecoveryWatchdog
+} from "./windows-desktop-icons.js";
 
 export class DesktopController {
+  private watchdogProcessId: number | null = null;
   private status: DesktopStatus = {
     mode: "idle",
     lastChangedAt: new Date().toISOString()
@@ -65,6 +67,7 @@ export class DesktopController {
     this.setStatus("activating", "正在启动整理");
 
     try {
+      await this.ensureRecoveryWatchdog();
       await this.hideDesktopIcons();
       this.database.setAppState("desktop_state", "active");
       this.database.setAppState("is_active", "true");
@@ -129,32 +132,27 @@ export class DesktopController {
   }
 
   private async setWindowsHideIcons(value: 0 | 1): Promise<void> {
-    await execFileAsync("reg", [
-      "add",
-      "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
-      "/v",
-      "HideIcons",
-      "/t",
-      "REG_DWORD",
-      "/d",
-      String(value),
-      "/f"
-    ]);
+    const state = await setWindowsDesktopIconsVisible(value === 0);
+    this.logger.info("desktop-state", "windows desktop icon visibility changed", {
+      hideIcons: value,
+      visible: state.visible,
+      iconCount: state.iconCount,
+      listViewHandle: state.listViewHandle
+    });
+  }
 
-    await execFileAsync("RUNDLL32.EXE", ["user32.dll,UpdatePerUserSystemParameters"]);
-    this.logger.info("desktop-state", "windows desktop icon visibility changed", { hideIcons: value });
+  private async ensureRecoveryWatchdog(): Promise<void> {
+    if (this.watchdogProcessId !== null || process.platform !== "win32") return;
+    this.watchdogProcessId = await startDesktopIconRecoveryWatchdog();
+    this.logger.info("desktop-state", "desktop icon recovery watchdog started", {
+      processId: this.watchdogProcessId,
+      parentProcessId: process.pid
+    });
   }
 
   private generateRecoveryScript(): void {
     const scriptPath = path.join(app.getPath("userData"), "ProjectD-Recover-Desktop.bat");
-    const content = [
-      "@echo off",
-      "reg add HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced /v HideIcons /t REG_DWORD /d 0 /f",
-      "taskkill /f /im explorer.exe",
-      "start explorer.exe",
-      "echo Project D desktop recovery completed.",
-      "pause"
-    ].join("\r\n");
+    const content = createDesktopIconRecoveryBatch();
 
     fs.writeFileSync(scriptPath, content, "utf8");
     this.database.setAppState("recovery_script_path", scriptPath);

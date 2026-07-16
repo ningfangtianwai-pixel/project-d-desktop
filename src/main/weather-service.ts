@@ -1,6 +1,7 @@
 import type { CurrentWeather, SettingsSnapshot } from "../shared/types.js";
 import type { DatabaseService } from "./database.js";
 import type { AppLogger } from "./logger.js";
+import { getPrivacyNetworkState } from "./privacy-network.js";
 
 interface OpenMeteoResponse {
   current?: {
@@ -55,6 +56,14 @@ export class WeatherService {
 
   async getCurrentWeather(): Promise<CurrentWeather> {
     const settings = this.database.getSettings();
+    if (getPrivacyNetworkState(this.database).paused) {
+      const cached = this.readCache();
+      return {
+        ...(cached ?? this.manualWeather(settings)),
+        source: cached ? "cache" : "manual",
+        error: "privacy-network-paused"
+      };
+    }
     if (settings.weather.mode !== "auto") {
       return this.manualWeather(settings);
     }

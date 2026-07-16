@@ -21,6 +21,11 @@ extraResources:
   - from: resources/
     to: resources/
 
+publish:
+  - provider: generic
+    url: https://updates.projectd.invalid/releases
+    channel: latest
+
 win:
   target:
     - target: nsis
@@ -30,34 +35,10 @@ win:
   artifactName: ProjectD-${version}-Setup.${ext}
 
 nsis:
+  include: resources/installer.nsh
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
-
-mac:
-  target:
-    - target: dmg
-      arch:
-        - x64
-        - arm64
-  icon: resources/app-icon.png
-  category: public.app-category.utilities
-  artifactName: ProjectD-${version}.${ext}
-
-dmg:
-  contents:
-    - x: 130
-      y: 220
-    - x: 410
-      y: 220
-      type: link
-      path: /Applications
-
-linux:
-  target:
-    - target: AppImage
-      arch:
-        - x64
-  icon: resources/app-icon.png
+  deleteAppDataOnUninstall: false
