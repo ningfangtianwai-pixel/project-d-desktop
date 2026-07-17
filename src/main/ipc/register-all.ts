@@ -14,6 +14,8 @@ import { registerShortcutIpcHandlers } from "./shortcut-ipc.js";
 import { registerAutoRulesIpcHandlers } from "../auto-rules/auto-rules-ipc.js";
 import { registerRecoveryIpcHandlers } from "./recovery-ipc.js";
 import { registerUpdateIpcHandlers } from "./update-ipc.js";
+import { registerRuntimeIpcHandlers } from "./runtime-ipc.js";
+import { registerWallpaperIpcHandlers } from "./wallpaper-ipc.js";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -83,6 +85,11 @@ export interface ServiceDeps {
   getRecoverySystemStatus: () => Promise<any>;
   setPeekShortcut: (accelerator: unknown) => Promise<{ success: boolean; accelerator: string }>;
   updateService: any;
+  getRuntimeState: () => any;
+  setRuntimeManualPaused: (paused: boolean) => any;
+  getRuntimeMetrics: () => any;
+  getWallpaperDisplays: () => any[];
+  assignWallpaperToDisplay: (displayId: string, wallpaperId: string | null) => any[];
 }
 
 export function registerAllIpcHandlers(deps: ServiceDeps): void {
@@ -241,5 +248,20 @@ export function registerAllIpcHandlers(deps: ServiceDeps): void {
     checkForUpdates: () => deps.updateService.checkForUpdates(),
     downloadUpdate: () => deps.updateService.downloadUpdate(),
     installDownloadedUpdate: () => deps.updateService.installDownloadedUpdate()
+  });
+
+  registerRuntimeIpcHandlers({
+    ipc: ipcMain,
+    assertTrustedSender,
+    getState: deps.getRuntimeState,
+    setManualPaused: deps.setRuntimeManualPaused,
+    getMetrics: deps.getRuntimeMetrics
+  });
+
+  registerWallpaperIpcHandlers({
+    ipc: ipcMain,
+    assertTrustedSender,
+    getDisplays: deps.getWallpaperDisplays,
+    assignDisplay: deps.assignWallpaperToDisplay
   });
 }

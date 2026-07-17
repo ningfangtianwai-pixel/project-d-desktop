@@ -13,6 +13,7 @@ if (!window.projectD) {
   memoryState.set("recovery_script_path", "ProjectD-Recover-Desktop.bat");
   memoryState.set("performance_mode", "auto");
   memoryState.set("auto_activate_on_start", "false");
+  memoryState.set("launch_at_login", "false");
   memoryState.set("cover_all_displays", "false");
   const chatHistory: ChatMessage[] = [];
   const actionPlans = new Map<string, ActionPlan>();
@@ -22,6 +23,7 @@ if (!window.projectD) {
   const folderPortals: PortalConfig[] = [];
   const settingsListeners = new Set<() => void>();
   const updateListeners = new Set<(status: UpdateStatus) => void>();
+  let mockDisplayWallpaperId: string | null = null;
   let mockUpdateStatus: UpdateStatus = {
     phase: "disabled",
     channel: "stable",
@@ -375,6 +377,26 @@ if (!window.projectD) {
       notifySettingsUpdated();
       return cloneSettings();
     },
+    getWallpaperDisplays: async () => [{
+      id: "preview-display",
+      label: "预览显示器",
+      isPrimary: true,
+      bounds: { x: 0, y: 0, width: window.innerWidth, height: window.innerHeight },
+      scaleFactor: window.devicePixelRatio,
+      wallpaperId: mockDisplayWallpaperId
+    }],
+    assignWallpaperToDisplay: async (_displayId, wallpaperId) => {
+      mockDisplayWallpaperId = wallpaperId;
+      notifySettingsUpdated();
+      return [{
+        id: "preview-display",
+        label: "预览显示器",
+        isPrimary: true,
+        bounds: { x: 0, y: 0, width: window.innerWidth, height: window.innerHeight },
+        scaleFactor: window.devicePixelRatio,
+        wallpaperId: mockDisplayWallpaperId
+      }];
+    },
     getCurrentWeather: async () => ({
       mode: "manual",
       condition: "clear",
@@ -454,6 +476,39 @@ if (!window.projectD) {
     checkForUpdates: async () => ({ ...mockUpdateStatus }),
     downloadUpdate: async () => ({ ...mockUpdateStatus }),
     installDownloadedUpdate: async () => undefined,
+    getRuntimeState: async () => ({
+      paused: false,
+      reasons: [],
+      manual: false,
+      externalFullscreen: false,
+      screenLocked: false,
+      suspended: false,
+      onBattery: false,
+      batteryLevel: null,
+      thermalState: "nominal",
+      configuredMode: "auto",
+      effectiveProfile: "balanced",
+      changedAt: now()
+    }),
+    setRuntimeManualPaused: async (paused) => ({
+      paused,
+      reasons: paused ? ["manual"] : [],
+      manual: paused,
+      externalFullscreen: false,
+      screenLocked: false,
+      suspended: false,
+      onBattery: false,
+      batteryLevel: null,
+      thermalState: "nominal",
+      configuredMode: "auto",
+      effectiveProfile: "balanced",
+      changedAt: now()
+    }),
+    getRuntimeMetrics: async () => ({
+      generatedAt: now(), sampleCount: 0, windowMinutes: 0, cpuMedianPercent: 0,
+      cpuP95Percent: 0, peakWorkingSetBytes: 0, memoryGrowthPercent: 0,
+      pausedSampleCount: 0, samples: []
+    }),
     pinSearchResultToScene: async () => undefined,
     addSearchResultToPortal: async () => null,
     resolveSearchResultPath: async (resultId: string) => resultId,
@@ -473,7 +528,8 @@ if (!window.projectD) {
       return () => {
         updateListeners.delete(handler);
       };
-    }
+    },
+    onRuntimeStateChanged: () => () => undefined
   };
 
   window.projectD = mockApi;

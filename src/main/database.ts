@@ -18,6 +18,8 @@ import type {
   SettingsPatch,
   SettingsSnapshot
 } from "../shared/types.js";
+import type { WallpaperLibraryItem } from "../shared/types.js";
+import type { RuntimeMetricSample } from "../shared/runtime.js";
 import { normalizeContainerAccent, type ContainerAccent } from "../shared/container-accents.js";
 import type { AutoRule } from "../shared/auto-rules.js";
 import { autoRuleToRow, rowToAutoRule, type AutoRuleRow } from "./auto-rules/auto-rules-service.js";
@@ -33,7 +35,7 @@ export interface UpsertDesktopFileInput {
   fingerprint: string;
 }
 
-const LATEST_SCHEMA_VERSION = 4;
+const LATEST_SCHEMA_VERSION = 6;
 
 const SCHEMA_SQL = `
 PRAGMA journal_mode = WAL;
@@ -252,6 +254,38 @@ CREATE TABLE IF NOT EXISTS auto_rules (
 );
 
 CREATE INDEX IF NOT EXISTS idx_auto_rules_priority ON auto_rules(priority, created_at);
+
+CREATE TABLE IF NOT EXISTS media_assets (
+    id              TEXT PRIMARY KEY,
+    media_type      TEXT NOT NULL,
+    source          TEXT NOT NULL DEFAULT 'bundled',
+    file_path       TEXT NOT NULL,
+    label           TEXT NOT NULL,
+    style           TEXT NOT NULL,
+    metadata_json   TEXT NOT NULL DEFAULT '{}',
+    updated_at      TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS display_wallpaper_assignments (
+    display_key     TEXT PRIMARY KEY,
+    wallpaper_id    TEXT,
+    fit_mode        TEXT NOT NULL DEFAULT 'cover',
+    updated_at      TEXT NOT NULL,
+    FOREIGN KEY (wallpaper_id) REFERENCES media_assets(id)
+);
+
+CREATE TABLE IF NOT EXISTS runtime_metrics (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    sampled_at        TEXT NOT NULL,
+    source            TEXT NOT NULL,
+    process_id        INTEGER NOT NULL,
+    cpu_percent       REAL NOT NULL,
+    working_set_bytes INTEGER NOT NULL,
+    paused            INTEGER NOT NULL,
+    profile           TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_runtime_metrics_sampled ON runtime_metrics(sampled_at DESC);
 `;
 
 const DEFAULT_CONTAINERS = [
@@ -488,6 +522,65 @@ export class DatabaseService {
       [key, value]
     );
     this.persist();
+  }
+
+  syncMediaAssets(items: readonly WallpaperLibraryItem[]): void {
+    const now = new Date().toISOString();
+    this.getDb().run("BEGIN");
+    try {
+      for (const item of items) {
+        this.getDb().run(
+          `INSERT INTO media_assets(id, media_type, source, file_path, label, style, metadata_json, updated_at)
+           VALUES (?, ?, 'bundled', ?, ?, ?, ?, ?)
+           ON CONFLICT(id) DO UPDATE SET media_type = excluded.media_type, file_path = excluded.file_path,
+             label = excluded.label, style = excluded.style, metadata_json = excluded.metadata_json,
+             updated_at = excluded.updated_at`,
+          [item.id, item.type, item.file, item.label, item.style, JSON.stringify({ aliases: item.aliases }), now]
+        );
+      }
+      this.getDb().run("COMMIT");
+      this.persist();
+    } catch (error) {
+      this.getDb().run("ROLLBACK");
+      throw error;
+    }
+  }
+
+  getDisplayWallpaperAssignments(): Record<string, string> {
+    return Object.fromEntries(
+      this.selectRows("SELECT display_key, wallpaper_id FROM display_wallpaper_assignments WHERE wallpaper_id IS NOT NULL")
+        .map((row) => [String(row.display_key), String(row.wallpaper_id)])
+    );
+  }
+
+  setDisplayWallpaperAssignment(displayKey: string, wallpaperId: string | null): void {
+    this.getDb().run(
+      `INSERT INTO display_wallpaper_assignments(display_key, wallpaper_id, fit_mode, updated_at)
+       VALUES (?, ?, 'cover', ?)
+       ON CONFLICT(display_key) DO UPDATE SET wallpaper_id = excluded.wallpaper_id, updated_at = excluded.updated_at`,
+      [displayKey, wallpaperId, new Date().toISOString()]
+    );
+    this.persist();
+  }
+
+  appendRuntimeMetrics(samples: readonly RuntimeMetricSample[]): void {
+    if (!samples.length) return;
+    this.getDb().run("BEGIN");
+    try {
+      for (const sample of samples) {
+        this.getDb().run(
+          `INSERT INTO runtime_metrics(sampled_at, source, process_id, cpu_percent, working_set_bytes, paused, profile)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [sample.sampledAt, sample.source, sample.processId, sample.cpuPercent, sample.workingSetBytes, sample.paused ? 1 : 0, sample.profile]
+        );
+      }
+      this.getDb().run("DELETE FROM runtime_metrics WHERE id NOT IN (SELECT id FROM runtime_metrics ORDER BY id DESC LIMIT 10000)");
+      this.getDb().run("COMMIT");
+      this.persist();
+    } catch (error) {
+      this.getDb().run("ROLLBACK");
+      throw error;
+    }
   }
 
   getContainers(): ContainerRecord[] {
@@ -1019,7 +1112,9 @@ export class DatabaseService {
       scenes: parsePayloads("workspace_scenes"),
       portals: this.getPortalConfigs(),
       consentScopes,
-      autoRules: this.getAutoRules()
+      autoRules: this.getAutoRules(),
+      mediaAssets: this.selectRows("SELECT id, media_type, source, file_path, label, style, metadata_json, updated_at FROM media_assets ORDER BY id ASC"),
+      displayWallpaperAssignments: this.getDisplayWallpaperAssignments()
     };
   }
 
@@ -1206,6 +1301,47 @@ export class DatabaseService {
         } catch {
           tempDb.run("ROLLBACK");
           throw new Error("v4 migration failed");
+        }
+      }
+
+      if (currentVersion < 5) {
+        tempDb.run("BEGIN");
+        try {
+          tempDb.run(`CREATE TABLE IF NOT EXISTS media_assets (
+            id TEXT PRIMARY KEY, media_type TEXT NOT NULL, source TEXT NOT NULL DEFAULT 'bundled',
+            file_path TEXT NOT NULL, label TEXT NOT NULL, style TEXT NOT NULL,
+            metadata_json TEXT NOT NULL DEFAULT '{}', updated_at TEXT NOT NULL
+          )`);
+          tempDb.run(`CREATE TABLE IF NOT EXISTS display_wallpaper_assignments (
+            display_key TEXT PRIMARY KEY, wallpaper_id TEXT, fit_mode TEXT NOT NULL DEFAULT 'cover',
+            updated_at TEXT NOT NULL, FOREIGN KEY (wallpaper_id) REFERENCES media_assets(id)
+          )`);
+          tempDb.run("INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (5, ?)", [new Date().toISOString()]);
+          tempDb.run("INSERT OR REPLACE INTO app_state(key, value) VALUES ('schema_version', '5')");
+          tempDb.run("COMMIT");
+          modified = true;
+        } catch {
+          tempDb.run("ROLLBACK");
+          throw new Error("v5 migration failed");
+        }
+      }
+
+      if (currentVersion < 6) {
+        tempDb.run("BEGIN");
+        try {
+          tempDb.run(`CREATE TABLE IF NOT EXISTS runtime_metrics (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, sampled_at TEXT NOT NULL, source TEXT NOT NULL,
+            process_id INTEGER NOT NULL, cpu_percent REAL NOT NULL, working_set_bytes INTEGER NOT NULL,
+            paused INTEGER NOT NULL, profile TEXT NOT NULL
+          )`);
+          tempDb.run("CREATE INDEX IF NOT EXISTS idx_runtime_metrics_sampled ON runtime_metrics(sampled_at DESC)");
+          tempDb.run("INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (6, ?)", [new Date().toISOString()]);
+          tempDb.run("INSERT OR REPLACE INTO app_state(key, value) VALUES ('schema_version', '6')");
+          tempDb.run("COMMIT");
+          modified = true;
+        } catch {
+          tempDb.run("ROLLBACK");
+          throw new Error("v6 migration failed");
         }
       }
 

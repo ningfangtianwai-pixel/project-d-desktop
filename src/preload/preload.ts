@@ -66,6 +66,8 @@ const api: ProjectDApi = {
   updateSettings: (patch) => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_UPDATE, patch),
   getWallpaperLibrary: () => ipcRenderer.invoke(IPC_CHANNELS.WALLPAPER_LIBRARY_GET),
   applyWallpaper: (wallpaperId) => ipcRenderer.invoke(IPC_CHANNELS.WALLPAPER_APPLY, wallpaperId),
+  getWallpaperDisplays: () => ipcRenderer.invoke(IPC_CHANNELS.WALLPAPER_DISPLAYS_GET),
+  assignWallpaperToDisplay: (displayId, wallpaperId) => ipcRenderer.invoke(IPC_CHANNELS.WALLPAPER_DISPLAY_ASSIGN, displayId, wallpaperId),
   getCurrentWeather: () => ipcRenderer.invoke(IPC_CHANNELS.WEATHER_GET_CURRENT),
   sendChatMessage: (content) => ipcRenderer.invoke(IPC_CHANNELS.AI_CHAT_SEND, content),
   getChatHistory: () => ipcRenderer.invoke(IPC_CHANNELS.AI_CHAT_HISTORY),
@@ -92,6 +94,9 @@ const api: ProjectDApi = {
   checkForUpdates: () => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_CHECK),
   downloadUpdate: () => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_DOWNLOAD),
   installDownloadedUpdate: () => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_INSTALL),
+  getRuntimeState: () => ipcRenderer.invoke(IPC_CHANNELS.RUNTIME_GET_STATE),
+  setRuntimeManualPaused: (paused) => ipcRenderer.invoke(IPC_CHANNELS.RUNTIME_SET_MANUAL_PAUSED, paused),
+  getRuntimeMetrics: () => ipcRenderer.invoke(IPC_CHANNELS.RUNTIME_GET_METRICS),
   onMenuCommand: (handler) => {
     const listener = (_event: Electron.IpcRendererEvent, command: MenuCommand) => {
       handler(command);
@@ -162,6 +167,15 @@ const api: ProjectDApi = {
     ipcRenderer.on(IPC_CHANNELS.UPDATE_STATUS_CHANGED, listener);
     return () => {
       ipcRenderer.off(IPC_CHANNELS.UPDATE_STATUS_CHANGED, listener);
+    };
+  },
+  onRuntimeStateChanged: (handler) => {
+    const listener = (_event: Electron.IpcRendererEvent, state: Parameters<typeof handler>[0]) => {
+      handler(state);
+    };
+    ipcRenderer.on(IPC_CHANNELS.RUNTIME_STATE_CHANGED, listener);
+    return () => {
+      ipcRenderer.off(IPC_CHANNELS.RUNTIME_STATE_CHANGED, listener);
     };
   }
 };

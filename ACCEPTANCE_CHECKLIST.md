@@ -606,3 +606,24 @@
 - [x] Run keys, Startup folders, and scheduled tasks contain no hidden Project D launch entry.
 - [x] User data remains in `%APPDATA%\Project D` and is not overwritten by the E-drive deployment synchronization.
 - [ ] A signed clean-account installer replaces the current manual E-drive deployment for external distribution.
+
+## Stage 38 V3 Runtime And Evidence
+
+- [x] One runtime arbiter composes manual, fullscreen, lock, suspend, thermal, battery, and quality inputs.
+- [x] Video, Pixi, Canvas, weather animation, and refresh pause and resume together.
+- [x] Fullscreen detection uses one disposable helper instead of repeated PowerShell/WMI launches.
+- [x] Login startup and automatic desktop activation are separate settings.
+- [x] Per-display wallpaper assignments persist and safely fall back to the global wallpaper.
+- [x] Runtime process metrics persist in bounded storage and appear in Recovery Center.
+- [x] Wallpaper preload caching is bounded with LRU eviction.
+- [x] Soak tooling emits JSON/CSV CPU, memory, process, pause, profile, and machine evidence.
+- [x] Stress short test exits cleanly with zero errors.
+- [x] Static idle CPU is below the 1% median and 3% P95 reference thresholds on this laptop.
+- [x] Asset ledger covers all 12 bundled wallpapers and verifies SHA-256 values.
+- [x] GitHub quality workflow includes test, typecheck, build, audit, secret scan, SBOM, and evidence upload.
+- [x] Official npm audit reports no known vulnerabilities and Builder still packages successfully.
+- [x] Final NSIS package and packaged-runtime verification pass.
+- [ ] Four-hour interactive and 24-hour idle reports pass with sufficient memory evidence.
+- [ ] Physical multi-monitor, DPI, GPU, sleep/wake, and Windows 10/11 matrix is recorded.
+- [ ] Every wallpaper has approved commercial license evidence.
+- [ ] Installer, uninstaller, and update package have valid timestamped Authenticode signatures.

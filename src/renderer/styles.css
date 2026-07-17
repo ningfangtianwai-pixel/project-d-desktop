@@ -180,6 +180,12 @@ button {
   --weather-intensity: 0.55;
 }
 
+.wallpaper-stage[data-runtime-paused="true"] .real-weather-layer *,
+.wallpaper-stage[data-runtime-paused="true"] .real-weather-layer *::before,
+.wallpaper-stage[data-runtime-paused="true"] .real-weather-layer *::after {
+  animation-play-state: paused !important;
+}
+
 .weather-fog,
 .weather-leaves,
 .weather-light {

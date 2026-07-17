@@ -52,7 +52,12 @@ const sectionRules: Record<string, Record<string, Rule>> = {
   }
 };
 
-const writableStateKeys = new Set(["auto_activate_on_start", "performance_mode"]);
+const writableStateKeys = new Set([
+  "auto_activate_on_start",
+  "launch_at_login",
+  "cover_all_displays",
+  "performance_mode"
+]);
 
 export function validateSettingsPatch(input: unknown): SettingsPatch {
   if (!isPlainObject(input)) throw new Error("Invalid settings patch");

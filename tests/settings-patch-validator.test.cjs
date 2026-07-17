@@ -6,7 +6,12 @@ test("settings validator accepts the bounded settings-page payload", () => {
   const patch = {
     weather: { mode: "auto", particleIntensity: 0.8, apiKey: "" },
     ai: { provider: "deepseek", apiEndpoint: "https://api.deepseek.com", maxTokens: 300, enabled: true },
-    appState: { auto_activate_on_start: "true", performance_mode: "balanced" }
+    appState: {
+      auto_activate_on_start: "true",
+      launch_at_login: "true",
+      cover_all_displays: "true",
+      performance_mode: "balanced"
+    }
   };
   assert.deepEqual(validateSettingsPatch(patch), patch);
 });

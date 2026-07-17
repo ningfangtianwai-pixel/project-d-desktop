@@ -1,6 +1,8 @@
 import type { MenuCommand } from "./ipc.js";
 import type { AutoRule, AutoRuleExecution } from "./auto-rules.js";
 import type { ContainerAccent } from "./container-accents.js";
+import type { RuntimePauseSnapshot } from "./runtime.js";
+import type { RuntimeMetricsReport } from "./runtime.js";
 
 export type DesktopMode = "idle" | "activating" | "active" | "deactivating" | "safe-mode" | "error";
 
@@ -143,6 +145,15 @@ export interface WallpaperLibraryItem {
   type: "image" | "video";
   file: string;
   aliases: string[];
+}
+
+export interface WallpaperDisplayInfo {
+  id: string;
+  label: string;
+  isPrimary: boolean;
+  bounds: { x: number; y: number; width: number; height: number };
+  scaleFactor: number;
+  wallpaperId: string | null;
 }
 
 export interface CurrentWeather {
@@ -502,6 +513,8 @@ export interface ProjectDApi {
   updateSettings: (patch: SettingsPatch) => Promise<SettingsSnapshot>;
   getWallpaperLibrary: () => Promise<WallpaperLibraryItem[]>;
   applyWallpaper: (wallpaperId: string) => Promise<SettingsSnapshot>;
+  getWallpaperDisplays: () => Promise<WallpaperDisplayInfo[]>;
+  assignWallpaperToDisplay: (displayId: string, wallpaperId: string | null) => Promise<WallpaperDisplayInfo[]>;
   getCurrentWeather: () => Promise<CurrentWeather>;
   sendChatMessage: (content: string) => Promise<ChatResponse>;
   getChatHistory: () => Promise<ChatMessage[]>;
@@ -528,6 +541,9 @@ export interface ProjectDApi {
   checkForUpdates: () => Promise<import("./update.js").UpdateStatus>;
   downloadUpdate: () => Promise<import("./update.js").UpdateStatus>;
   installDownloadedUpdate: () => Promise<void>;
+  getRuntimeState: () => Promise<RuntimePauseSnapshot>;
+  setRuntimeManualPaused: (paused: boolean) => Promise<RuntimePauseSnapshot>;
+  getRuntimeMetrics: () => Promise<RuntimeMetricsReport>;
   onMenuCommand: (handler: (command: MenuCommand) => void) => () => void;
   onDesktopFilesUpdated: (handler: () => void) => () => void;
   onPortalsUpdated: (handler: () => void) => () => void;
@@ -535,4 +551,5 @@ export interface ProjectDApi {
   onFocusWorkspaceSearch: (handler: () => void) => () => void;
   onSettingsUpdated: (handler: () => void) => () => void;
   onUpdateStatusChanged: (handler: (status: import("./update.js").UpdateStatus) => void) => () => void;
+  onRuntimeStateChanged: (handler: (state: RuntimePauseSnapshot) => void) => () => void;
 }

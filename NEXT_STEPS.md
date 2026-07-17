@@ -110,3 +110,12 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 2. Add a visible build identifier to diagnostics and the About/Recovery view so support can distinguish stale deployments without filesystem forensics.
 3. Repeat the Stage 37 real-shortcut launch, duplicate-launch, and emergency-recovery checks after every wallpaper-host or packaging change.
 4. Keep full-screen machine captures with personal filenames in ignored QA artifacts; publish only redacted or app-cropped evidence.
+
+## After Stage 38
+
+1. Run `pnpm qa:soak:4h` and `pnpm qa:soak:24h`; retain JSON and CSV reports. Short runs do not close the memory-growth gate.
+2. Execute the physical Windows/GPU/display/DPI matrix, including hot-plug, 20 sleep/resume cycles, and 50 display transitions.
+3. Supply Authenticode signing credentials and a timestamp service; require signature status `Valid` before external distribution.
+4. Replace each `pending-evidence` asset-ledger entry with license snapshots and proof hashes; the commercial asset gate must pass.
+5. Configure the real HTTPS update service and execute N-2/N-1, corrupt package, disconnect, disk-full, and migration rollback drills.
+6. Keep payment, account, order, and entitlement work paused as requested.

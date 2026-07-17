@@ -33,15 +33,20 @@ import { inspectInterruptedAction } from "./actions/action-recovery.js";
 import { runWithDeadline } from "./shutdown-deadline.js";
 import { isMostlyWhiteBitmap, WindowResilienceSupervisor, type RendererRecoveryEvent, type WindowRole } from "./window-resilience.js";
 import { UpdateService, validateUpdateFeedUrl } from "./update-service.js";
+import { PauseArbiter } from "./pause-arbiter.js";
+import { RuntimeMetricsService } from "./runtime-metrics.js";
 import { IPC_CHANNELS, MENU_COMMANDS, type MenuCommand } from "../shared/ipc.js";
 import { registerAllIpcHandlers, type ServiceDeps } from "./ipc/register-all.js";
 import { WALLPAPER_LIBRARY } from "../shared/wallpaper-library.js";
-import type { ActionExecution, DesktopStatus, InterruptedActionRecovery, PetWindowBounds, PrivacyNetworkState, RecoveryHealthCode, RecoverySystemStatus, SettingsPatch, SettingsSnapshot, SuggestionDeliveryControls, SuggestionPolicy, SuggestionRecord, SupportDiagnosticsReport, WorkspaceSearchResult } from "../shared/types.js";
+import type { ActionExecution, DesktopStatus, InterruptedActionRecovery, PetWindowBounds, PrivacyNetworkState, RecoveryHealthCode, RecoverySystemStatus, SettingsPatch, SettingsSnapshot, SuggestionDeliveryControls, SuggestionPolicy, SuggestionRecord, SupportDiagnosticsReport, WallpaperDisplayInfo, WorkspaceSearchResult } from "../shared/types.js";
 import type { UpdateStatus } from "../shared/update.js";
+import type { PerformanceMode, RuntimePauseSnapshot, ThermalState } from "../shared/runtime.js";
 
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
 const SAFE_RENDERER_ARG = "--projectd-safe-renderer";
+const START_HIDDEN_ARG = "--projectd-start-hidden";
 const safeRendererMode = process.argv.includes(SAFE_RENDERER_ARG);
+const startHidden = process.argv.includes(START_HIDDEN_ARG);
 if (safeRendererMode) app.disableHardwareAcceleration();
 
 let mainWindow: BrowserWindow | null = null;
@@ -76,6 +81,8 @@ let suggestionEngine: SuggestionEngine | null = null;
 let runtimeRecovery: DesktopRuntimeRecovery | null = null;
 let explorerMonitor: ExplorerProcessMonitor | null = null;
 let updateService: UpdateService | null = null;
+let runtimePresenceTimer: NodeJS.Timeout | null = null;
+let runtimeMetricsService: RuntimeMetricsService | null = null;
 let suggestionEvaluationQueue: Promise<void> = Promise.resolve();
 let interruptedActionRecoveries: InterruptedActionRecovery[] = [];
 const approvedPortalSelections = new Map<string, number>();
@@ -84,7 +91,8 @@ let rendererRestartScheduled = false;
 let onboardingActive = false;
 const fileIconCache = new Map<string, string | null>();
 const diagnosticsService = new DiagnosticsService();
-const systemPresenceMonitor = new SystemPresenceMonitor();
+const systemPresenceMonitor = new SystemPresenceMonitor(undefined, 1_800);
+const pauseArbiter = new PauseArbiter({}, handleRuntimeStateChanged);
 const searchResultRegistry = new SearchResultRegistry();
 const wallpaperAttachQueue = new WallpaperAttachQueue();
 let desktopStatus: DesktopStatus = {
@@ -221,10 +229,15 @@ function rendererUrl(route = ""): string {
 
 function loadRendererWindow(window: BrowserWindow, route: string, role: WindowRole): void {
   void window.loadURL(rendererUrl(route)).catch((error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes("ERR_ABORTED")) {
+      logger?.info("app", "renderer navigation superseded", { role, route });
+      return;
+    }
     logger?.error("error", "renderer load promise rejected", {
       role,
       route,
-      message: error instanceof Error ? error.message : String(error)
+      message
     });
   });
 }
@@ -337,7 +350,7 @@ function createWindow(): BrowserWindow {
   loadRendererWindow(window, "", "main");
 
   window.once("ready-to-show", () => {
-    window.show();
+    if (!startHidden) window.show();
   });
 
   window.on("closed", () => {
@@ -514,6 +527,35 @@ function createWallpaperWindow(): BrowserWindow {
   return wallpaperWindow;
 }
 
+function getWallpaperDisplays(): WallpaperDisplayInfo[] {
+  const primaryId = String(screen.getPrimaryDisplay().id);
+  const assignments = database?.getDisplayWallpaperAssignments() ?? {};
+  return screen.getAllDisplays().map((display, index) => {
+    const id = String(display.id);
+    return {
+      id,
+      label: display.label || `显示器 ${index + 1}`,
+      isPrimary: id === primaryId,
+      bounds: { ...display.bounds },
+      scaleFactor: display.scaleFactor,
+      wallpaperId: assignments[id] ?? null
+    };
+  });
+}
+
+function assignWallpaperToDisplay(displayId: string, wallpaperId: string | null): WallpaperDisplayInfo[] {
+  if (!database) throw new Error("Database is not initialized");
+  if (!screen.getAllDisplays().some((display) => String(display.id) === displayId)) {
+    throw new Error("Display is not available");
+  }
+  if (wallpaperId && !WALLPAPER_LIBRARY.some((item) => item.id === wallpaperId)) {
+    throw new Error("Wallpaper is not available");
+  }
+  database.setDisplayWallpaperAssignment(displayId, wallpaperId);
+  broadcastSettingsUpdated();
+  return getWallpaperDisplays();
+}
+
 function createWallpaperWindowForDisplay(displayId: string, bounds: Electron.Rectangle): BrowserWindow {
   const window = new BrowserWindow({
     x: bounds.x,
@@ -639,7 +681,7 @@ function createWallpaperWindowForDisplay(displayId: string, bounds: Electron.Rec
     logger?.info("app", "wallpaper window destroyed", { displayId });
   });
 
-  loadRendererWindow(window, "#/wallpaper", "wallpaper");
+  loadRendererWindow(window, `?displayId=${encodeURIComponent(displayId)}#/wallpaper`, "wallpaper");
   logger?.info("app", "wallpaper window created", { displayId, bounds });
   return window;
 }
@@ -997,30 +1039,48 @@ function registerWallpaperRepairTriggers(): void {
     }, delayMs).unref?.();
   };
   screen.on("display-added", () => {
+    if (database?.getSettings().wallpaper.isDynamic) createWallpaperWindow();
     runtimeRecovery?.request("display-added");
     requestRendererProbe("display-added", 650);
   });
   screen.on("display-removed", () => {
+    if (database?.getSettings().wallpaper.isDynamic) createWallpaperWindow();
     runtimeRecovery?.request("display-removed");
     requestRendererProbe("display-removed", 650);
   });
   screen.on("display-metrics-changed", () => {
+    if (database?.getSettings().wallpaper.isDynamic) createWallpaperWindow();
     runtimeRecovery?.request("display-metrics-changed");
     requestRendererProbe("display-metrics-changed", 650);
   });
-  powerMonitor.on("suspend", () => runtimeRecovery?.suspend("system-suspend"));
+  powerMonitor.on("suspend", () => {
+    pauseArbiter.update({ suspended: true });
+    runtimeRecovery?.suspend("system-suspend");
+  });
   powerMonitor.on("resume", () => {
+    pauseArbiter.update({ suspended: false });
     setTimeout(() => runtimeRecovery?.resume("system-resume"), 800).unref?.();
     requestRendererProbe("system-resume", 1_800);
   });
-  powerMonitor.on("lock-screen", () => runtimeRecovery?.suspend("screen-locked"));
+  powerMonitor.on("lock-screen", () => {
+    pauseArbiter.update({ screenLocked: true });
+    runtimeRecovery?.suspend("screen-locked");
+  });
   powerMonitor.on("unlock-screen", () => {
+    pauseArbiter.update({ screenLocked: false });
     setTimeout(() => runtimeRecovery?.resume("screen-unlocked"), 350).unref?.();
     requestRendererProbe("screen-unlocked", 900);
+  });
+  powerMonitor.on("on-battery", () => pauseArbiter.update({ onBattery: true }));
+  powerMonitor.on("on-ac", () => pauseArbiter.update({ onBattery: false }));
+  powerMonitor.on("thermal-state-change", (details) => {
+    pauseArbiter.update({ thermalState: details.state as ThermalState });
   });
 }
 
 function syncWindowsFromSettings(settings: SettingsSnapshot): void {
+  pauseArbiter.update({ configuredMode: readPerformanceMode() });
+  syncLaunchAtLogin();
   if (settings.pet.isVisible) {
     createPetWindow();
     resizePetWindowForScale(settings.pet.scale);
@@ -1033,6 +1093,90 @@ function syncWindowsFromSettings(settings: SettingsSnapshot): void {
   } else {
     closeWallpaperWindow();
   }
+}
+
+function readPerformanceMode(): PerformanceMode {
+  const value = database?.getAppState("performance_mode");
+  return value === "quality" || value === "balanced" || value === "batterySaver" ? value : "auto";
+}
+
+function handleRuntimeStateChanged(snapshot: RuntimePauseSnapshot): void {
+  database?.setAppState("runtime_manual_paused", snapshot.manual ? "true" : "false");
+  database?.setAppState("runtime_effective_profile", snapshot.effectiveProfile);
+  database?.setAppState("runtime_pause_snapshot", JSON.stringify(snapshot));
+  logger?.info("desktop-state", "runtime pause state changed", {
+    paused: snapshot.paused,
+    reasons: snapshot.reasons,
+    effectiveProfile: snapshot.effectiveProfile,
+    onBattery: snapshot.onBattery,
+    batteryLevel: snapshot.batteryLevel
+  });
+  for (const window of BrowserWindow.getAllWindows()) {
+    if (!window.isDestroyed()) window.webContents.send(IPC_CHANNELS.RUNTIME_STATE_CHANGED, snapshot);
+  }
+}
+
+function setRuntimeManualPaused(paused: boolean): RuntimePauseSnapshot {
+  return pauseArbiter.update({ manual: paused });
+}
+
+function startRuntimePresenceMonitor(): void {
+  if (runtimePresenceTimer) return;
+  const poll = async () => {
+    if (shutdownInProgress) return;
+    const presence = await systemPresenceMonitor.getState();
+    pauseArbiter.update({
+      externalFullscreen: presence.externalFullscreen,
+      onBattery: presence.onBattery,
+      batteryLevel: presence.batteryLevel
+    });
+  };
+  void poll();
+  runtimePresenceTimer = setInterval(() => void poll(), 2_000);
+  runtimePresenceTimer.unref?.();
+}
+
+function stopRuntimePresenceMonitor(): void {
+  if (!runtimePresenceTimer) return;
+  clearInterval(runtimePresenceTimer);
+  runtimePresenceTimer = null;
+  systemPresenceMonitor.dispose();
+}
+
+function syncLaunchAtLogin(): void {
+  const enabled = database?.getAppState("launch_at_login") === "true";
+  if (!app.isPackaged) return;
+  const current = app.getLoginItemSettings({ path: process.execPath, args: [START_HIDDEN_ARG] });
+  if (current.openAtLogin === enabled) return;
+  app.setLoginItemSettings({ openAtLogin: enabled, path: process.execPath, args: [START_HIDDEN_ARG] });
+  logger?.info("app", "login startup preference applied", { enabled });
+}
+
+function createRuntimeMetricsService(): RuntimeMetricsService {
+  return new RuntimeMetricsService({
+    sampleProcesses: () => app.getAppMetrics().map((metric) => ({
+      source: metric.type === "Browser"
+        ? "main"
+        : metric.type === "GPU"
+          ? "gpu"
+          : metric.type === "Tab" || metric.type === "Utility"
+            ? metric.type === "Tab" ? "renderer" : "utility"
+            : "other",
+      processId: metric.pid,
+      cpuPercent: metric.cpu.percentCPUUsage,
+      workingSetBytes: metric.memory.workingSetSize * 1024
+    })),
+    getRuntimeState: () => pauseArbiter.snapshot,
+    persistBatch: (samples) => {
+      try {
+        database?.appendRuntimeMetrics(samples);
+      } catch (error) {
+        logger?.warn("app", "runtime metrics batch could not be persisted", {
+          message: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
+  });
 }
 
 async function emergencyRestoreDesktop(reason: string): Promise<void> {
@@ -1582,6 +1726,18 @@ function createTray(): Tray {
         closeWallpaperWindow();
       }
     },
+    {
+      label: "暂停动态效果",
+      click: () => {
+        setRuntimeManualPaused(true);
+      }
+    },
+    {
+      label: "继续动态效果",
+      click: () => {
+        setRuntimeManualPaused(false);
+      }
+    },
     { type: "separator" },
     {
       label: "显示桌宠",
@@ -1909,7 +2065,16 @@ function buildIpcDeps(): ServiceDeps {
     setPrivacyNetworkPaused: updatePrivacyNetworkPaused,
     getRecoverySystemStatus,
     setPeekShortcut,
-    updateService
+    updateService,
+    getRuntimeState: () => pauseArbiter.snapshot,
+    setRuntimeManualPaused,
+    getRuntimeMetrics: () => runtimeMetricsService?.report() ?? {
+      generatedAt: new Date().toISOString(), sampleCount: 0, windowMinutes: 0,
+      cpuMedianPercent: 0, cpuP95Percent: 0, peakWorkingSetBytes: 0,
+      memoryGrowthPercent: 0, pausedSampleCount: 0, samples: []
+    },
+    getWallpaperDisplays,
+    assignWallpaperToDisplay
   };
 }
 
@@ -1972,6 +2137,18 @@ async function initializeCoreServices(): Promise<void> {
 
   database = new DatabaseService(logger);
   const status = await database.initialize();
+  if (!app.isPackaged && process.env.PROJECTD_QA_IDLE === "1") {
+    database.updateSettings({ wallpaper: { isDynamic: false }, pet: { isVisible: false } });
+  }
+  database.syncMediaAssets(WALLPAPER_LIBRARY);
+  runtimeMetricsService = createRuntimeMetricsService();
+  runtimeMetricsService.start();
+  pauseArbiter.update({
+    manual: database.getAppState("runtime_manual_paused") === "true",
+    configuredMode: readPerformanceMode(),
+    onBattery: powerMonitor.isOnBatteryPower()
+  });
+  syncLaunchAtLogin();
   updateService = new UpdateService({
     updater: autoUpdater,
     currentVersion: app.getVersion(),
@@ -2161,6 +2338,14 @@ async function shutdownSafely(): Promise<void> {
       }
       await fileScanner?.stopWatching();
       portalWatcher?.stop();
+      stopRuntimePresenceMonitor();
+      runtimeMetricsService?.stop();
+      const qaMetricsPath = process.env.PROJECTD_QA_METRICS_PATH;
+      if (runtimeMetricsService && qaMetricsPath) {
+        fs.mkdirSync(path.dirname(qaMetricsPath), { recursive: true });
+        fs.writeFileSync(qaMetricsPath, JSON.stringify(runtimeMetricsService.report(), null, 2), "utf8");
+      }
+      runtimeMetricsService = null;
       runtimeRecovery?.stop();
       runtimeRecovery = null;
       explorerMonitor?.stop();
@@ -2178,12 +2363,12 @@ async function shutdownSafely(): Promise<void> {
     }, 8_000, () => {
       writeBootstrapLog("shutdown deadline exceeded", { timeoutMs: 8_000 });
       logger?.error("error", "shutdown deadline exceeded; forcing process exit", { timeoutMs: 8_000 });
-      app.exit(1);
+      process.exit(1);
     });
 
     if (result === "completed") {
       writeBootstrapLog("shutdown completed");
-      app.exit(0);
+      process.exit(0);
     }
   } catch (error) {
     writeBootstrapLog("shutdown cleanup failed", {
@@ -2192,7 +2377,7 @@ async function shutdownSafely(): Promise<void> {
     logger?.error("error", "shutdown cleanup failed; forcing process exit", {
       message: error instanceof Error ? error.message : String(error)
     });
-    app.exit(1);
+    process.exit(1);
   }
 }
 
@@ -2247,6 +2432,7 @@ if (!singleInstanceLock) {
 
       await initializeCoreServices();
       registerWallpaperRepairTriggers();
+      startRuntimePresenceMonitor();
       registerIpc();
 
       tray = createTray();

@@ -28,7 +28,8 @@ import {
   WifiOff
 } from "lucide-vue-next";
 import { resetOnboarding } from "@shared/onboarding";
-import type { ActionExecution, AppInfo, ContainerRecord, CurrentWeather, InterruptedActionRecovery, LayoutRecord, PortalConfig, PortalResource, PrivacyNetworkState, RecoverySystemStatus, SettingsSnapshot, SuggestionDeliveryControls, SupportDiagnosticsReport, WallpaperLibraryItem, WorkspaceScene } from "@shared/types";
+import type { ActionExecution, AppInfo, ContainerRecord, CurrentWeather, InterruptedActionRecovery, LayoutRecord, PortalConfig, PortalResource, PrivacyNetworkState, RecoverySystemStatus, SettingsSnapshot, SuggestionDeliveryControls, SupportDiagnosticsReport, WallpaperDisplayInfo, WallpaperLibraryItem, WorkspaceScene } from "@shared/types";
+import type { RuntimeMetricsReport, RuntimePauseSnapshot } from "@shared/runtime";
 import type { UpdateChannel, UpdateStatus } from "@shared/update";
 import type { AutoRule, AutoRuleAction, AutoRuleCondition, AutoRuleExecution } from "@shared/auto-rules";
 import { PET_PERSONALITIES } from "@shared/pet-behavior";
@@ -64,6 +65,7 @@ const ruleValue = ref(".pdf");
 const ruleActionType = ref<AutoRuleAction["type"]>("move-to-container");
 const ruleActionTarget = ref("");
 const wallpaperLibrary = ref<WallpaperLibraryItem[]>([]);
+const wallpaperDisplays = ref<WallpaperDisplayInfo[]>([]);
 const currentWeather = ref<CurrentWeather | null>(null);
 const wallpaperHost = ref("unknown");
 const weatherLocationSource = ref("unknown");
@@ -84,6 +86,7 @@ const privacyNetwork = ref<PrivacyNetworkState>({ paused: false, changedAt: null
 const recoverySystemStatus = ref<RecoverySystemStatus | null>(null);
 let unsubscribePortals: (() => void) | null = null;
 let unsubscribeUpdateStatus: (() => void) | null = null;
+let unsubscribeRuntimeState: (() => void) | null = null;
 
 const peekShortcut = ref("Control+Alt+Space");
 const peekShortcutRecording = ref(false);
@@ -160,8 +163,26 @@ async function confirmPeekShortcut(accelerator: string): Promise<void> {
 }
 
 const autoActivate = ref(false);
+const launchAtLogin = ref(false);
 const coverAllDisplays = ref(false);
 const performanceMode = ref("auto");
+const runtimeState = ref<RuntimePauseSnapshot | null>(null);
+const runtimeMetrics = ref<RuntimeMetricsReport | null>(null);
+const runtimePauseDetail = computed(() => {
+  if (!runtimeState.value?.paused) return `运行中 · ${runtimeState.value?.effectiveProfile ?? "balanced"}`;
+  const labels: Record<string, string> = {
+    manual: "手动暂停",
+    "external-fullscreen": "全屏应用",
+    "screen-locked": "屏幕锁定",
+    "system-suspend": "系统休眠",
+    "thermal-critical": "设备过热"
+  };
+  return runtimeState.value.reasons.map((reason) => labels[reason] ?? reason).join("、");
+});
+
+async function setManualRuntimePause(paused: boolean): Promise<void> {
+  runtimeState.value = await window.projectD.setRuntimeManualPaused(paused);
+}
 const particleIntensity = ref(55);
 const petEnabled = ref(true);
 const petPersonality = ref("gentle");
@@ -248,8 +269,9 @@ const recoverySystemItems = computed(() => {
 });
 
 async function loadSettings(): Promise<void> {
-  const [nextLibrary, nextSettings, nextLayouts, nextContainers, nextAutoRules, nextAppInfo, nextHost, nextLocationSource, nextRecoveryPath, nextPerformance, nextAutoActivate, nextCoverAllDisplays, nextPortals, nextScenes, nextActionHistory, nextInterruptedRecoveries, nextSuggestionDelivery, nextPrivacyNetwork, nextRecoverySystemStatus, nextUpdateStatus] = await Promise.all([
+  const [nextLibrary, nextDisplays, nextSettings, nextLayouts, nextContainers, nextAutoRules, nextAppInfo, nextHost, nextLocationSource, nextRecoveryPath, nextPerformance, nextAutoActivate, nextLaunchAtLogin, nextCoverAllDisplays, nextRuntimeState, nextPortals, nextScenes, nextActionHistory, nextInterruptedRecoveries, nextSuggestionDelivery, nextPrivacyNetwork, nextRecoverySystemStatus, nextUpdateStatus] = await Promise.all([
     window.projectD.getWallpaperLibrary(),
+    window.projectD.getWallpaperDisplays(),
     window.projectD.getSettings(),
     window.projectD.getLayouts(),
     window.projectD.getContainers(),
@@ -260,7 +282,9 @@ async function loadSettings(): Promise<void> {
     window.projectD.getState("recovery_script_path").catch(() => null),
     window.projectD.getState("performance_mode").catch(() => null),
     window.projectD.getState("auto_activate_on_start").catch(() => null),
+    window.projectD.getState("launch_at_login").catch(() => null),
     window.projectD.getState("cover_all_displays").catch(() => null),
+    window.projectD.getRuntimeState(),
     window.projectD.getFolderPortals(),
     window.projectD.getWorkspaceScenes(),
     window.projectD.getActionHistory(),
@@ -272,6 +296,7 @@ async function loadSettings(): Promise<void> {
   ]);
 
   wallpaperLibrary.value = nextLibrary;
+  wallpaperDisplays.value = nextDisplays;
   settings.value = nextSettings;
   layouts.value = nextLayouts;
   containers.value = nextContainers;
@@ -286,7 +311,9 @@ async function loadSettings(): Promise<void> {
   updateStatus.value = nextUpdateStatus;
   performanceMode.value = nextPerformance ?? "auto";
   autoActivate.value = nextAutoActivate === "true";
+  launchAtLogin.value = nextLaunchAtLogin === "true";
   coverAllDisplays.value = nextCoverAllDisplays === "true";
+  runtimeState.value = nextRuntimeState;
   portals.value = nextPortals;
   scenes.value = nextScenes;
   actionHistory.value = nextActionHistory;
@@ -316,6 +343,7 @@ async function loadSettings(): Promise<void> {
   aiApiKey.value = "";
   saveStatus.value = "设置已载入";
   peekShortcut.value = (await window.projectD.getState("shortcut_peek")) ?? "Control+Alt+Space";
+  runtimeMetrics.value = await window.projectD.getRuntimeMetrics().catch(() => null);
 
   try {
     currentWeather.value = await window.projectD.getCurrentWeather();
@@ -337,11 +365,15 @@ onMounted(() => {
   unsubscribeUpdateStatus = window.projectD.onUpdateStatusChanged((status) => {
     updateStatus.value = status;
   });
+  unsubscribeRuntimeState = window.projectD.onRuntimeStateChanged((state) => {
+    runtimeState.value = state;
+  });
 });
 
 onUnmounted(() => {
   unsubscribePortals?.();
   unsubscribeUpdateStatus?.();
+  unsubscribeRuntimeState?.();
   document.documentElement.classList.remove("settings-window-root");
   document.body.classList.remove("settings-window-body");
 });
@@ -683,6 +715,11 @@ async function applySelectedWallpaper(): Promise<void> {
   saveStatus.value = "壁纸已应用";
 }
 
+async function assignWallpaper(displayId: string, wallpaperId: string): Promise<void> {
+  wallpaperDisplays.value = await window.projectD.assignWallpaperToDisplay(displayId, wallpaperId || null);
+  saveStatus.value = "显示器壁纸已更新";
+}
+
 function selectWallpaper(wallpaperId: string): void {
   selectedWallpaperId.value = wallpaperId;
   wallpaperStyle.value = "user";
@@ -728,6 +765,7 @@ async function saveSettings(): Promise<void> {
     },
     appState: {
       auto_activate_on_start: autoActivate.value ? "true" : "false",
+      launch_at_login: launchAtLogin.value ? "true" : "false",
       cover_all_displays: coverAllDisplays.value ? "true" : "false",
       performance_mode: performanceMode.value
     }
@@ -785,6 +823,10 @@ async function saveSettings(): Promise<void> {
               <input v-model="autoActivate" class="switch-input" type="checkbox" />
             </label>
             <label class="setting-row">
+              <span><strong>登录后启动</strong><small>在后台启动 Project D，不自动接管桌面</small></span>
+              <input v-model="launchAtLogin" class="switch-input" type="checkbox" />
+            </label>
+            <label class="setting-row">
               <span><strong>覆盖全部显示器</strong><small>主屏显示容器，其他屏显示壁纸与天气舞台</small></span>
               <input v-model="coverAllDisplays" class="switch-input" type="checkbox" />
             </label>
@@ -796,6 +838,15 @@ async function saveSettings(): Promise<void> {
                 <option value="balanced">平衡</option>
                 <option value="batterySaver">省电</option>
               </select>
+            </label>
+            <label class="setting-row">
+              <span><strong>动态效果</strong><small>{{ runtimePauseDetail }}</small></span>
+              <input
+                :checked="!runtimeState?.manual"
+                class="switch-input"
+                type="checkbox"
+                @change="setManualRuntimePause(!($event.target as HTMLInputElement).checked)"
+              />
             </label>
             <label class="setting-row">
               <span><strong>桌面整理建议</strong><small>{{ suggestionDelivery.disabled ? "已关闭" : suggestionDelivery.snoozedUntil ? "暂缓提醒" : "事件触发" }}</small></span>
@@ -1030,6 +1081,19 @@ async function saveSettings(): Promise<void> {
               ><span>{{ wallpaper.label }}</span></button>
             </div>
           </div>
+          <div v-if="wallpaperDisplays.length > 0" class="settings-group">
+            <h2>多显示器分配</h2>
+            <label v-for="display in wallpaperDisplays" :key="display.id" class="setting-row">
+              <span>
+                <strong>{{ display.label }}{{ display.isPrimary ? " · 主屏" : "" }}</strong>
+                <small>{{ display.bounds.width }} × {{ display.bounds.height }} · {{ Math.round(display.scaleFactor * 100) }}%</small>
+              </span>
+              <select :value="display.wallpaperId ?? ''" @change="assignWallpaper(display.id, ($event.target as HTMLSelectElement).value)">
+                <option value="">跟随全局壁纸</option>
+                <option v-for="wallpaper in wallpaperLibrary" :key="wallpaper.id" :value="wallpaper.id">{{ wallpaper.label }}</option>
+              </select>
+            </label>
+          </div>
         </section>
 
         <section v-else-if="activeTab === 'weather'" class="settings-pane">
@@ -1095,6 +1159,15 @@ async function saveSettings(): Promise<void> {
               <p v-if="recoverySystemItems.length === 0" class="runtime-line">正在读取系统状态。</p>
             </div>
             <p v-if="recoverySystemStatus" class="runtime-line">检测时间：{{ new Date(recoverySystemStatus.checkedAt).toLocaleString() }}</p>
+          </div>
+          <div class="settings-group">
+            <div class="group-heading"><div><h2>本机性能采样</h2><p class="runtime-line">仅保存在本机，不包含文件名、路径或聊天内容。</p></div></div>
+            <div class="recovery-system-grid">
+              <article data-status="ready"><span class="recovery-health-dot"></span><span><strong>CPU 中位数</strong><small>{{ (runtimeMetrics?.cpuMedianPercent ?? 0).toFixed(2) }}%</small></span></article>
+              <article data-status="ready"><span class="recovery-health-dot"></span><span><strong>CPU P95</strong><small>{{ (runtimeMetrics?.cpuP95Percent ?? 0).toFixed(2) }}%</small></span></article>
+              <article data-status="ready"><span class="recovery-health-dot"></span><span><strong>工作集峰值</strong><small>{{ ((runtimeMetrics?.peakWorkingSetBytes ?? 0) / 1024 / 1024).toFixed(1) }} MiB</small></span></article>
+              <article :data-status="Math.abs(runtimeMetrics?.memoryGrowthPercent ?? 0) <= 15 ? 'ready' : 'degraded'"><span class="recovery-health-dot"></span><span><strong>内存变化</strong><small>{{ (runtimeMetrics?.memoryGrowthPercent ?? 0).toFixed(1) }}% · {{ runtimeMetrics?.sampleCount ?? 0 }} 样本</small></span></article>
+            </div>
           </div>
           <div v-if="interruptedRecoveries.length > 0" class="settings-group">
             <div class="group-heading"><div><h2>中断动作检查</h2><p class="runtime-line">启动时只读检查完成；不会自动继续、覆盖或删除文件。</p></div></div>

@@ -1279,3 +1279,19 @@
 - Checked HKCU/HKLM Run keys, both Startup folders, and scheduled tasks; no automatic Project D launch entry was found.
 - Retargeted `D:\Desktop\Project D.lnk` to the canonical `release\win-unpacked` executable, cold-started from the updated shortcut, and reconfirmed one root process plus `attached: true` and `renderReady: true`.
 - Stored three full-screen QA captures under ignored `artifacts/qa/stage37-live` so personal desktop filenames are not published to the public repository.
+
+## 2026-07-17 Stage 38 V3 Non-Payment Delivery
+
+- Added PauseArbiter, trusted runtime IPC, Settings/tray controls, lifecycle events, media pause/resume, adaptive profiles, and a persistent low-overhead Windows presence helper.
+- Added database schema v5/v6 for media assets, per-display wallpaper assignments, and runtime metrics; backup-first migration and integrity checking remain active.
+- Added per-display wallpaper UI, hot-plug reconciliation, hidden login startup, bounded LRU caching, local performance reports, JSON/CSV soak evidence, and 4-hour/24-hour commands.
+- Added asset ledger verification and GitHub test/typecheck/build/audit/gitleaks/SBOM quality gates.
+- First stress run failed on expected `ERR_ABORTED` logging and WMI-distorted sampling; both root causes were fixed and the failed report retained.
+- Second run exposed Electron root-process shutdown hanging after cleanup. Final cleanup now uses `process.exit()` only after desktop restore, database close, and window/tray destruction.
+- Final stress run passed with clean exit and zero errors: `artifacts/qa/soak-2026-07-17T01-36-52-278Z`.
+- Final static-idle run passed with CPU average 0.44%, median 0.32%, P95 1.33%: `artifacts/qa/soak-2026-07-17T01-39-36-769Z`.
+- Official audit initially found old `tar`, `semver`, and `ejs`. Workspace overrides plus `@electron/rebuild 4.2.0` removed all known vulnerabilities while preserving packaging.
+- `pnpm verify:assets`: passed 12 assets. Commercial asset verification intentionally remains blocked until license evidence is supplied.
+- `pnpm test`: passed 120/120. `pnpm typecheck` and `pnpm build`: passed. `pnpm verify:packaged`: passed 33/33.
+- First dist attempt failed on a running release DLL lock. Restored `HideIcons=0`, stopped only Project D release processes, verified Explorer healthy, and rebuilt successfully.
+- Final installer: 226,421,090 bytes; SHA-256 `F53C92772E2BD7D2C4ECC3AF92CF26E8DFAA163E211B7C4BBB53DC4F00958265`; Authenticode `NotSigned`.

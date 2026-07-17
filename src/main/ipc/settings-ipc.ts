@@ -10,6 +10,7 @@ const READABLE_STATE_KEYS = new Set([
   "recovery_script_path",
   "performance_mode",
   "auto_activate_on_start",
+  "launch_at_login",
   "cover_all_displays",
   "shortcut_peek",
   "shortcut_peek_status",

@@ -66,6 +66,8 @@ export const IPC_CHANNELS = {
   SETTINGS_UPDATED: "settings:updated",
   WALLPAPER_LIBRARY_GET: "wallpaper:get-library",
   WALLPAPER_APPLY: "wallpaper:apply",
+  WALLPAPER_DISPLAYS_GET: "wallpaper:get-displays",
+  WALLPAPER_DISPLAY_ASSIGN: "wallpaper:assign-display",
   WEATHER_GET_CURRENT: "weather:get-current",
   AI_CHAT_SEND: "ai:chat-send",
   AI_CHAT_HISTORY: "ai:chat-history",
@@ -92,7 +94,11 @@ export const IPC_CHANNELS = {
   UPDATE_CHECK: "update:check",
   UPDATE_DOWNLOAD: "update:download",
   UPDATE_INSTALL: "update:install",
-  UPDATE_STATUS_CHANGED: "update:status-changed"
+  UPDATE_STATUS_CHANGED: "update:status-changed",
+  RUNTIME_GET_STATE: "runtime:get-state",
+  RUNTIME_SET_MANUAL_PAUSED: "runtime:set-manual-paused",
+  RUNTIME_STATE_CHANGED: "runtime:state-changed",
+  RUNTIME_GET_METRICS: "runtime:get-metrics"
 } as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];

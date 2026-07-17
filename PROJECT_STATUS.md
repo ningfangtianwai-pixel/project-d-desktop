@@ -867,3 +867,17 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Launched the same shortcut twice more in quick succession. Both secondary processes received `locked: false`; one main instance remained, so repeated double-clicks cannot create duplicate wallpaper hosts.
 - Invoked `Ctrl+Alt+Shift+Escape` against the deployed build. The wallpaper window was destroyed, 72 Explorer icons were visible, `HideIcons=0`, and desktop state returned to `idle`.
 - No Project D Run key, Startup shortcut, or scheduled task exists on this machine. The recurrence path was the manually opened stale desktop shortcut target.
+
+## Stage 38 - V3 Runtime, Performance And Release Evidence (Complete)
+
+- Implemented one PauseArbiter for manual pause, external fullscreen, lock, suspend, critical thermal state, battery state, and quality mode.
+- Video decoding, Pixi, Canvas, weather animations, and wallpaper refresh now pause and resume from the same runtime snapshot.
+- Replaced repeated PowerShell/WMI calls with one disposable Windows presence helper.
+- Separated hidden login startup from automatic desktop activation.
+- Added schema v5/v6 media assets, persistent per-display wallpaper assignments, and bounded runtime metrics.
+- Added per-display Settings UI, runtime controls, local performance evidence, and bounded LRU wallpaper caching.
+- Added a 12-asset SHA-256 ledger, commercial evidence gate, GitHub quality workflow, secret scan, dependency audit, and SBOM.
+- Stress and static-idle short runs both exit cleanly with zero error entries. Static idle CPU: average 0.44%, median 0.32%, P95 1.33%.
+- Verification: 120/120 tests, production build, zero known npm audit vulnerabilities, packaged runtime 33/33 modules, and NSIS packaging passed.
+- Installer: `release/ProjectD-0.1.0-Setup.exe`, 226,421,090 bytes, SHA-256 `F53C92772E2BD7D2C4ECC3AF92CF26E8DFAA163E211B7C4BBB53DC4F00958265`.
+- Commercial release remains blocked by unsigned binaries, pending wallpaper license evidence, physical hardware matrix, and four-hour/24-hour soak duration.

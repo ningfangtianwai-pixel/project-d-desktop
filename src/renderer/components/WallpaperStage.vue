@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { Application, Container, Graphics } from "pixi.js";
 import type { CurrentWeather, SettingsSnapshot, WallpaperLibraryItem } from "@shared/types";
 import { WallpaperPlayer, type WallpaperAsset } from "@shared/wallpaper-player";
+import type { RuntimePauseSnapshot } from "@shared/runtime";
 
 const host = ref<HTMLDivElement | null>(null);
 let app: Application | null = null;
@@ -12,13 +13,43 @@ let currentWeather: CurrentWeather | null = null;
 let wallpaperLibrary: WallpaperLibraryItem[] = [];
 let performanceMode = "auto";
 let fallbackFrame = 0;
+let fallbackRender: FrameRequestCallback | null = null;
 let runtimeTimer = 0;
 let wallpaperTransitionTimer = 0;
 let unsubscribeSettingsUpdated: (() => void) | null = null;
+let unsubscribeRuntimeState: (() => void) | null = null;
 const wallpaperLayers = ref<Array<WallpaperAsset & { active: boolean }>>([]);
 const weatherMode = ref<WeatherVisualMode>("clear");
 const weatherIntensity = ref(0.55);
 const performanceProfile = ref("auto");
+const runtimePaused = ref(false);
+
+async function syncMediaPlayback(): Promise<void> {
+  await nextTick();
+  const videos = host.value?.querySelectorAll<HTMLVideoElement>(".wallpaper-bg-video") ?? [];
+  for (const video of videos) {
+    const shouldPlay = !runtimePaused.value && video.classList.contains("is-active");
+    if (!shouldPlay) {
+      video.pause();
+      continue;
+    }
+    void video.play().catch(() => undefined);
+  }
+}
+
+function applyRuntimeState(state: RuntimePauseSnapshot): void {
+  runtimePaused.value = state.paused;
+  performanceMode = state.effectiveProfile;
+  performanceProfile.value = state.effectiveProfile;
+  if (host.value) host.value.dataset.runtimePaused = String(state.paused);
+  if (state.paused) {
+    app?.ticker.stop();
+  } else {
+    app?.ticker.start();
+    if (fallbackRender && !fallbackFrame) fallbackFrame = requestAnimationFrame(fallbackRender);
+  }
+  void syncMediaPlayback();
+}
 
 function loadBrowserWallpaper(asset: WallpaperAsset): Promise<void> {
   if (asset.type === "image") {
@@ -81,10 +112,12 @@ async function selectWallpaper(item: WallpaperLibraryItem): Promise<void> {
     ];
     wallpaperTransitionTimer = window.setTimeout(() => {
       wallpaperLayers.value = result.current ? [{ ...result.current, active: true }] : [];
+      void syncMediaPlayback();
     }, 900);
   } else if (wallpaperLayers.value.length === 0) {
     wallpaperLayers.value = [{ ...result.current, active: true }];
   }
+  void syncMediaPlayback();
 
   const currentIndex = wallpaperLibrary.findIndex((wallpaper) => wallpaper.id === item.id);
   const next = wallpaperLibrary[(currentIndex + 1) % wallpaperLibrary.length];
@@ -237,17 +270,17 @@ function currentWeatherMode(): WeatherVisualMode {
 }
 
 async function refreshRuntime(): Promise<void> {
-  const [nextSettings, nextWeather, nextLibrary, nextPerformanceMode] = await Promise.all([
+  const [nextSettings, nextWeather, nextLibrary, nextRuntimeState, nextDisplays] = await Promise.all([
     window.projectD.getSettings(),
     window.projectD.getCurrentWeather(),
     window.projectD.getWallpaperLibrary(),
-    window.projectD.getState("performance_mode")
+    window.projectD.getRuntimeState(),
+    window.projectD.getWallpaperDisplays()
   ]);
   settings = nextSettings;
   currentWeather = nextWeather;
   wallpaperLibrary = nextLibrary;
-  performanceMode = nextPerformanceMode ?? "auto";
-  performanceProfile.value = performanceMode;
+  applyRuntimeState(nextRuntimeState);
   weatherMode.value = currentWeatherMode();
   weatherIntensity.value = Math.max(0.2, Math.min(1.2, settings?.weather.particleIntensity ?? 0.55));
   const styleId = currentStyleId();
@@ -255,9 +288,11 @@ async function refreshRuntime(): Promise<void> {
     host.value.style.background = currentPalette().css;
   }
 
-  const dynamicId = settings?.wallpaper.dynamicId ?? "";
+  const displayId = new URLSearchParams(window.location.search).get("displayId");
+  const assignedId = nextDisplays.find((display) => display.id === displayId)?.wallpaperId ?? null;
+  const dynamicId = assignedId ?? settings?.wallpaper.dynamicId ?? "";
   const userWallpaper = wallpaperLibrary.find((item) => item.id === dynamicId);
-  if (styleId === "user" && userWallpaper) {
+  if ((assignedId || styleId === "user") && userWallpaper) {
     await selectWallpaper(userWallpaper);
   } else {
     wallpaperLayers.value = [];
@@ -275,8 +310,9 @@ onMounted(async () => {
     unsubscribeSettingsUpdated = window.projectD.onSettingsUpdated(() => {
       void refreshRuntime();
     });
+    unsubscribeRuntimeState = window.projectD.onRuntimeStateChanged(applyRuntimeState);
     runtimeTimer = window.setInterval(() => {
-      void refreshRuntime();
+      if (!runtimePaused.value) void refreshRuntime();
     }, 30_000);
     const pixiApp = new Application();
     await pixiApp.init({
@@ -289,6 +325,7 @@ onMounted(async () => {
     host.value.appendChild(pixiApp.canvas);
     app = pixiApp;
     rafReady = true;
+    if (runtimePaused.value) pixiApp.ticker.stop();
 
     const weatherLayer = new Container();
     pixiApp.stage.addChild(weatherLayer);
@@ -314,7 +351,7 @@ onMounted(async () => {
     });
 
     pixiApp.ticker.add((ticker) => {
-      if (!rafReady || !host.value || document.hidden) {
+      if (!rafReady || !host.value || document.hidden || runtimePaused.value) {
         return;
       }
 
@@ -423,6 +460,8 @@ onBeforeUnmount(() => {
   window.removeEventListener("projectd:settings-changed", refreshRuntime);
   unsubscribeSettingsUpdated?.();
   unsubscribeSettingsUpdated = null;
+  unsubscribeRuntimeState?.();
+  unsubscribeRuntimeState = null;
   app?.destroy(true);
   app = null;
 });
@@ -439,6 +478,8 @@ function startCanvasFallback(container: HTMLDivElement): void {
   container.appendChild(canvas);
 
   const render = (time: number) => {
+    fallbackFrame = 0;
+    if (runtimePaused.value) return;
     const width = container.clientWidth || window.innerWidth;
     const height = container.clientHeight || window.innerHeight;
     canvas.width = width;
@@ -484,12 +525,13 @@ function startCanvasFallback(container: HTMLDivElement): void {
     fallbackFrame = requestAnimationFrame(render);
   };
 
+  fallbackRender = render;
   fallbackFrame = requestAnimationFrame(render);
 }
 </script>
 
 <template>
-  <div ref="host" class="wallpaper-stage" :data-style="currentStyleId()" aria-hidden="true">
+  <div ref="host" class="wallpaper-stage" :data-style="currentStyleId()" :data-runtime-paused="String(runtimePaused)" aria-hidden="true">
     <template v-for="layer in wallpaperLayers" :key="layer.id">
       <div
         v-if="layer.type === 'image'"
@@ -502,7 +544,7 @@ function startCanvasFallback(container: HTMLDivElement): void {
         class="wallpaper-bg-media wallpaper-bg-video"
         :class="{ 'is-active': layer.active }"
         :src="layer.src"
-        autoplay
+        :autoplay="!runtimePaused"
         loop
         muted
         playsinline

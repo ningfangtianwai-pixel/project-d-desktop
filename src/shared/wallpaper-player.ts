@@ -17,7 +17,10 @@ export class WallpaperPlayer {
   private requestSequence = 0;
   private currentAsset: WallpaperAsset | null = null;
 
-  constructor(private readonly loadAsset: (asset: WallpaperAsset) => Promise<void>) {}
+  constructor(
+    private readonly loadAsset: (asset: WallpaperAsset) => Promise<void>,
+    private readonly maxPreloadedAssets = 6
+  ) {}
 
   get current(): WallpaperAsset | null {
     return this.currentAsset;
@@ -57,6 +60,8 @@ export class WallpaperPlayer {
   private ensureLoaded(asset: WallpaperAsset): Promise<void> {
     const cached = this.loads.get(asset.id);
     if (cached) {
+      this.loads.delete(asset.id);
+      this.loads.set(asset.id, cached);
       return cached;
     }
 
@@ -65,6 +70,23 @@ export class WallpaperPlayer {
       throw error;
     });
     this.loads.set(asset.id, pending);
+    this.evictExcess(asset.id);
     return pending;
+  }
+
+  private evictExcess(protectedId: string): void {
+    const limit = Math.max(2, Math.round(this.maxPreloadedAssets));
+    while (this.loads.size > limit) {
+      const candidate = this.loads.keys().next().value as string | undefined;
+      if (!candidate) return;
+      if (candidate === protectedId || candidate === this.currentAsset?.id) {
+        const value = this.loads.get(candidate);
+        this.loads.delete(candidate);
+        if (value) this.loads.set(candidate, value);
+        if ([...this.loads.keys()].every((id) => id === protectedId || id === this.currentAsset?.id)) return;
+        continue;
+      }
+      this.loads.delete(candidate);
+    }
   }
 }

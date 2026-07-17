@@ -84,3 +84,10 @@ pnpm dist
 ```
 
 发布前记录安装包大小、SHA-256、签名状态、`latest.yml`/`beta.yml` 内容和一次干净虚拟机安装结果。任何一步失败都阻止发布。
+
+浸泡报告同时生成 `samples.csv`，数据来自 Electron 自身的主进程、renderer、GPU 和 utility 指标，不再用高开销 WMI 反复枚举进程树。正式时长命令：
+
+```powershell
+pnpm qa:soak:4h
+pnpm qa:soak:24h
+```

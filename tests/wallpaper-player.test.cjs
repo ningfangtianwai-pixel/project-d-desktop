@@ -42,3 +42,20 @@ test("wallpaper player caches preloads and ignores stale concurrent selection", 
   assert.equal(player.current.id, "second");
   assert.equal(counts.get("second"), 1);
 });
+
+test("wallpaper player bounds its preload cache with LRU eviction", async () => {
+  const counts = new Map();
+  const player = new WallpaperPlayer(async (asset) => {
+    counts.set(asset.id, (counts.get(asset.id) ?? 0) + 1);
+  }, 2);
+  const asset = (id) => ({ id, type: "image", src: `/${id}.jpg` });
+
+  await player.preload(asset("one"));
+  await player.preload(asset("two"));
+  await player.preload(asset("three"));
+  await player.preload(asset("one"));
+
+  assert.equal(counts.get("one"), 2);
+  assert.equal(counts.get("two"), 1);
+  assert.equal(counts.get("three"), 1);
+});

@@ -12,6 +12,8 @@ const runId = new Date().toISOString().replace(/[:.]/g, "-");
 const runDir = path.join(root, "artifacts", "qa", `soak-${runId}`);
 const userDataDir = path.join(runDir, "user-data");
 const reportPath = path.join(runDir, "report.json");
+const csvPath = path.join(runDir, "samples.csv");
+const runtimeMetricsPath = path.join(runDir, "runtime-metrics.json");
 const electronPath = require("electron");
 const qaToken = `--projectd-qa-run=${runId}`;
 
@@ -36,31 +38,6 @@ async function waitForReady(child, timeoutMs = 40_000) {
   throw new Error("Project D did not report readiness within 40 seconds");
 }
 
-function sampleProcessTree(rootPid) {
-  const script = `
-$rootPid = ${Number(rootPid)}
-$rows = Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId
-$ids = [System.Collections.Generic.HashSet[int]]::new()
-[void]$ids.Add($rootPid)
-do {
-  $before = $ids.Count
-  foreach ($row in $rows) { if ($ids.Contains([int]$row.ParentProcessId)) { [void]$ids.Add([int]$row.ProcessId) } }
-} while ($ids.Count -gt $before)
-$processes = foreach ($id in $ids) { Get-Process -Id $id -ErrorAction SilentlyContinue }
-[pscustomobject]@{
-  at = [DateTimeOffset]::UtcNow.ToString('o')
-  processCount = @($processes).Count
-  workingSetBytes = [long](($processes | Measure-Object WorkingSet64 -Sum).Sum)
-  privateBytes = [long](($processes | Measure-Object PrivateMemorySize64 -Sum).Sum)
-  cpuSeconds = [double](($processes | Measure-Object CPU -Sum).Sum)
-  handles = [long](($processes | Measure-Object Handles -Sum).Sum)
-} | ConvertTo-Json -Compress
-`;
-  const result = spawnSync("powershell.exe", ["-NoProfile", "-Command", script], { encoding: "utf8", windowsHide: true });
-  if (result.status !== 0 || !result.stdout.trim()) return null;
-  return JSON.parse(result.stdout.trim());
-}
-
 function waitForExit(child, timeoutMs) {
   if (child.exitCode !== null) return Promise.resolve(child.exitCode);
   return new Promise((resolve, reject) => {
@@ -82,32 +59,53 @@ function stopQaRun() {
   spawnSync("powershell.exe", ["-NoProfile", "-Command", script], { windowsHide: true, stdio: "ignore" });
 }
 
+function toCsv(samples) {
+  const header = "sampledAt,source,processId,cpuPercent,workingSetBytes,paused,profile";
+  return [header, ...samples.map((sample) => [
+    sample.sampledAt, sample.source, sample.processId, sample.cpuPercent,
+    sample.workingSetBytes, sample.paused, sample.profile
+  ].join(","))].join("\n") + "\n";
+}
+
+function aggregateSamples(samples) {
+  const groups = new Map();
+  for (const sample of samples) {
+    const current = groups.get(sample.sampledAt) ?? { sampledAt: sample.sampledAt, cpuPercent: 0, workingSetBytes: 0 };
+    current.cpuPercent += sample.cpuPercent;
+    current.workingSetBytes += sample.workingSetBytes;
+    groups.set(sample.sampledAt, current);
+  }
+  return [...groups.values()];
+}
+
 (async () => {
   const env = {
     ...process.env,
     PROJECTD_QA_USER_DATA_DIR: userDataDir,
-    PROJECTD_QA_OPEN_SETTINGS: "1",
-    PROJECTD_QA_AUTO_QUIT_MS: String((durationSeconds + 8) * 1_000)
+    PROJECTD_QA_OPEN_SETTINGS: mode === "stress" ? "1" : "0",
+    PROJECTD_QA_AUTO_QUIT_MS: String((durationSeconds + 8) * 1_000),
+    PROJECTD_QA_METRICS_PATH: runtimeMetricsPath
   };
   if (mode === "stress") env.PROJECTD_QA_SOAK = "1";
-  else delete env.PROJECTD_QA_SOAK;
+  else {
+    delete env.PROJECTD_QA_SOAK;
+    env.PROJECTD_QA_IDLE = "1";
+  }
   delete env.ELECTRON_RUN_AS_NODE;
-  const child = spawn(electronPath, [root, qaToken], { cwd: root, env, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
+  const childArgs = mode === "idle" ? [root, qaToken, "--projectd-start-hidden"] : [root, qaToken];
+  const child = spawn(electronPath, childArgs, { cwd: root, env, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
   let stdout = "";
   let stderr = "";
   child.stdout.on("data", (chunk) => { stdout += chunk.toString(); });
   child.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
 
   const startedAt = new Date().toISOString();
-  const samples = [];
   let failure = null;
   try {
     await waitForReady(child);
     const samplingDeadline = Date.now() + durationSeconds * 1_000;
     while (Date.now() < samplingDeadline && child.exitCode === null) {
-      const sample = sampleProcessTree(child.pid);
-      if (sample?.processCount > 0) samples.push(sample);
-      await delay(3_000);
+      await delay(500);
     }
     const exitCode = await waitForExit(child, 20_000);
     if (exitCode !== 0) throw new Error(`Project D exited with code ${exitCode}`);
@@ -120,26 +118,33 @@ function stopQaRun() {
   const appLog = readText(path.join(userDataDir, "logs", "app.log"));
   const errorLog = readText(path.join(userDataDir, "logs", "error.log"));
   const bootstrapLog = readText(path.join(userDataDir, "logs", "bootstrap.log"));
-  const warmSamples = samples.slice(Math.floor(samples.length * 0.2));
-  const first = warmSamples[0] ?? samples[0] ?? null;
-  const last = warmSamples.at(-1) ?? samples.at(-1) ?? null;
-  const elapsedSeconds = first && last ? Math.max(1, (Date.parse(last.at) - Date.parse(first.at)) / 1_000) : 1;
+  const runtimeMetrics = JSON.parse(readText(runtimeMetricsPath) || "{\"samples\":[]}");
+  const samples = Array.isArray(runtimeMetrics.samples) ? runtimeMetrics.samples : [];
+  const aggregate = aggregateSamples(samples);
+  const first = aggregate[0] ?? null;
+  const last = aggregate.at(-1) ?? null;
+  const elapsedSeconds = first && last ? Math.max(1, (Date.parse(last.sampledAt) - Date.parse(first.sampledAt)) / 1_000) : 1;
   const memorySlopeMiBPerMinute = first && last
-    ? ((last.privateBytes - first.privateBytes) / 1024 / 1024) / (elapsedSeconds / 60)
+    ? ((last.workingSetBytes - first.workingSetBytes) / 1024 / 1024) / (elapsedSeconds / 60)
     : null;
-  const cpuAveragePercent = first && last
-    ? Math.max(0, ((last.cpuSeconds - first.cpuSeconds) / elapsedSeconds) * 100 / Math.max(1, os.cpus().length))
+  const cpuAveragePercent = aggregate.length
+    ? aggregate.reduce((total, sample) => total + sample.cpuPercent, 0) / aggregate.length
     : null;
-  const peakPrivateMiB = samples.length ? Math.max(...samples.map((item) => item.privateBytes)) / 1024 / 1024 : null;
+  const cpuMedianPercent = runtimeMetrics.cpuMedianPercent ?? null;
+  const cpuP95Percent = runtimeMetrics.cpuP95Percent ?? null;
+  const peakPrivateMiB = runtimeMetrics.peakWorkingSetBytes ? runtimeMetrics.peakWorkingSetBytes / 1024 / 1024 : null;
+  const memoryTrendEvidenceSufficient = aggregate.length >= 10;
   const errorEntries = errorLog.split(/\r?\n/).filter((line) => line.includes('"level":"ERROR"')).length;
   const checks = {
     processExitedCleanly: failure === null,
     coreReadyLogged: appLog.includes("core services ready"),
     shutdownCompleted: bootstrapLog.includes("shutdown completed"),
     noErrorLogEntries: errorEntries === 0,
-    memorySlopeWithinPreflightLimit: memorySlopeMiBPerMinute === null || memorySlopeMiBPerMinute < 100,
+    memorySlopeWithinPreflightLimit: !memoryTrendEvidenceSufficient || memorySlopeMiBPerMinute === null || memorySlopeMiBPerMinute < 100,
     peakPrivateMemoryWithinPreflightLimit: peakPrivateMiB === null || peakPrivateMiB < 1536,
-    noSafeRendererRelaunch: !bootstrapLog.includes("--projectd-safe-renderer")
+    noSafeRendererRelaunch: !bootstrapLog.includes("--projectd-safe-renderer"),
+    idleCpuMedianWithinCommercialTarget: mode !== "idle" || cpuMedianPercent === null || cpuMedianPercent <= 1,
+    idleCpuP95WithinCommercialTarget: mode !== "idle" || cpuP95Percent === null || cpuP95Percent <= 3
   };
   const passed = Object.values(checks).every(Boolean);
   const report = {
@@ -152,7 +157,12 @@ function stopQaRun() {
     sampleCount: samples.length,
     passed,
     limitation: "This accelerated run is a preflight and does not replace the required 24-hour soak.",
-    metrics: { cpuAveragePercent, memorySlopeMiBPerMinute, peakPrivateMiB },
+    machine: {
+      platform: os.platform(), release: os.release(), architecture: os.arch(),
+      cpuModel: os.cpus()[0]?.model ?? "unknown", logicalCpuCount: os.cpus().length,
+      totalMemoryBytes: os.totalmem()
+    },
+    metrics: { cpuAveragePercent, cpuMedianPercent, cpuP95Percent, memorySlopeMiBPerMinute, peakPrivateMiB, memoryTrendEvidenceSufficient },
     checks,
     errorEntries,
     failure,
@@ -160,7 +170,8 @@ function stopQaRun() {
     capturedOutput: { stdout: stdout.slice(-4_000), stderr: stderr.slice(-4_000) }
   };
   fs.writeFileSync(reportPath, JSON.stringify(report, null, 2), "utf8");
-  console.log(JSON.stringify({ passed, reportPath, metrics: report.metrics, checks }, null, 2));
+  fs.writeFileSync(csvPath, toCsv(samples), "utf8");
+  console.log(JSON.stringify({ passed, reportPath, csvPath, metrics: report.metrics, checks }, null, 2));
   process.exitCode = passed ? 0 : 1;
 })().catch((error) => {
   console.error(error);

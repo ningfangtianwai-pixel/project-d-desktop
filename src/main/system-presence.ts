@@ -1,7 +1,4 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-
-const execFileAsync = promisify(execFile);
+import { spawn } from "node:child_process";
 
 export interface SystemPresenceState {
   externalFullscreen: boolean;
@@ -9,7 +6,7 @@ export interface SystemPresenceState {
   batteryLevel: number | null;
 }
 
-export type SystemPresenceProbe = () => Promise<SystemPresenceState>;
+export type SystemPresenceProbe = (() => Promise<SystemPresenceState>) & { dispose?: () => void };
 
 const FALLBACK_STATE: SystemPresenceState = {
   externalFullscreen: false,
@@ -43,22 +40,76 @@ export class SystemPresenceMonitor {
       });
     return this.pending;
   }
+
+  dispose(): void {
+    this.probe.dispose?.();
+  }
 }
 
 export function createWindowsPresenceProbe(excludedProcessId = process.pid): SystemPresenceProbe {
   if (process.platform !== "win32") return async () => FALLBACK_STATE;
 
-  const script = buildProbeScript(excludedProcessId);
-  const encoded = Buffer.from(script, "utf16le").toString("base64");
-  return async () => {
-    const { stdout } = await execFileAsync(
+  const encoded = Buffer.from(buildProbeScript(excludedProcessId), "utf16le").toString("base64");
+  let child: ReturnType<typeof spawn> | null = null;
+  let latest: SystemPresenceState | null = null;
+  let buffer = "";
+  const waiters = new Set<(state: SystemPresenceState) => void>();
+
+  const settle = (state: SystemPresenceState) => {
+    latest = state;
+    for (const resolve of waiters) resolve(state);
+    waiters.clear();
+  };
+
+  const start = () => {
+    if (child && child.exitCode === null) return;
+    child = spawn(
       "powershell.exe",
       ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", encoded],
-      { encoding: "utf8", windowsHide: true, timeout: 2_500, maxBuffer: 16 * 1024 }
+      { windowsHide: true, stdio: ["ignore", "pipe", "ignore"] }
     );
-    const parsed = JSON.parse(stdout.trim()) as Partial<SystemPresenceState>;
-    return normalizeState(parsed);
+    child.stdout?.setEncoding("utf8");
+    child.stdout?.on("data", (chunk: string) => {
+      buffer += chunk;
+      const lines = buffer.split(/\r?\n/);
+      buffer = lines.pop() ?? "";
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          settle(normalizeState(JSON.parse(line) as Partial<SystemPresenceState>));
+        } catch {
+          // Ignore malformed helper output and retain the last valid state.
+        }
+      }
+    });
+    child.once("error", () => settle(FALLBACK_STATE));
+    child.once("exit", () => {
+      child = null;
+      settle(latest ?? FALLBACK_STATE);
+    });
   };
+
+  const probe: SystemPresenceProbe = async () => {
+    start();
+    if (latest) return latest;
+    return new Promise<SystemPresenceState>((resolve) => {
+      const timeout = setTimeout(() => {
+        waiters.delete(done);
+        resolve(FALLBACK_STATE);
+      }, 3_000);
+      const done = (state: SystemPresenceState) => {
+        clearTimeout(timeout);
+        resolve(state);
+      };
+      waiters.add(done);
+    });
+  };
+  probe.dispose = () => {
+    waiters.clear();
+    child?.kill();
+    child = null;
+  };
+  return probe;
 }
 
 function normalizeState(input: Partial<SystemPresenceState>): SystemPresenceState {
@@ -87,6 +138,7 @@ public static class ProjectDPresenceUser32 {
   [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr hWnd);
 }
 "@
+while ($true) {
 $fullScreen = $false
 $hwnd = [ProjectDPresenceUser32]::GetForegroundWindow()
 if ($hwnd -ne [IntPtr]::Zero -and -not [ProjectDPresenceUser32]::IsIconic($hwnd)) {
@@ -99,11 +151,13 @@ if ($hwnd -ne [IntPtr]::Zero -and -not [ProjectDPresenceUser32]::IsIconic($hwnd)
     $fullScreen = [Math]::Abs($rect.Left - $bounds.Left) -le 2 -and [Math]::Abs($rect.Top - $bounds.Top) -le 2 -and [Math]::Abs($rect.Right - $bounds.Right) -le 2 -and [Math]::Abs($rect.Bottom - $bounds.Bottom) -le 2
   }
 }
-$battery = Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue | Select-Object -First 1
+$power = [System.Windows.Forms.SystemInformation]::PowerStatus
 [pscustomobject]@{
   externalFullscreen = $fullScreen
-  onBattery = if ($null -eq $battery) { $false } else { [int]$battery.BatteryStatus -eq 1 }
-  batteryLevel = if ($null -eq $battery) { $null } else { [int]$battery.EstimatedChargeRemaining }
+  onBattery = $power.PowerLineStatus -eq [System.Windows.Forms.PowerLineStatus]::Offline
+  batteryLevel = if ($power.BatteryLifePercent -lt 0) { $null } else { [int][Math]::Round($power.BatteryLifePercent * 100) }
 } | ConvertTo-Json -Compress
+Start-Sleep -Milliseconds 1500
+}
 `;
 }
