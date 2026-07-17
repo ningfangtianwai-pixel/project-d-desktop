@@ -119,3 +119,11 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 4. Replace each `pending-evidence` asset-ledger entry with license snapshots and proof hashes; the commercial asset gate must pass.
 5. Configure the real HTTPS update service and execute N-2/N-1, corrupt package, disconnect, disk-full, and migration rollback drills.
 6. Keep payment, account, order, and entitlement work paused as requested.
+
+## After Stage 39
+
+1. Produce transparent idle/happy/thinking/sleeping/action frames for the four design-sheet-only characters; the supplied sheets are now selectable, but only Luna Q has a complete transparent action pack.
+2. Run the physical two/three-display matrix at 100/125/150/200 percent scaling, including portrait rotation, primary-display changes, hot unplug, reconnect, and per-display wallpaper persistence.
+3. Repeat clean desktop entry and `Esc` recovery from the packaged installer on Windows 10 and Windows 11, including Explorer-busy and forced-process-exit cases.
+4. Complete four-hour and 24-hour soak evidence, Authenticode signing, HTTPS update infrastructure, and commercial license evidence for all distributed artwork.
+5. Keep payment, account, order, and entitlement implementation paused until the merchant and server-side architecture is approved.

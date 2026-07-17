@@ -4,6 +4,7 @@ import { Application, Container, Graphics } from "pixi.js";
 import type { CurrentWeather, SettingsSnapshot, WallpaperLibraryItem } from "@shared/types";
 import { WallpaperPlayer, type WallpaperAsset } from "@shared/wallpaper-player";
 import type { RuntimePauseSnapshot } from "@shared/runtime";
+import { wallpaperRenderScale, type WallpaperRenderProfile } from "@shared/wallpaper-render-scale";
 
 const host = ref<HTMLDivElement | null>(null);
 let app: Application | null = null;
@@ -23,6 +24,11 @@ const weatherMode = ref<WeatherVisualMode>("clear");
 const weatherIntensity = ref(0.55);
 const performanceProfile = ref("auto");
 const runtimePaused = ref(false);
+
+function activeRenderProfile(): WallpaperRenderProfile {
+  if (performanceMode === "quality" || performanceMode === "battery-saver") return performanceMode;
+  return "balanced";
+}
 
 async function syncMediaPlayback(): Promise<void> {
   await nextTick();
@@ -315,10 +321,18 @@ onMounted(async () => {
       if (!runtimePaused.value) void refreshRuntime();
     }, 30_000);
     const pixiApp = new Application();
+    const initialRenderScale = wallpaperRenderScale({
+      cssWidth: host.value.clientWidth || window.innerWidth,
+      cssHeight: host.value.clientHeight || window.innerHeight,
+      devicePixelRatio: window.devicePixelRatio,
+      profile: activeRenderProfile()
+    });
     await pixiApp.init({
       resizeTo: host.value,
       backgroundAlpha: 0,
       antialias: true,
+      resolution: initialRenderScale,
+      autoDensity: true,
       preference: "webgl"
     });
 
@@ -482,8 +496,19 @@ function startCanvasFallback(container: HTMLDivElement): void {
     if (runtimePaused.value) return;
     const width = container.clientWidth || window.innerWidth;
     const height = container.clientHeight || window.innerHeight;
-    canvas.width = width;
-    canvas.height = height;
+    const renderScale = wallpaperRenderScale({
+      cssWidth: width,
+      cssHeight: height,
+      devicePixelRatio: window.devicePixelRatio,
+      profile: activeRenderProfile()
+    });
+    const pixelWidth = Math.max(1, Math.round(width * renderScale));
+    const pixelHeight = Math.max(1, Math.round(height * renderScale));
+    if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+      canvas.width = pixelWidth;
+      canvas.height = pixelHeight;
+    }
+    context.setTransform(renderScale, 0, 0, renderScale, 0, 0);
     context.clearRect(0, 0, width, height);
     const weather = currentWeatherMode();
     const palette = currentPalette();

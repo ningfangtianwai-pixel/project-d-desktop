@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { petActionIntervalMs, petBubbleDelayMs, petSentence } from "@shared/pet-behavior";
+import { getPetCharacter, normalizePetCharacterId } from "@shared/pet-characters";
 import type { CurrentWeather, SettingsSnapshot, SuggestionRecord } from "@shared/types";
 
 const bubble = ref("我在桌面上。");
@@ -8,6 +9,7 @@ const bubbleVisible = ref(false);
 const petShell = ref<HTMLElement | null>(null);
 const spriteFailed = ref(false);
 const petScale = ref(1);
+const characterId = ref("luna-q");
 const personality = ref("gentle");
 const talkFrequency = ref("normal");
 const autoOutfit = ref(true);
@@ -106,6 +108,15 @@ const announcedSuggestionIds = new Set<string>();
 
 const actions: PetAction[] = ["idle", "happy", "cheerful", "thinking", "sitting", "sleepy"];
 const currentState = computed(() => petStates[action.value]);
+const currentCharacter = computed(() => getPetCharacter(characterId.value));
+const currentCharacterImage = computed(() => currentCharacter.value.renderMode === "sprite-pack"
+  ? currentState.value.image
+  : `${import.meta.env.BASE_URL}${currentCharacter.value.asset}`);
+const currentCharacterLabel = computed(() => `${currentCharacter.value.name} · ${currentState.value.label}`);
+const characterSheetStyle = computed(() => ({
+  "--pet-focus-x": `${currentCharacter.value.focusX}%`,
+  "--pet-focus-y": `${currentCharacter.value.focusY}%`
+}));
 const petStageStyle = computed(() => ({
   width: `${Math.round(146 * petScale.value)}px`,
   height: `${Math.round(164 * petScale.value)}px`
@@ -297,6 +308,7 @@ function handlePetClick(): void {
 
 function applyPetSettings(settings: SettingsSnapshot): void {
   petScale.value = Math.max(0.5, Math.min(1.6, settings.pet.scale));
+  characterId.value = normalizePetCharacterId(settings.pet.characterId);
   personality.value = settings.pet.personality;
   talkFrequency.value = settings.pet.talkFrequency;
   autoOutfit.value = settings.pet.autoOutfit;
@@ -470,8 +482,10 @@ function stopDrag(): void {
         <img
           v-if="!spriteFailed"
           class="pet-sprite"
-          :src="currentState.image"
-          :alt="currentState.label"
+          :class="{ 'pet-character-sheet': currentCharacter.renderMode === 'portrait-sheet' }"
+          :style="characterSheetStyle"
+          :src="currentCharacterImage"
+          :alt="currentCharacterLabel"
           draggable="false"
           @error="spriteFailed = true"
         />

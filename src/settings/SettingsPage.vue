@@ -33,6 +33,7 @@ import type { RuntimeMetricsReport, RuntimePauseSnapshot } from "@shared/runtime
 import type { UpdateChannel, UpdateStatus } from "@shared/update";
 import type { AutoRule, AutoRuleAction, AutoRuleCondition, AutoRuleExecution } from "@shared/auto-rules";
 import { PET_PERSONALITIES } from "@shared/pet-behavior";
+import { PET_CHARACTERS } from "@shared/pet-characters";
 import { WALLPAPER_STYLES } from "@shared/wallpaper-library";
 
 type SettingsTab = "general" | "layout" | "rules" | "portal" | "privacy" | "wallpaper" | "weather" | "pet" | "ai" | "recovery" | "about";
@@ -185,6 +186,7 @@ async function setManualRuntimePause(paused: boolean): Promise<void> {
 }
 const particleIntensity = ref(55);
 const petEnabled = ref(true);
+const petCharacterId = ref("luna-q");
 const petPersonality = ref("gentle");
 const petTalkFrequency = ref("normal");
 const petScale = ref(100);
@@ -254,6 +256,8 @@ const locationSourceLabel = computed(() => {
 });
 
 const personalities = PET_PERSONALITIES;
+const petCharacters = PET_CHARACTERS;
+const baseUrl = import.meta.env.BASE_URL;
 const filteredWallpapers = computed(() => wallpaperStyleFilter.value === "all"
   ? wallpaperLibrary.value
   : wallpaperLibrary.value.filter((wallpaper) => wallpaper.style === wallpaperStyleFilter.value));
@@ -322,6 +326,7 @@ async function loadSettings(): Promise<void> {
 
   particleIntensity.value = Math.round(nextSettings.weather.particleIntensity * 100);
   petEnabled.value = nextSettings.pet.isVisible;
+  petCharacterId.value = nextSettings.pet.characterId === "default" ? "luna-q" : nextSettings.pet.characterId;
   petPersonality.value = nextSettings.pet.personality;
   petTalkFrequency.value = nextSettings.pet.talkFrequency;
   petScale.value = Math.round(nextSettings.pet.scale * 100);
@@ -748,6 +753,7 @@ async function saveSettings(): Promise<void> {
     },
     pet: {
       isVisible: petEnabled.value,
+      characterId: petCharacterId.value,
       personality: petPersonality.value,
       talkFrequency: petTalkFrequency.value,
       scale: petScale.value / 100,
@@ -1086,7 +1092,7 @@ async function saveSettings(): Promise<void> {
             <label v-for="display in wallpaperDisplays" :key="display.id" class="setting-row">
               <span>
                 <strong>{{ display.label }}{{ display.isPrimary ? " · 主屏" : "" }}</strong>
-                <small>{{ display.bounds.width }} × {{ display.bounds.height }} · {{ Math.round(display.scaleFactor * 100) }}%</small>
+                <small>{{ Math.round(display.bounds.width * display.scaleFactor) }} × {{ Math.round(display.bounds.height * display.scaleFactor) }} px · {{ display.bounds.height > display.bounds.width ? '竖屏' : '横屏' }} · {{ Math.round(display.scaleFactor * 100) }}%</small>
               </span>
               <select :value="display.wallpaperId ?? ''" @change="assignWallpaper(display.id, ($event.target as HTMLSelectElement).value)">
                 <option value="">跟随全局壁纸</option>
@@ -1114,7 +1120,22 @@ async function saveSettings(): Promise<void> {
 
         <section v-else-if="activeTab === 'pet'" class="settings-pane">
           <div class="settings-group">
-            <label class="setting-row"><span><strong>显示桌宠</strong><small>Luna Q</small></span><input v-model="petEnabled" class="switch-input" type="checkbox" /></label>
+            <h2>角色</h2>
+            <div class="pet-character-grid">
+              <button
+                v-for="character in petCharacters"
+                :key="character.id"
+                type="button"
+                :class="{ selected: petCharacterId === character.id }"
+                @click="petCharacterId = character.id"
+              >
+                <img :src="`${baseUrl}${character.asset}`" :alt="character.name" />
+                <span>{{ character.name }}</span>
+              </button>
+            </div>
+          </div>
+          <div class="settings-group">
+            <label class="setting-row"><span><strong>显示桌宠</strong><small>{{ petCharacters.find((item) => item.id === petCharacterId)?.name ?? 'Luna Q' }}</small></span><input v-model="petEnabled" class="switch-input" type="checkbox" /></label>
             <label class="setting-row"><span><strong>自动换装</strong><small>weather outfit</small></span><input v-model="petAutoOutfit" class="switch-input" type="checkbox" /></label>
             <label class="setting-row"><span><strong>话频率</strong><small>bubble frequency</small></span><select v-model="petTalkFrequency"><option value="silent">安静</option><option value="rare">偶尔</option><option value="normal">正常</option><option value="chatty">话痨</option></select></label>
             <label class="setting-row"><span><strong>动作间隔</strong><small>ambient actions</small></span><select v-model="petActionInterval"><option :value="30">30 秒</option><option :value="60">1 分钟</option><option :value="120">2 分钟</option><option :value="300">5 分钟</option></select></label>
@@ -1336,6 +1357,12 @@ select:focus, input:focus { border-color: rgba(159,215,237,.58); }
 .wallpaper-thumb { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border: 1px solid rgba(255,255,255,.12); border-radius: 8px; padding: 0; color: #fff; background-position: center; background-size: cover; cursor: pointer; }
 .wallpaper-thumb.selected { border-color: #9fd7ed; box-shadow: 0 0 0 1px rgba(159,215,237,.38); }
 .wallpaper-thumb span { position: absolute; right: 7px; bottom: 7px; left: 7px; overflow: hidden; padding: 4px 6px; border-radius: 5px; background: rgba(8,10,12,.62); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.pet-character-grid { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 8px; }
+.pet-character-grid button { position: relative; aspect-ratio: 3 / 4; overflow: hidden; border: 1px solid rgba(255,255,255,.1); border-radius: 8px; padding: 0; color: #f4f1ea; background: #171a1f; cursor: pointer; }
+.pet-character-grid button.selected { border-color: #9fd7ed; box-shadow: inset 0 0 0 1px rgba(159,215,237,.35); }
+.pet-character-grid img { width: 100%; height: 100%; object-fit: cover; object-position: center 27%; opacity: .86; transition: transform .18s ease, opacity .18s ease; }
+.pet-character-grid button:hover img, .pet-character-grid button.selected img { opacity: 1; transform: scale(1.025); }
+.pet-character-grid span { position: absolute; right: 4px; bottom: 4px; left: 4px; overflow: hidden; padding: 4px 5px; border-radius: 5px; background: rgba(9,11,14,.76); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .portal-list, .portal-resource-list, .scene-list, .recovery-list { display: grid; gap: 8px; }
 .portal-list article, .recovery-list article { display: flex; align-items: center; gap: 10px; min-height: 54px; border: 1px solid rgba(255,255,255,.09); border-radius: 8px; padding: 7px 8px; background: rgba(255,255,255,.025); }
 .portal-list article.selected { border-color: rgba(159,215,237,.46); background: rgba(159,215,237,.07); }

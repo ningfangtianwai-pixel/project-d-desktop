@@ -1,4 +1,4 @@
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
@@ -50,20 +50,13 @@ export async function startDesktopIconRecoveryWatchdog(parentProcessId = process
     "Start-Sleep -Milliseconds 500",
     buildDesktopIconSyncScript(true)
   ].join("\n");
-  const watchdogCommand = `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand ${encodePowerShell(watchdogScript)}`;
-  const launcherScript = [
-    "$ErrorActionPreference = 'Stop'",
-    `$result = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = '${watchdogCommand}' }`,
-    "if ($result.ReturnValue -ne 0) { throw \"WMI process creation failed: $($result.ReturnValue)\" }",
-    "[Console]::Write($result.ProcessId)"
-  ].join("\n");
-  const { stdout } = await execFileAsync("powershell.exe", powershellArguments(launcherScript), {
-    encoding: "utf8",
+  const child = spawn("powershell.exe", powershellArguments(watchdogScript), {
     windowsHide: true,
-    timeout: POWERSHELL_TIMEOUT_MS,
-    maxBuffer: 16 * 1024
+    detached: true,
+    stdio: "ignore"
   });
-  const watchdogProcessId = Number.parseInt(stdout.trim(), 10);
+  child.unref();
+  const watchdogProcessId = child.pid ?? 0;
   if (!Number.isInteger(watchdogProcessId) || watchdogProcessId <= 0) {
     throw new Error("Desktop icon recovery watchdog did not start");
   }
@@ -109,7 +102,13 @@ public static class ProjectDDesktopIcons {
   [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern IntPtr FindWindowEx(IntPtr parent, IntPtr after, string cls, string title);
   [DllImport("user32.dll")] public static extern bool EnumWindows(EnumWindowsProc callback, IntPtr lParam);
   [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hWnd);
-  [DllImport("user32.dll", CharSet=CharSet.Auto)] public static extern IntPtr SendMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+  [DllImport("user32.dll", CharSet=CharSet.Auto, SetLastError=true)] public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam, uint flags, uint timeout, out IntPtr result);
+  public static IntPtr SendMessageSafe(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam) {
+    IntPtr result;
+    IntPtr succeeded = SendMessageTimeout(hWnd, msg, wParam, lParam, 0x0002, 1000, out result);
+    if (succeeded == IntPtr.Zero) throw new InvalidOperationException("Explorer desktop window did not respond in time");
+    return result;
+  }
   public static IntPtr FindDesktopView() {
     IntPtr progman = FindWindow("Progman", null);
     IntPtr view = FindWindowEx(progman, IntPtr.Zero, "SHELLDLL_DefView", null);
@@ -131,12 +130,12 @@ $list = [ProjectDDesktopIcons]::FindWindowEx($view, [IntPtr]::Zero, 'SysListView
 if ($list -eq [IntPtr]::Zero) { throw 'Explorer desktop icon list was not found' }
 $before = [ProjectDDesktopIcons]::IsWindowVisible($list)
 if ($null -ne $desired -and $before -ne $desired) {
-  [void][ProjectDDesktopIcons]::SendMessage($view, 0x0111, [IntPtr]0x7402, [IntPtr]::Zero)
+  [void][ProjectDDesktopIcons]::SendMessageSafe($view, 0x0111, [IntPtr]0x7402, [IntPtr]::Zero)
   Start-Sleep -Milliseconds 250
 }
 ${registryUpdate}
 $after = [ProjectDDesktopIcons]::IsWindowVisible($list)
-$count = [ProjectDDesktopIcons]::SendMessage($list, 0x1004, [IntPtr]::Zero, [IntPtr]::Zero).ToInt64()
+$count = [ProjectDDesktopIcons]::SendMessageSafe($list, 0x1004, [IntPtr]::Zero, [IntPtr]::Zero).ToInt64()
 [pscustomobject]@{
   visible = $after
   iconCount = $count

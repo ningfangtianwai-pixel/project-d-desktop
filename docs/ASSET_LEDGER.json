@@ -169,6 +169,76 @@
       "version": 1,
       "reviewStatus": "pending-evidence",
       "distributionEnabled": false
+    },
+    {
+      "assetId": "pet-character-luna-q",
+      "file": "public/pet/characters/luna-q.png",
+      "author": "Project D project owner",
+      "originalUrl": null,
+      "acquiredAt": "2026-07-17",
+      "licenseType": "evidence-required",
+      "licenseSnapshot": null,
+      "evidenceSha256": null,
+      "fileSha256": "1cd646cc1c8c1d278cf1ba922ec06b43d9b7d8cc9546d850de6122e3d86d10d7",
+      "version": 1,
+      "reviewStatus": "pending-evidence",
+      "distributionEnabled": false
+    },
+    {
+      "assetId": "pet-character-luna-spring",
+      "file": "public/pet/characters/luna-spring.png",
+      "author": "Project D project owner",
+      "originalUrl": null,
+      "acquiredAt": "2026-07-17",
+      "licenseType": "evidence-required",
+      "licenseSnapshot": null,
+      "evidenceSha256": null,
+      "fileSha256": "ae7e2f8fb6a889b931714fbf9c5ac84089869a949a29ce2bb7bc17a92dda3a91",
+      "version": 1,
+      "reviewStatus": "pending-evidence",
+      "distributionEnabled": false
+    },
+    {
+      "assetId": "pet-character-starlight",
+      "file": "public/pet/characters/starlight.png",
+      "author": "Project D project owner",
+      "originalUrl": null,
+      "acquiredAt": "2026-07-17",
+      "licenseType": "evidence-required",
+      "licenseSnapshot": null,
+      "evidenceSha256": null,
+      "fileSha256": "06d42518cebbaca94118796199f5ccff021f987b3dde8f7e5686e4c9586de66a",
+      "version": 1,
+      "reviewStatus": "pending-evidence",
+      "distributionEnabled": false
+    },
+    {
+      "assetId": "pet-character-floral-star",
+      "file": "public/pet/characters/floral-star.png",
+      "author": "Project D project owner",
+      "originalUrl": null,
+      "acquiredAt": "2026-07-17",
+      "licenseType": "evidence-required",
+      "licenseSnapshot": null,
+      "evidenceSha256": null,
+      "fileSha256": "2c7cdf97afc1bcbaf35ad84354be062920a25d442c194f4f6453bda98104d7dc",
+      "version": 1,
+      "reviewStatus": "pending-evidence",
+      "distributionEnabled": false
+    },
+    {
+      "assetId": "pet-character-lin-yuxi",
+      "file": "public/pet/characters/lin-yuxi.png",
+      "author": "Project D project owner",
+      "originalUrl": null,
+      "acquiredAt": "2026-07-17",
+      "licenseType": "evidence-required",
+      "licenseSnapshot": null,
+      "evidenceSha256": null,
+      "fileSha256": "8d0c835fb71e598ffe37763dfaff959b2d444c9098a8c8c0b11b4039216820c1",
+      "version": 1,
+      "reviewStatus": "pending-evidence",
+      "distributionEnabled": false
     }
   ]
 }

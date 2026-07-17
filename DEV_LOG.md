@@ -1295,3 +1295,18 @@
 - `pnpm test`: passed 120/120. `pnpm typecheck` and `pnpm build`: passed. `pnpm verify:packaged`: passed 33/33.
 - First dist attempt failed on a running release DLL lock. Restored `HideIcons=0`, stopped only Project D release processes, verified Explorer healthy, and rebuilt successfully.
 - Final installer: 226,421,090 bytes; SHA-256 `F53C92772E2BD7D2C4ECC3AF92CF26E8DFAA163E211B7C4BBB53DC4F00958265`; Authenticode `NotSigned`.
+
+## 2026-07-17 Stage 39 Display, Pet Roster, And Clean Desktop Recovery
+
+- Added display-aware pet bounds and wallpaper render-scale modules with tests for small external screens, portrait monitors, negative origins, 125% DPI, and 4K/battery budgets.
+- Added five selectable pet characters from every supplied character sheet, Settings previews, persisted `characterId`, safe validation, and a context-menu character switcher.
+- Added a clean-desktop Escape guard, failure-closed activation, coalesced exit, and a real CDP + system-key acceptance script.
+- The first live clean-desktop run exposed blocking Win32 `SendMessage`; replaced it with `SendMessageTimeout`.
+- The second run exposed slow WMI watchdog startup; replaced WMI process creation with a detached hidden child process.
+- The third run exposed duplicate recovery calls while Explorer was still deactivating; made exit idempotent and changed QA to poll the real state.
+- Final live result: `{ entered: active, exited: idle, iconsVisible: true, escapeRecovered: true }`.
+- `pnpm typecheck`: passed. Focused tests: passed. `pnpm test`: passed 127/127.
+- Product screenshot capture: passed 24/24. `pnpm verify:assets`: passed 17 development assets.
+- Added all five new distributed character sheets to the SHA-256 asset ledger; commercial evidence remains intentionally pending.
+- `pnpm dist`: passed. `pnpm verify:packaged`: passed 33/33 modules.
+- Stage 39 installer: 239,154,024 bytes; SHA-256 `CCFCFEE3821DDA1EB5802810F346C83E690613E18F475F90A5B14BE9C94F6DC6`; Authenticode `NotSigned`.

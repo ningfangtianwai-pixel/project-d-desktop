@@ -881,3 +881,15 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Verification: 120/120 tests, production build, zero known npm audit vulnerabilities, packaged runtime 33/33 modules, and NSIS packaging passed.
 - Installer: `release/ProjectD-0.1.0-Setup.exe`, 226,421,090 bytes, SHA-256 `F53C92772E2BD7D2C4ECC3AF92CF26E8DFAA163E211B7C4BBB53DC4F00958265`.
 - Commercial release remains blocked by unsigned binaries, pending wallpaper license evidence, physical hardware matrix, and four-hour/24-hour soak duration.
+
+## Stage 39 - Mixed-Display Pets And Clean Desktop Escape (Complete)
+
+- Wallpaper effects now choose a bounded render scale from the active display DPI, CSS resolution, and quality profile; balanced 4K rendering is capped to an 8-million-pixel budget.
+- Pet windows clamp and resize within small, portrait, negative-origin, and mixed-resolution display work areas.
+- All five supplied character sheets are available in Settings and the pet context menu. Luna Q retains its complete transparent action pack; the other supplied design sheets render as animated portrait characters.
+- Clean desktop registers `Escape` only while active, coalesces concurrent exit requests, and refuses to hide the main window if Explorer icons could not be hidden.
+- Explorer icon commands now use `SendMessageTimeout`, and the recovery watchdog starts as a detached child without WMI.
+- Live acceptance entered clean desktop, sent `Esc`, returned from `active` to `idle`, verified `HideIcons=0`, and restored 73 desktop icons.
+- Visual acceptance captured 24 screenshots under `artifacts/qa/stage39-final3/screenshots`; the pet roster, wallpaper display metadata, wallpaper host, and live pet rendered without overflow.
+- Verification: `pnpm typecheck` passed, all 127 tests passed, and the development asset gate verified 17 wallpaper/character assets.
+- Stage 39 NSIS package and packaged-runtime verification passed. Installer size: 239,154,024 bytes; SHA-256: `CCFCFEE3821DDA1EB5802810F346C83E690613E18F475F90A5B14BE9C94F6DC6`; Authenticode remains `NotSigned`.

@@ -627,3 +627,19 @@
 - [ ] Physical multi-monitor, DPI, GPU, sleep/wake, and Windows 10/11 matrix is recorded.
 - [ ] Every wallpaper has approved commercial license evidence.
 - [ ] Installer, uninstaller, and update package have valid timestamped Authenticode signatures.
+
+## Stage 39 Mixed Displays, Pet Roster, And Clean Desktop Escape
+
+- [x] Wallpaper render density is bounded by display DPI, resolution, and performance profile.
+- [x] Pet bounds stay inside small external, portrait, negative-origin, and mixed-resolution work areas.
+- [x] Settings and the desktop pet menu expose all five supplied character designs.
+- [x] Pet character selection persists through the existing validated settings path.
+- [x] `Escape` is registered only while clean desktop is active and is released after recovery.
+- [x] Clean desktop refuses to claim success when Explorer icons could not be hidden.
+- [x] Concurrent clean-desktop exit requests share one recovery operation.
+- [x] Explorer messaging has a bounded timeout and watchdog startup no longer depends on WMI.
+- [x] Live Electron acceptance returns `active -> idle`, restores `HideIcons=0`, and reports `escapeRecovered: true`.
+- [x] Twenty-four product screenshots include the five-character roster and live desktop pet.
+- [x] Automated suite passes 127/127 and the asset gate verifies 17 bundled wallpaper/character sources.
+- [ ] Four non-Luna-Q character sheets have final transparent multi-action sprite packs.
+- [ ] Physical multi-monitor/DPI acceptance is recorded on more than one real display.

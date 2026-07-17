@@ -35,6 +35,8 @@ import { isMostlyWhiteBitmap, WindowResilienceSupervisor, type RendererRecoveryE
 import { UpdateService, validateUpdateFeedUrl } from "./update-service.js";
 import { PauseArbiter } from "./pause-arbiter.js";
 import { RuntimeMetricsService } from "./runtime-metrics.js";
+import { CleanDesktopEscapeGuard } from "./clean-desktop-escape.js";
+import { defaultPetWindowForWorkArea, fitPetWindowToWorkArea } from "./pet-window-layout.js";
 import { IPC_CHANNELS, MENU_COMMANDS, type MenuCommand } from "../shared/ipc.js";
 import { registerAllIpcHandlers, type ServiceDeps } from "./ipc/register-all.js";
 import { WALLPAPER_LIBRARY } from "../shared/wallpaper-library.js";
@@ -89,12 +91,16 @@ const approvedPortalSelections = new Map<string, number>();
 let shutdownInProgress = false;
 let rendererRestartScheduled = false;
 let onboardingActive = false;
+let cleanDesktopExitPromise: Promise<DesktopStatus> | null = null;
 const fileIconCache = new Map<string, string | null>();
 const diagnosticsService = new DiagnosticsService();
 const systemPresenceMonitor = new SystemPresenceMonitor(undefined, 1_800);
 const pauseArbiter = new PauseArbiter({}, handleRuntimeStateChanged);
 const searchResultRegistry = new SearchResultRegistry();
 const wallpaperAttachQueue = new WallpaperAttachQueue();
+const cleanDesktopEscapeGuard = new CleanDesktopEscapeGuard(globalShortcut, () => {
+  void exitCleanDesktop("escape-key");
+});
 let desktopStatus: DesktopStatus = {
   mode: "idle",
   lastChangedAt: new Date().toISOString()
@@ -749,25 +755,12 @@ async function verifyVisibleWallpaperFrame(window: BrowserWindow, timeoutMs = 2_
 
 function defaultPetBounds(): PetWindowBounds {
   const display = screen.getPrimaryDisplay();
-  const workArea = display.workArea;
-  const width = 250;
-  const height = 250;
-  return {
-    x: workArea.x + workArea.width - width - 28,
-    y: workArea.y + workArea.height - height - 24,
-    width,
-    height
-  };
+  return defaultPetWindowForWorkArea(display.workArea);
 }
 
 function normalizePetBounds(bounds: PetWindowBounds): PetWindowBounds {
   const display = screen.getDisplayMatching(bounds);
-  const workArea = display.workArea;
-  const width = Math.max(230, Math.min(340, Math.round(bounds.width)));
-  const height = Math.max(230, Math.min(340, Math.round(bounds.height)));
-  const x = Math.max(workArea.x, Math.min(Math.round(bounds.x), workArea.x + workArea.width - width));
-  const y = Math.max(workArea.y, Math.min(Math.round(bounds.y), workArea.y + workArea.height - height));
-  return { x, y, width, height };
+  return fitPetWindowToWorkArea(bounds, display.workArea);
 }
 
 function readPetBounds(): PetWindowBounds {
@@ -1181,6 +1174,7 @@ function createRuntimeMetricsService(): RuntimeMetricsService {
 
 async function emergencyRestoreDesktop(reason: string): Promise<void> {
   logger?.warn("desktop-state", "emergency desktop restore requested", { reason });
+  cleanDesktopEscapeGuard.disarm();
   closeOverlayWindow();
   closeWallpaperWindow();
   database?.setAppState("clean_desktop_mode", "false");
@@ -1198,27 +1192,51 @@ async function emergencyRestoreDesktop(reason: string): Promise<void> {
 
 async function enterCleanDesktop(): Promise<DesktopStatus> {
   desktopStatus = (await desktopController?.activate()) ?? updateDesktopStatus("safe-mode");
+  if (desktopStatus.mode !== "active") {
+    cleanDesktopEscapeGuard.disarm();
+    database?.setAppState("clean_desktop_mode", "false");
+    mainWindow?.show();
+    logger?.warn("desktop-state", "clean desktop mode rejected because desktop icons could not be hidden", {
+      mode: desktopStatus.mode
+    });
+    return {
+      ...desktopStatus,
+      message: "未进入纯净桌面：系统图标隐藏失败，已保持原桌面可见。"
+    };
+  }
   createWallpaperWindow();
   closeOverlayWindow();
   mainWindow?.hide();
   database?.setAppState("clean_desktop_mode", "true");
+  const escapeReady = cleanDesktopEscapeGuard.arm();
   desktopStatus = {
     ...desktopStatus,
-    message: "纯净桌面已开启：系统桌面图标和 Project D 整理层已隐藏，可从托盘恢复。"
+    message: escapeReady
+      ? "纯净桌面已开启：按 Esc 随时恢复桌面图标。"
+      : "纯净桌面已开启：Esc 注册冲突，请从托盘选择“恢复桌面”。"
   };
-  logger?.info("desktop-state", "clean desktop mode entered");
+  logger?.[escapeReady ? "info" : "warn"]("desktop-state", "clean desktop mode entered", { escapeReady });
   sendMenuCommand(MENU_COMMANDS.ACTIVATE_DESKTOP);
   return desktopStatus;
 }
 
-async function exitCleanDesktop(): Promise<DesktopStatus> {
-  desktopStatus = (await desktopController?.deactivate()) ?? updateDesktopStatus("idle");
-  database?.setAppState("clean_desktop_mode", "false");
-  mainWindow?.show();
-  showMainWindow();
-  logger?.info("desktop-state", "clean desktop mode exited");
-  sendMenuCommand(MENU_COMMANDS.DEACTIVATE_DESKTOP);
-  return desktopStatus;
+function exitCleanDesktop(reason = "user-action"): Promise<DesktopStatus> {
+  if (cleanDesktopExitPromise) return cleanDesktopExitPromise;
+  cleanDesktopEscapeGuard.disarm();
+  const operation = (async () => {
+    desktopStatus = (await desktopController?.deactivate()) ?? updateDesktopStatus("idle");
+    database?.setAppState("clean_desktop_mode", "false");
+    mainWindow?.show();
+    showMainWindow();
+    logger?.info("desktop-state", "clean desktop mode exited", { reason });
+    sendMenuCommand(MENU_COMMANDS.DEACTIVATE_DESKTOP);
+    return desktopStatus;
+  })();
+  const tracked = operation.finally(() => {
+    if (cleanDesktopExitPromise === tracked) cleanDesktopExitPromise = null;
+  });
+  cleanDesktopExitPromise = tracked;
+  return tracked;
 }
 
 function broadcastSettingsUpdated(): void {
@@ -1696,7 +1714,7 @@ function createTray(): Tray {
       }
     },
     {
-      label: "纯净桌面",
+      label: "纯净桌面（Esc 退出）",
       click: async () => {
         await enterCleanDesktop();
       }
@@ -2319,6 +2337,7 @@ async function activateDesktopOnStartup(): Promise<void> {
 async function shutdownSafely(): Promise<void> {
   try {
     const result = await runWithDeadline(async () => {
+      cleanDesktopEscapeGuard.disarm();
       try {
         const currentMode = desktopController?.getStatus().mode ?? desktopStatus.mode;
         if (["active", "activating", "deactivating", "error", "safe-mode"].includes(currentMode)) {

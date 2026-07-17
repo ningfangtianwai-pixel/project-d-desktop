@@ -12,6 +12,8 @@ test("desktop icon synchronization verifies the real Explorer list view", () => 
   const hide = buildDesktopIconSyncScript(false);
 
   assert.match(show, /IsWindowVisible/);
+  assert.match(show, /SendMessageTimeout/);
+  assert.match(show, /1000/);
   assert.match(show, /SysListView32/);
   assert.match(show, /\$desired = \$true/);
   assert.match(show, /-Value 0/);

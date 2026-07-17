@@ -1,5 +1,6 @@
 import type { MenuItemConstructorOptions } from "electron";
 import { PET_PERSONALITIES } from "../shared/pet-behavior.js";
+import { PET_CHARACTERS, normalizePetCharacterId } from "../shared/pet-characters.js";
 import type { SettingsPatch, SettingsSnapshot } from "../shared/types.js";
 
 interface PetMenuActions {
@@ -8,7 +9,7 @@ interface PetMenuActions {
   updatePet: (patch: NonNullable<SettingsPatch["pet"]>) => void;
 }
 
-type PetMenuSettings = Pick<SettingsSnapshot["pet"], "personality" | "autoOutfit" | "currentOutfit">;
+type PetMenuSettings = Pick<SettingsSnapshot["pet"], "characterId" | "personality" | "autoOutfit" | "currentOutfit">;
 
 export function createPetMenuTemplate(settings: PetMenuSettings, actions: PetMenuActions): MenuItemConstructorOptions[] {
   const outfits = [
@@ -20,8 +21,17 @@ export function createPetMenuTemplate(settings: PetMenuSettings, actions: PetMen
   ] as const;
 
   return [
-    { label: "和 Luna 对话", click: actions.openConversation },
+    { label: "和桌宠对话", click: actions.openConversation },
     { type: "separator" },
+    {
+      label: "角色",
+      submenu: PET_CHARACTERS.map((character) => ({
+        label: character.name,
+        type: "radio" as const,
+        checked: normalizePetCharacterId(settings.characterId) === character.id,
+        click: () => actions.updatePet({ characterId: character.id })
+      }))
+    },
     {
       label: "换装",
       submenu: [

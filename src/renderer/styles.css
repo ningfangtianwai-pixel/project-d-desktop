@@ -425,6 +425,19 @@ button {
   pointer-events: none;
 }
 
+.pet-character-sheet {
+  inset: -22% -54% -18%;
+  width: 208%;
+  height: 140%;
+  max-width: none;
+  object-fit: cover;
+  object-position: var(--pet-focus-x, 50%) var(--pet-focus-y, 34%);
+  border-radius: 46% 46% 38% 38%;
+  filter: saturate(0.96) drop-shadow(0 14px 14px rgba(0, 0, 0, 0.24));
+  -webkit-mask-image: radial-gradient(ellipse 42% 48% at 50% 48%, #000 54%, rgba(0,0,0,.82) 70%, transparent 100%);
+  mask-image: radial-gradient(ellipse 42% 48% at 50% 48%, #000 54%, rgba(0,0,0,.82) 70%, transparent 100%);
+}
+
 .pet-emote {
   position: absolute;
   top: 7px;

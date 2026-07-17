@@ -25,6 +25,7 @@
     "qa:soak:4h": "pnpm build && node scripts/qa-soak.cjs --seconds 14400 --mode stress",
     "qa:soak:24h": "pnpm build && node scripts/qa-soak.cjs --seconds 86400 --mode idle",
     "qa:crash-restart": "pnpm build && node scripts/qa-crash-restart.cjs",
+    "qa:clean-desktop-escape": "node scripts/qa-clean-desktop-escape.cjs",
     "verify:packaged": "node scripts/verify-packaged-runtime.cjs",
     "preview": "vite preview --host 127.0.0.1",
     "dist": "pnpm build && electron-builder"

@@ -1,4 +1,5 @@
 import type { SettingsPatch } from "../shared/types.js";
+import { PET_CHARACTERS } from "../shared/pet-characters.js";
 
 type Rule = (value: unknown) => boolean;
 
@@ -31,7 +32,7 @@ const sectionRules: Record<string, Record<string, Rule>> = {
     enableBorderInteraction: isBoolean
   },
   pet: {
-    characterId: string(60),
+    characterId: oneOf(PET_CHARACTERS.map((character) => character.id)),
     currentOutfit: string(60),
     scale: number(0.5, 2),
     isVisible: isBoolean,
