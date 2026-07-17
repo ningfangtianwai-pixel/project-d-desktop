@@ -595,3 +595,14 @@
 - [x] A new Stage 36 installer is built and its packaged runtime passes 33/33 module loads.
 - [x] Twenty-four distinct packaged-product screenshots are captured and indexed.
 - [ ] The Stage 36 installer is signed and accepted on clean Windows 10/11 accounts.
+
+## Stage 37 Desktop Shortcut Deployment Recovery
+
+- [x] The desktop shortcut target is identified and its deployed files match the verified Stage 36 release hashes.
+- [x] The local acceptance shortcut targets the canonical `release\win-unpacked` build instead of a manually copied directory that can become stale.
+- [x] Launching through the real desktop shortcut records `attached: true` and `renderReady: true` without a white fullscreen overlay.
+- [x] Two rapid duplicate shortcut launches are rejected by the single-instance lock and leave exactly one root process.
+- [x] `Ctrl+Alt+Shift+Escape` destroys the wallpaper host and restores Explorer icons with `HideIcons=0`.
+- [x] Run keys, Startup folders, and scheduled tasks contain no hidden Project D launch entry.
+- [x] User data remains in `%APPDATA%\Project D` and is not overwritten by the E-drive deployment synchronization.
+- [ ] A signed clean-account installer replaces the current manual E-drive deployment for external distribution.

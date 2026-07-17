@@ -103,3 +103,10 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 1. Obtain an Authenticode certificate and sign the rebuilt Stage 36 installer; the functional artifact is current but remains unsigned.
 2. Repeat the wallpaper-host validation on Windows 10 and on physical 125/150/200 percent DPI configurations.
 3. Run sleep/wake, Explorer restart, display hot-plug, and four-hour/24-hour soak evidence with the Stage 36 host implementation.
+
+## After Stage 37
+
+1. Stop distributing manual copies without a deployment record. Future local acceptance must install the current NSIS artifact or synchronize the full unpacked directory and verify `Project D.exe` plus `resources/app.asar` hashes before launch.
+2. Add a visible build identifier to diagnostics and the About/Recovery view so support can distinguish stale deployments without filesystem forensics.
+3. Repeat the Stage 37 real-shortcut launch, duplicate-launch, and emergency-recovery checks after every wallpaper-host or packaging change.
+4. Keep full-screen machine captures with personal filenames in ignored QA artifacts; publish only redacted or app-cropped evidence.

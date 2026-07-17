@@ -1264,3 +1264,18 @@
 - Packaged Electron screenshot run captured 24 distinct PNG files covering onboarding, workspace, search, inbox, ActionPlan, all 11 settings sections, live wallpaper host, and live pet.
 - Emergency shortcut was invoked during the packaged run; the recovery request was logged and final `HideIcons` was `0`.
 - Installer SHA-256: `8E188A3714514E082B9B7FC6A70A66EAB25130925FEF74C277127349E2C14848`; Authenticode remains `NotSigned`.
+
+## 2026-07-17 Stage 37 Stale Desktop Shortcut Recovery
+
+- Reproduced the reported white screen and identified the running root process as `E:\新建文件夹 (3)\Project D\Project D.exe`.
+- Inspected `D:\Desktop\Project D.lnk`; it targeted the E-drive manual deployment rather than the current release directory.
+- Compared SHA-256 hashes and timestamps. Both the E-drive executable and `resources/app.asar` differed from the verified Stage 36 build and were about 52 minutes older.
+- Force-terminated the blocking legacy process after the first recovery command failed because of a PowerShell here-string quoting error. Restored `HideIcons=0` and captured a normal physical desktop.
+- Used `robocopy /E /COPY:DAT` to synchronize all Stage 36 unpacked files into the existing E-drive deployment without touching `%APPDATA%\Project D` user data.
+- Verified exact hash equality after deployment: executable `57BB74348C67A7BBFA50454406CA00922A9D911C240A3899785055CEBD7C4356`; `app.asar` `091B89F09B795B262B869F3F2CBB6945764FDFE47B012CFD93C35BA97D826F83`.
+- Real shortcut launch: one root process, five Electron children, wallpaper `attached: true`, and `renderReady: true`.
+- Duplicate shortcut test: two immediate secondary launches logged `single instance lock result` with `locked: false`; root-process count remained one.
+- Emergency recovery test: `Ctrl+Alt+Shift+Escape` destroyed the wallpaper window, restored 72 desktop icons, kept `HideIcons=0`, and returned desktop state to `idle`.
+- Checked HKCU/HKLM Run keys, both Startup folders, and scheduled tasks; no automatic Project D launch entry was found.
+- Retargeted `D:\Desktop\Project D.lnk` to the canonical `release\win-unpacked` executable, cold-started from the updated shortcut, and reconfirmed one root process plus `attached: true` and `renderReady: true`.
+- Stored three full-screen QA captures under ignored `artifacts/qa/stage37-live` so personal desktop filenames are not published to the public repository.

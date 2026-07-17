@@ -856,3 +856,14 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Verification: `pnpm test` 112/112 passed; `pnpm build` passed with 2420 modules transformed.
 - Stage 36 NSIS installer rebuilt and packaged-runtime verification loaded 33/33 modules. SHA-256: `8E188A3714514E082B9B7FC6A70A66EAB25130925FEF74C277127349E2C14848`.
 - Captured and pixel-checked 24 screenshots from the packaged Electron application under `docs/screenshots/stage36`; no files are empty or hash-duplicates.
+
+## Stage 37 - Stale Desktop Shortcut Deployment Incident (Complete)
+
+- Confirmed the recurrence did not come from the Stage 36 source or installer. `D:\Desktop\Project D.lnk` still launched a manually copied E-drive build whose executable and `app.asar` hashes predated Stage 36.
+- Terminated the blocking legacy process, restored `HideIcons=0`, and visually confirmed that Explorer, the taskbar, and desktop icons were usable again.
+- Synchronized the verified Stage 36 `release/win-unpacked` build to `E:\新建文件夹 (3)\Project D`; the deployed executable and `app.asar` now match the release hashes exactly.
+- Retargeted the local acceptance shortcut to `D:\桌面操作系统\release\win-unpacked\Project D.exe`, eliminating future drift between a newly packaged build and the old manual E-drive copy.
+- Launched through the real desktop shortcut. The wallpaper host recorded `attached: true` and `renderReady: true`, and a physical screen capture showed the normal Project D interface instead of a white fullscreen window.
+- Launched the same shortcut twice more in quick succession. Both secondary processes received `locked: false`; one main instance remained, so repeated double-clicks cannot create duplicate wallpaper hosts.
+- Invoked `Ctrl+Alt+Shift+Escape` against the deployed build. The wallpaper window was destroyed, 72 Explorer icons were visible, `HideIcons=0`, and desktop state returned to `idle`.
+- No Project D Run key, Startup shortcut, or scheduled task exists on this machine. The recurrence path was the manually opened stale desktop shortcut target.
