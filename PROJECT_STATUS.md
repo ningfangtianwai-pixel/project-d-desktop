@@ -893,3 +893,25 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Visual acceptance captured 24 screenshots under `artifacts/qa/stage39-final3/screenshots`; the pet roster, wallpaper display metadata, wallpaper host, and live pet rendered without overflow.
 - Verification: `pnpm typecheck` passed, all 127 tests passed, and the development asset gate verified 17 wallpaper/character assets.
 - Stage 39 NSIS package and packaged-runtime verification passed. Installer size: 239,154,024 bytes; SHA-256: `CCFCFEE3821DDA1EB5802810F346C83E690613E18F475F90A5B14BE9C94F6DC6`; Authenticode remains `NotSigned`.
+
+## Stage 40 - V3 Commercial Foundations And Release Automation (Code Complete)
+
+- Replaced the `any`-based IPC service bag with strongly typed dependency contracts for all 16 handler modules.
+- Added an explicit wallpaper media state machine covering loading, playing, paused, error, fallback, runtime pause/resume, bounded play attempts, and `canplay/playing/pause/ended/error/stalled` events.
+- Video playback and decode failures now preserve the previous visible layer or use a required static poster instead of exposing a black frame.
+- Added a persistent update recovery ledger with failure budgets, pending-install reconciliation, last-successful-version evidence, and bounded automatic retries.
+- Added an isolated install/upgrade/corrupt-package/offline/rollback harness. It is deliberately fixture-only and does not claim a real installer acceptance pass.
+- Added local CycloneDX SBOM, `pnpm audit` JSON, asset-ledger `sync/check/report`, and matching CI evidence uploads.
+- Added Gate 8 signed remote-configuration policy and main-process HTTPS/cache integration. AI, weather, wallpaper assets, versions, and update distribution now obey verified controls while protected desktop recovery remains available; bounded local sessions and hashed crash fingerprints feed the local dashboard and P0/P1 rules.
+- Added a Gate 5 server-side domain skeleton for accounts, devices, orders, verified/idempotent payment callbacks, refunds, signed entitlement snapshots, and append-only audit records.
+- Added Gate 6 privacy-policy and user-agreement drafts plus a payment integration runbook. They remain drafts pending legal review.
+- Verification: `pnpm quality` passed; 165/165 tests, renderer/main/server type checks, production build, 358-component SBOM, zero known audit findings, and five release-lifecycle fixture checks.
+- A 30-second hidden Electron idle preflight exited cleanly with zero errors; CPU median 0.26% and P95 0.97%. The sample is intentionally not counted as four-hour or 24-hour evidence.
+- Final `pnpm dist` and `pnpm verify:packaged` passed with Electron 43.1.1 and 39/39 packaged runtime modules. The NSIS installer is 239,167,277 bytes, SHA-256 `6DF1082EA41160C357751AD53FF459E6CE189FD2DB4CDD6AE47F2E28A89040F0`; Authenticode remains `NotSigned`.
+
+### Stage 40 External Closure Requirements
+
+- Real signed N-2/N-1 installation, update, rollback, uninstall, disk-full, and interrupted-update acceptance remains open.
+- A production HTTPS remote-config service, protected signing key, server-side telemetry transport, hosted dashboard, and alert destination remain open; the client refresh/cache/decision path and local dashboard are implemented.
+- The commercial service uses in-memory adapters and test verification only; production storage, authentication, channel SDKs, merchant credentials, deployment, penetration testing, and disaster recovery remain open.
+- All 35 files distributed under `public` and `assets` are now tracked; every entry still requires auditable commercial-license evidence.

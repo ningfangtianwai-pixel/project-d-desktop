@@ -3,6 +3,95 @@ const test = require("node:test");
 
 const { WallpaperPlayer } = require("../dist/shared/wallpaper-player.js");
 
+test("wallpaper player exposes the complete playback lifecycle", async () => {
+  const states = [];
+  let releaseLoad;
+  const player = new WallpaperPlayer(
+    () => new Promise((resolve) => {
+      releaseLoad = resolve;
+    })
+  );
+  const video = { id: "video", type: "video", src: "/video.mp4" };
+  const unsubscribe = player.subscribe((snapshot) => states.push([snapshot.state, snapshot.lastEvent]));
+
+  const selection = player.select(video);
+  assert.equal(player.snapshot.state, "loading");
+  releaseLoad();
+  await selection;
+  player.handleMediaEvent("video", "canplay");
+  player.handleMediaEvent("video", "playing");
+  player.handleMediaEvent("video", "pause");
+  player.handleMediaEvent("video", "ended");
+  unsubscribe();
+
+  assert.deepEqual(states, [
+    ["idle", null],
+    ["loading", null],
+    ["loading", null],
+    ["loading", "canplay"],
+    ["playing", "playing"],
+    ["paused", "pause"],
+    ["loading", "ended"]
+  ]);
+});
+
+test("runtime pause and resume permit one new video play attempt", async () => {
+  const player = new WallpaperPlayer(async () => undefined);
+  const video = { id: "video", type: "video", src: "/video.mp4" };
+
+  await player.select(video);
+  assert.equal(player.requestPlay("video"), true);
+  assert.equal(player.requestPlay("video"), false);
+  player.handleMediaEvent("video", "playing");
+  player.pause();
+  assert.equal(player.snapshot.state, "paused");
+  assert.equal(player.requestPlay("video"), false);
+  player.resume();
+  assert.equal(player.snapshot.state, "loading");
+  assert.equal(player.requestPlay("video"), true);
+  assert.equal(player.requestPlay("video"), false);
+});
+
+test("video playback failure falls back to its static poster without retrying", async () => {
+  const states = [];
+  const player = new WallpaperPlayer(async () => undefined);
+  const video = {
+    id: "video",
+    type: "video",
+    src: "/video.mp4",
+    posterSrc: "/video-poster.jpg"
+  };
+  player.subscribe((snapshot) => states.push(snapshot.state));
+
+  await player.select(video);
+  assert.equal(player.requestPlay("video"), true);
+  player.handleMediaEvent("video", "error", "decoder unavailable");
+
+  assert.equal(player.snapshot.state, "fallback");
+  assert.deepEqual(player.snapshot.fallback, {
+    id: "video:poster",
+    type: "image",
+    src: "/video-poster.jpg"
+  });
+  assert.match(player.snapshot.error, /decoder unavailable/);
+  assert.equal(player.requestPlay("video"), false);
+  assert.deepEqual(states.slice(-2), ["error", "fallback"]);
+});
+
+test("stalled video preserves the previous wallpaper when no poster exists", async () => {
+  const player = new WallpaperPlayer(async () => undefined);
+  const cover = { id: "cover", type: "image", src: "/cover.jpg" };
+  const video = { id: "video", type: "video", src: "/video.mp4" };
+
+  await player.select(cover);
+  await player.select(video);
+  player.handleMediaEvent("video", "stalled");
+
+  assert.equal(player.snapshot.state, "fallback");
+  assert.equal(player.snapshot.fallback.id, "cover");
+  assert.equal(player.snapshot.lastEvent, "stalled");
+});
+
 test("wallpaper player keeps the previous wallpaper when a new asset fails", async () => {
   const loads = [];
   const player = new WallpaperPlayer(async (asset) => {

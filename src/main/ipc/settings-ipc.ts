@@ -28,8 +28,6 @@ export interface SettingsIpcDependencies {
   broadcastSettings: () => void;
   syncWindows: (settings: SettingsSnapshot) => void;
   validateSettingsPatch: (patch: unknown) => SettingsPatch;
-  tryAiReply: (input: string, weather: string, history: unknown[], personality: string) => Promise<string | null>;
-  createLocalAiReply: (input: string, personality: string, weather: string) => string;
   sendChatMessage: (content: string) => Promise<ChatResponse>;
 }
 

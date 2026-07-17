@@ -44,7 +44,13 @@ const modulePaths = [
   "dist/main/shutdown-deadline.js",
   "dist/main/window-resilience.js",
   "dist/main/update-service.js",
+  "dist/main/operations/remote-config.js",
+  "dist/main/operations/crash-metrics.js",
+  "dist/main/operations/alert-engine.js",
+  "dist/main/operations/operations-control.js",
+  "dist/main/operations/operations-telemetry.js",
   "dist/shared/ipc.js",
+  "dist/shared/operations.js",
   "dist/main/ipc/register-all.js",
   "dist/shared/wallpaper-library.js",
 ];

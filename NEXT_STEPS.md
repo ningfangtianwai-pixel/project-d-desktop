@@ -127,3 +127,14 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 3. Repeat clean desktop entry and `Esc` recovery from the packaged installer on Windows 10 and Windows 11, including Explorer-busy and forced-process-exit cases.
 4. Complete four-hour and 24-hour soak evidence, Authenticode signing, HTTPS update infrastructure, and commercial license evidence for all distributed artwork.
 5. Keep payment, account, order, and entitlement implementation paused until the merchant and server-side architecture is approved.
+
+## After Stage 40
+
+1. Add licensed 1080p/2K/4K H.264 video samples with matching static posters, then execute 100-loop playback and 300-switch packaged-runtime evidence.
+2. Run the real four-hour interactive and 24-hour idle soak commands; include sleep/wake, Explorer restart, network loss, full-screen pause, and display changes.
+3. Provide a production HTTPS operations endpoint and Ed25519 public key, then connect signed configuration refresh and persisted cursor handling to the main process.
+4. Connect crash/session events to an approved telemetry service and alert destination without uploading desktop filenames, paths, chat text, or API keys.
+5. Replace Gate 5 in-memory adapters with a separately deployed service using durable transactions, authenticated sessions, encrypted secrets, merchant-channel SDKs, and append-only audit storage.
+6. Obtain legal review for the privacy policy, user agreement, membership/payment terms, refund flow, and data-retention schedule.
+7. Execute signed N-2/N-1 installer/update/rollback/uninstall acceptance on clean Windows 10 and Windows 11 accounts.
+8. Complete the real Windows/GPU/multi-display/DPI/refresh-rate matrix and commercial asset-license evidence.

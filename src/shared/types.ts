@@ -144,6 +144,7 @@ export interface WallpaperLibraryItem {
   style: "anime" | "landscape" | "cinematic" | "cyberpunk" | "minimalist" | "seasonal";
   type: "image" | "video";
   file: string;
+  posterFile?: string;
   aliases: string[];
 }
 

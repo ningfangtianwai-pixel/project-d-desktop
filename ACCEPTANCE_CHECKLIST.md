@@ -643,3 +643,24 @@
 - [x] Automated suite passes 127/127 and the asset gate verifies 17 bundled wallpaper/character sources.
 - [ ] Four non-Luna-Q character sheets have final transparent multi-action sprite packs.
 - [ ] Physical multi-monitor/DPI acceptance is recorded on more than one real display.
+
+## Stage 40 V3 Commercial Foundations And Release Automation
+
+- [x] IPC composition uses module-owned TypeScript dependency contracts without an `any` service bag.
+- [x] Wallpaper video state covers loading, playing, paused, error, fallback, runtime pause/resume, and bounded play attempts.
+- [x] Video error and stalled events preserve the previous layer or use a static poster fallback.
+- [x] Update failures persist recovery intent and stop automatic retries after a bounded failure budget.
+- [x] Install, overwrite-upgrade, corrupt-package, offline, and rollback paths have an explicitly isolated fixture harness.
+- [x] Local CycloneDX SBOM, dependency audit JSON, and asset-ledger sync/check/report commands cover all 35 distributed `public`/`assets` files and pass.
+- [x] Signed remote configuration rejects tampering, expiry, revision rollback, and protected desktop-core disable attempts.
+- [x] Crash aggregation and P0/P1 alert rules implement deduplication, cooldown, escalation, and recovery.
+- [x] Server-side order/payment/entitlement tests reject unsigned callbacks and duplicate grants, and revoke entitlement after refund.
+- [x] Privacy-policy, user-agreement, and payment-integration drafts are present and marked for legal review.
+- [x] Automated quality gate passes 165/165 tests, all TypeScript targets, production build, supply-chain evidence, and release fixture QA.
+- [x] Verified Gate 8 controls are connected to AI, weather, wallpaper assets, versions, update checks, durable cursor caching, and a bounded privacy-safe local crash dashboard.
+- [x] Electron 43.1.1 NSIS packaging passes and all 39 declared packaged runtime modules load from `app.asar`.
+- [ ] Licensed video samples pass the real 100-loop and 300-switch packaged-runtime matrix.
+- [ ] Real signed installer and N-2/N-1 update rollback pass on clean Windows 10/11 accounts.
+- [ ] Production remote-config delivery, telemetry, alert transport, and operational dashboards are deployed.
+- [ ] Production account/payment/entitlement service and real merchant channels pass security and disaster-recovery review.
+- [ ] Legal counsel approves all commercial terms and privacy disclosures.

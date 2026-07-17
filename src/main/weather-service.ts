@@ -51,17 +51,18 @@ interface WeatherLocation {
 export class WeatherService {
   constructor(
     private readonly database: DatabaseService,
-    private readonly logger: AppLogger
+    private readonly logger: AppLogger,
+    private readonly networkAllowed: () => boolean = () => true
   ) {}
 
   async getCurrentWeather(): Promise<CurrentWeather> {
     const settings = this.database.getSettings();
-    if (getPrivacyNetworkState(this.database).paused) {
+    if (!this.networkAllowed() || getPrivacyNetworkState(this.database).paused) {
       const cached = this.readCache();
       return {
         ...(cached ?? this.manualWeather(settings)),
         source: cached ? "cache" : "manual",
-        error: "privacy-network-paused"
+        error: this.networkAllowed() ? "privacy-network-paused" : "remote-feature-disabled"
       };
     }
     if (settings.weather.mode !== "auto") {

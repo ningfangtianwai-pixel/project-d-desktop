@@ -2,7 +2,13 @@
 import { nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { Application, Container, Graphics } from "pixi.js";
 import type { CurrentWeather, SettingsSnapshot, WallpaperLibraryItem } from "@shared/types";
-import { WallpaperPlayer, type WallpaperAsset } from "@shared/wallpaper-player";
+import {
+  WallpaperPlayer,
+  type WallpaperAsset,
+  type WallpaperMediaEvent,
+  type WallpaperPlaybackSnapshot,
+  type WallpaperPlaybackState
+} from "@shared/wallpaper-player";
 import type { RuntimePauseSnapshot } from "@shared/runtime";
 import { wallpaperRenderScale, type WallpaperRenderProfile } from "@shared/wallpaper-render-scale";
 
@@ -19,11 +25,13 @@ let runtimeTimer = 0;
 let wallpaperTransitionTimer = 0;
 let unsubscribeSettingsUpdated: (() => void) | null = null;
 let unsubscribeRuntimeState: (() => void) | null = null;
+let unsubscribeWallpaperPlayback: (() => void) | null = null;
 const wallpaperLayers = ref<Array<WallpaperAsset & { active: boolean }>>([]);
 const weatherMode = ref<WeatherVisualMode>("clear");
 const weatherIntensity = ref(0.55);
 const performanceProfile = ref("auto");
 const runtimePaused = ref(false);
+const playbackState = ref<WallpaperPlaybackState>("idle");
 
 function activeRenderProfile(): WallpaperRenderProfile {
   if (performanceMode === "quality" || performanceMode === "battery-saver") return performanceMode;
@@ -34,17 +42,29 @@ async function syncMediaPlayback(): Promise<void> {
   await nextTick();
   const videos = host.value?.querySelectorAll<HTMLVideoElement>(".wallpaper-bg-video") ?? [];
   for (const video of videos) {
-    const shouldPlay = !runtimePaused.value && video.classList.contains("is-active");
+    const assetId = video.dataset.wallpaperId ?? "";
+    const snapshot = wallpaperPlayer.snapshot;
+    const shouldPlay =
+      !runtimePaused.value &&
+      snapshot.current?.id === assetId &&
+      (snapshot.state === "loading" || snapshot.state === "playing");
     if (!shouldPlay) {
-      video.pause();
+      if (!video.paused) video.pause();
       continue;
     }
-    void video.play().catch(() => undefined);
+    if (!wallpaperPlayer.requestPlay(assetId)) continue;
+    try {
+      await video.play();
+    } catch (error) {
+      wallpaperPlayer.handleMediaEvent(assetId, "error", error instanceof Error ? error.message : String(error));
+    }
   }
 }
 
 function applyRuntimeState(state: RuntimePauseSnapshot): void {
   runtimePaused.value = state.paused;
+  if (state.paused) wallpaperPlayer.pause();
+  else wallpaperPlayer.resume();
   performanceMode = state.effectiveProfile;
   performanceProfile.value = state.effectiveProfile;
   if (host.value) host.value.dataset.runtimePaused = String(state.paused);
@@ -57,17 +77,21 @@ function applyRuntimeState(state: RuntimePauseSnapshot): void {
   void syncMediaPlayback();
 }
 
+function loadBrowserImage(src: string, errorMessage: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve();
+    image.onerror = () => reject(new Error(errorMessage));
+    image.src = src;
+  });
+}
+
 function loadBrowserWallpaper(asset: WallpaperAsset): Promise<void> {
   if (asset.type === "image") {
-    return new Promise((resolve, reject) => {
-      const image = new Image();
-      image.onload = () => resolve();
-      image.onerror = () => reject(new Error(`壁纸图片加载失败: ${asset.id}`));
-      image.src = asset.src;
-    });
+    return loadBrowserImage(asset.src, `Wallpaper image failed to load: ${asset.id}`);
   }
 
-  return new Promise((resolve, reject) => {
+  const videoLoad = new Promise<void>((resolve, reject) => {
     const video = document.createElement("video");
     let settled = false;
     const finish = (handler: () => void) => {
@@ -91,13 +115,69 @@ function loadBrowserWallpaper(asset: WallpaperAsset): Promise<void> {
     video.src = asset.src;
     video.load();
   });
+  const posterLoad = asset.posterSrc
+    ? loadBrowserImage(asset.posterSrc, `Wallpaper poster failed to load: ${asset.id}`).catch(() => {
+        // A missing optional poster must not reject an otherwise decodable video.
+        asset.posterSrc = undefined;
+      })
+    : Promise.resolve();
+  return Promise.all([videoLoad, posterLoad]).then(() => undefined);
 }
 
 const wallpaperPlayer = new WallpaperPlayer(loadBrowserWallpaper);
 
+function activateWallpaperLayer(assetId: string): void {
+  if (wallpaperTransitionTimer) window.clearTimeout(wallpaperTransitionTimer);
+  wallpaperLayers.value = wallpaperLayers.value.map((layer) => ({ ...layer, active: layer.id === assetId }));
+  wallpaperTransitionTimer = window.setTimeout(() => {
+    wallpaperTransitionTimer = 0;
+    wallpaperLayers.value = wallpaperLayers.value.filter((layer) => layer.id === assetId);
+    void syncMediaPlayback();
+  }, 900);
+}
+
+function applyWallpaperPlayback(snapshot: WallpaperPlaybackSnapshot): void {
+  playbackState.value = snapshot.state;
+  if (host.value) {
+    host.value.dataset.playbackState = snapshot.state;
+    if (snapshot.lastEvent) host.value.dataset.playbackEvent = snapshot.lastEvent;
+    else delete host.value.dataset.playbackEvent;
+    if (snapshot.error) host.value.dataset.wallpaperError = snapshot.error;
+    else delete host.value.dataset.wallpaperError;
+  }
+
+  if (snapshot.state === "playing" && snapshot.lastEvent === "playing" && snapshot.current) {
+    activateWallpaperLayer(snapshot.current.id);
+  } else if (snapshot.state === "fallback") {
+    if (wallpaperTransitionTimer) {
+      window.clearTimeout(wallpaperTransitionTimer);
+      wallpaperTransitionTimer = 0;
+    }
+    if (snapshot.fallback) {
+      wallpaperLayers.value = [{ ...snapshot.fallback, active: true }];
+    }
+  }
+}
+
+function handleVideoEvent(layer: WallpaperAsset, event: WallpaperMediaEvent, domEvent: Event): void {
+  const video = domEvent.currentTarget as HTMLVideoElement;
+  const mediaError = video.error
+    ? `Media error ${video.error.code}${video.error.message ? `: ${video.error.message}` : ""}`
+    : undefined;
+  wallpaperPlayer.handleMediaEvent(layer.id, event, mediaError);
+  if (event === "canplay") void syncMediaPlayback();
+  if ((event === "error" || event === "stalled") && !video.paused) video.pause();
+}
+
 function wallpaperAsset(item: WallpaperLibraryItem): WallpaperAsset {
   const basePath = window.location.protocol === "file:" ? "./wallpapers/" : "/wallpapers/";
-  return { id: item.id, type: item.type, src: basePath + item.file };
+  const posterFile = item.posterFile;
+  return {
+    id: item.id,
+    type: item.type,
+    src: basePath + item.file,
+    posterSrc: posterFile ? basePath + posterFile : undefined
+  };
 }
 
 async function selectWallpaper(item: WallpaperLibraryItem): Promise<void> {
@@ -112,16 +192,20 @@ async function selectWallpaper(item: WallpaperLibraryItem): Promise<void> {
   if (host.value) delete host.value.dataset.wallpaperError;
   if (result.changed) {
     if (wallpaperTransitionTimer) window.clearTimeout(wallpaperTransitionTimer);
-    wallpaperLayers.value = [
-      ...(result.previous ? [{ ...result.previous, active: false }] : []),
-      { ...result.current, active: true }
-    ];
-    wallpaperTransitionTimer = window.setTimeout(() => {
-      wallpaperLayers.value = result.current ? [{ ...result.current, active: true }] : [];
-      void syncMediaPlayback();
-    }, 900);
+    if (result.current.type === "video") {
+      wallpaperLayers.value = [
+        ...(result.previous ? [{ ...result.previous, active: true }] : []),
+        { ...result.current, active: false }
+      ];
+    } else {
+      wallpaperLayers.value = [
+        ...(result.previous ? [{ ...result.previous, active: false }] : []),
+        { ...result.current, active: true }
+      ];
+      activateWallpaperLayer(result.current.id);
+    }
   } else if (wallpaperLayers.value.length === 0) {
-    wallpaperLayers.value = [{ ...result.current, active: true }];
+    wallpaperLayers.value = [{ ...result.current, active: result.current.type === "image" }];
   }
   void syncMediaPlayback();
 
@@ -311,6 +395,7 @@ onMounted(async () => {
   }
 
   try {
+    unsubscribeWallpaperPlayback = wallpaperPlayer.subscribe(applyWallpaperPlayback);
     await refreshRuntime();
     window.addEventListener("projectd:settings-changed", refreshRuntime);
     unsubscribeSettingsUpdated = window.projectD.onSettingsUpdated(() => {
@@ -476,6 +561,8 @@ onBeforeUnmount(() => {
   unsubscribeSettingsUpdated = null;
   unsubscribeRuntimeState?.();
   unsubscribeRuntimeState = null;
+  unsubscribeWallpaperPlayback?.();
+  unsubscribeWallpaperPlayback = null;
   app?.destroy(true);
   app = null;
 });
@@ -556,7 +643,14 @@ function startCanvasFallback(container: HTMLDivElement): void {
 </script>
 
 <template>
-  <div ref="host" class="wallpaper-stage" :data-style="currentStyleId()" :data-runtime-paused="String(runtimePaused)" aria-hidden="true">
+  <div
+    ref="host"
+    class="wallpaper-stage"
+    :data-style="currentStyleId()"
+    :data-runtime-paused="String(runtimePaused)"
+    :data-playback-state="playbackState"
+    aria-hidden="true"
+  >
     <template v-for="layer in wallpaperLayers" :key="layer.id">
       <div
         v-if="layer.type === 'image'"
@@ -569,10 +663,18 @@ function startCanvasFallback(container: HTMLDivElement): void {
         class="wallpaper-bg-media wallpaper-bg-video"
         :class="{ 'is-active': layer.active }"
         :src="layer.src"
-        :autoplay="!runtimePaused"
+        :poster="layer.posterSrc"
+        :data-wallpaper-id="layer.id"
+        preload="auto"
         loop
         muted
         playsinline
+        @canplay="handleVideoEvent(layer, 'canplay', $event)"
+        @playing="handleVideoEvent(layer, 'playing', $event)"
+        @pause="handleVideoEvent(layer, 'pause', $event)"
+        @ended="handleVideoEvent(layer, 'ended', $event)"
+        @error="handleVideoEvent(layer, 'error', $event)"
+        @stalled="handleVideoEvent(layer, 'stalled', $event)"
       ></video>
     </template>
     <div

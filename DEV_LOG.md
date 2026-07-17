@@ -1310,3 +1310,25 @@
 - Added all five new distributed character sheets to the SHA-256 asset ledger; commercial evidence remains intentionally pending.
 - `pnpm dist`: passed. `pnpm verify:packaged`: passed 33/33 modules.
 - Stage 39 installer: 239,154,024 bytes; SHA-256 `CCFCFEE3821DDA1EB5802810F346C83E690613E18F475F90A5B14BE9C94F6DC6`; Authenticode `NotSigned`.
+
+## 2026-07-17 Stage 40 Commercial Foundations And Automation
+
+- Implemented the video playback state machine and static-poster/previous-frame failure path.
+- Rebuilt IPC composition around module-owned TypeScript dependency contracts and removed the `ServiceDeps` `any` bag.
+- Implemented update recovery state, bounded retry behavior, fixture release lifecycle QA, supply-chain evidence generation, and asset-ledger automation.
+- Implemented Gate 8 signed configuration decisions, crash metrics, and alert rules.
+- Implemented the Gate 5 commercial domain skeleton and six security-focused tests; added Gate 6 legal drafts and payment runbook.
+
+### Commands And Results
+
+- `pnpm quality`: passed.
+- `pnpm test`: passed, 165/165 after review fixes, Gate 8 main-process integration, and persisted anti-rollback cursor coverage.
+- `pnpm typecheck`: passed for Vue, Electron main/preload/shared, and the commercial server domain.
+- `pnpm build`: passed, 2422 renderer modules transformed.
+- `pnpm verify:supply-chain`: passed; CycloneDX contains 358 components and audit reports zero info/low/moderate/high/critical findings.
+- `pnpm qa:release-lifecycle`: passed five isolated fixture checks; installer signature remains `NotSigned`.
+- `pnpm verify:assets:sync && pnpm verify:assets && pnpm verify:assets:report`: passed; coverage expanded from 17 selected files to all 35 distributed `public`/`assets` files without overwriting authorization fields.
+- `node scripts/qa-soak.cjs --seconds 30 --mode idle`: passed with clean shutdown and zero error entries; duration is insufficient for a memory-growth conclusion.
+- Review fixes: made order idempotency atomic, wrapped payment settlement in a rollback-capable transaction port, stopped optional poster failure from rejecting video playback, expanded the ledger to all distributed assets, and connected signed operations controls plus privacy-safe crash telemetry to the main process.
+- Preserved the highest accepted operations-config cursor independently of an expired or corrupt cached envelope, preventing a stale revision from being accepted after cache rejection.
+- Final `pnpm dist`: passed. `pnpm verify:packaged`: passed 39/39 runtime modules, including all operations-control modules. Installer size: 239,167,277 bytes; SHA-256 `6DF1082EA41160C357751AD53FF459E6CE189FD2DB4CDD6AE47F2E28A89040F0`; Authenticode `NotSigned`.

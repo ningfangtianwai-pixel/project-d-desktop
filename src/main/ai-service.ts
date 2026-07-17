@@ -13,7 +13,8 @@ export class AiService {
   constructor(
     private readonly database: DatabaseService,
     private readonly weather: WeatherService,
-    private readonly logger: AppLogger
+    private readonly logger: AppLogger,
+    private readonly networkAllowed: () => boolean = () => true
   ) {}
 
   setSettingsChangedHandler(handler: (settings: SettingsSnapshot) => void): void {
@@ -166,7 +167,7 @@ export class AiService {
 
   private async tryProviderReply(input: string, weather: string, history: ChatMessage[], personality: string): Promise<string | null> {
     const settings = this.database.getSettings();
-    if (getPrivacyNetworkState(this.database).paused || !settings.ai.enabled || settings.ai.provider === "local-fallback") {
+    if (!this.networkAllowed() || getPrivacyNetworkState(this.database).paused || !settings.ai.enabled || settings.ai.provider === "local-fallback") {
       return null;
     }
 

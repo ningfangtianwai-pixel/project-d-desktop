@@ -10,7 +10,19 @@ This runbook covers the Gate 8 client-side control foundation:
 - per-version crash-free metrics;
 - P0/P1 crash alerts with deduplication and cooldown.
 
-The modules are deliberately independent from Electron startup and networking. A later integration must provide transport, persistence, public-key provisioning, and alert delivery without weakening these rules.
+The policy modules remain independently testable. `OperationsControlService` now connects them to Electron startup, HTTPS refresh, durable app-state caching, AI/weather feature decisions, wallpaper asset stops, and update-distribution pause. `OperationsTelemetryService` records bounded local sessions and hashed crash fingerprints. Production alert delivery and server-side dashboards remain external work.
+
+## Client configuration
+
+Production builds can supply:
+
+- `PROJECTD_OPERATIONS_CONFIG_URL`: HTTPS URL for the signed envelope;
+- `PROJECTD_OPERATIONS_PUBLIC_KEY`: pinned Ed25519 public key in PEM form (`\\n` escapes are normalized);
+- `PROJECTD_OPERATIONS_CONFIG_ID`: fixed environment identifier, default `project-d-production`.
+
+Without both HTTPS endpoint and public key, remote control remains inactive and local desktop functionality continues. The private signing key must never be placed in these variables or in the client package.
+
+The client stores only the verified envelope, monotonic revision cursor, bounded session/crash records, alert state, and a local dashboard summary. Crash fingerprints are SHA-256-derived identifiers; raw reasons, paths, chat text, prompts, filenames, and secrets are not written into the dashboard payload.
 
 ## Remote configuration contract
 

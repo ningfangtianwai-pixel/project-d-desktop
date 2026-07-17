@@ -14,6 +14,10 @@ test("wallpaper library has at least two real local assets for every required st
       const assetPath = path.join(__dirname, "..", "public", "wallpapers", item.file);
       assert.ok(fs.existsSync(assetPath), `${item.id} is missing ${assetPath}`);
       assert.ok(fs.statSync(assetPath).size > 100_000, `${item.id} is still a low-detail placeholder`);
+      if (item.type === "video") {
+        assert.ok(item.posterFile, `${item.id} must define a static poster fallback`);
+        assert.ok(fs.existsSync(path.join(__dirname, "..", "public", "wallpapers", item.posterFile)), `${item.id} poster is missing`);
+      }
     }
   }
 });

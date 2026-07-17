@@ -13,7 +13,7 @@ export interface DesktopIpcDependencies {
   getDatabase: () => { getStatus(): DatabaseStatus; getDesktopFileById(id: number): DesktopFileRecord | null; getContainers(): unknown[]; getLayouts(): LayoutRecord[]; moveFileToContainer(fileId: number, containerId: number): void; renameFileAlias(fileId: number, displayName: string): void; hideFile(fileId: number): void; updateContainerPosition(id: number, x: number, y: number, width: number, height: number, isCollapsed?: boolean): void; updateContainerAccent(id: number, accent: ContainerAccent): void; applyLayout(layoutId: number): void } | null;
   getContainersWithIcons: () => Promise<ContainerWithFiles[]>;
   readFilePreview: (fileId: number) => Promise<FilePreviewData>;
-  updateDesktopStatus: (mode: string) => DesktopStatus;
+  updateDesktopStatus: (mode: DesktopStatus["mode"]) => DesktopStatus;
   createOverlayWindow: (safeMode: boolean) => void;
   closeOverlayWindow: () => void;
   showMainWindow: () => void;

@@ -37,6 +37,9 @@ import { PauseArbiter } from "./pause-arbiter.js";
 import { RuntimeMetricsService } from "./runtime-metrics.js";
 import { CleanDesktopEscapeGuard } from "./clean-desktop-escape.js";
 import { defaultPetWindowForWorkArea, fitPetWindowToWorkArea } from "./pet-window-layout.js";
+import { validateSettingsPatch } from "./settings-patch-validator.js";
+import { OperationsControlService } from "./operations/operations-control.js";
+import { OperationsTelemetryService } from "./operations/operations-telemetry.js";
 import { IPC_CHANNELS, MENU_COMMANDS, type MenuCommand } from "../shared/ipc.js";
 import { registerAllIpcHandlers, type ServiceDeps } from "./ipc/register-all.js";
 import { WALLPAPER_LIBRARY } from "../shared/wallpaper-library.js";
@@ -83,6 +86,8 @@ let suggestionEngine: SuggestionEngine | null = null;
 let runtimeRecovery: DesktopRuntimeRecovery | null = null;
 let explorerMonitor: ExplorerProcessMonitor | null = null;
 let updateService: UpdateService | null = null;
+let operationsControl: OperationsControlService | null = null;
+let operationsTelemetry: OperationsTelemetryService | null = null;
 let runtimePresenceTimer: NodeJS.Timeout | null = null;
 let runtimeMetricsService: RuntimeMetricsService | null = null;
 let suggestionEvaluationQueue: Promise<void> = Promise.resolve();
@@ -136,6 +141,7 @@ function recordRendererRecovery(event: RendererRecoveryEvent): void {
     return;
   }
   if (event.status === "failed" || event.status === "exhausted") {
+    operationsTelemetry?.recordCrash("renderer", `${event.role}:${event.reason}:${event.status}`, false);
     logger?.error("error", "renderer lifecycle", data);
     return;
   }
@@ -1268,6 +1274,10 @@ function showPetContextMenu(): void {
   Menu.buildFromTemplate(template).popup({ window: petWindow ?? undefined });
 }
 
+function operationsFeatureEnabled(key: string): boolean {
+  return operationsControl?.feature({ key, risk: "low", defaultEnabled: true }).enabled ?? true;
+}
+
 function applyWallpaperById(wallpaperId: string): SettingsSnapshot {
   if (!database) {
     throw new Error("Database is not initialized");
@@ -1276,6 +1286,9 @@ function applyWallpaperById(wallpaperId: string): SettingsSnapshot {
   const wallpaper = WALLPAPER_LIBRARY.find((item) => item.id === wallpaperId);
   if (!wallpaper) {
     throw new Error("Wallpaper was not found in the local library");
+  }
+  if (operationsControl && !operationsControl.assetAllowed(wallpaper.id)) {
+    throw new Error("该壁纸已由运维策略暂停分发");
   }
 
   const current = database.getSettings();
@@ -1972,127 +1985,195 @@ async function getRecoverySystemStatus(): Promise<RecoverySystemStatus> {
 function buildIpcDeps(): ServiceDeps {
   return {
     assertTrustedSender: assertTrustedIpcSender,
-    showMain: showMainWindowAndFocusSearch,
-    showMainFocus: showMainWindowAndFocusSearch,
-    createSettings: createSettingsWindow,
-    openLogs: async () => {
-      const result = await shell.openPath(logger?.directory ?? path.join(app.getPath("userData"), "logs"));
-      if (result) throw new Error(result);
+    desktop: {
+      getDesktopController: () => desktopController,
+      getFileScanner: () => fileScanner,
+      getDatabase: () => database,
+      getContainersWithIcons: containersWithNativeIcons,
+      readFilePreview: readFilePreviewImpl,
+      updateDesktopStatus,
+      createOverlayWindow,
+      closeOverlayWindow,
+      showMainWindow: showMainWindowAndFocusSearch,
+      hideMainWindow: () => mainWindow?.hide(),
+      enterCleanDesktop,
+      exitCleanDesktop,
+      broadcastDesktopFiles: broadcastDesktopFilesUpdated
     },
-    desktopCtrl: desktopController,
-    fileScanner,
-    database,
-    getContainersIcons: containersWithNativeIcons,
-    readFilePreview: readFilePreviewImpl,
-    updateStatus: (mode: string) => updateDesktopStatus(mode as any as "idle"),
-    createOverlay: createOverlayWindow,
-    closeOverlay: closeOverlayWindow,
-    hideMain: () => mainWindow?.hide(),
-    enterClean: enterCleanDesktop,
-    exitClean: exitCleanDesktop,
-    broadcastFiles: broadcastDesktopFilesUpdated,
-    getWeather: () => weatherService?.getCurrentWeather() ?? Promise.reject(new Error("Weather not initialized")),
-    wallpaperList: () => WALLPAPER_LIBRARY,
-    applyWallpaper: applyWallpaperById,
-    broadcastSettings: broadcastSettingsUpdated,
-    syncWindows: syncWindowsFromSettings,
-    aiService,
-    currentPetBounds,
-    movePet: movePetWindow,
-    resetPet: resetPetWindow,
-    setPetInteract: (interactive: boolean) => {
-      const pw = petWindow;
-      if (pw && !pw.isDestroyed()) pw.setIgnoreMouseEvents(!interactive, { forward: true });
+    settings: {
+      getDatabase: () => database,
+      getWeather: () => weatherService?.getCurrentWeather() ?? Promise.reject(new Error("Weather not initialized")),
+      getWallpaperLibrary: () => WALLPAPER_LIBRARY,
+      applyWallpaper: applyWallpaperById,
+      broadcastSettings: broadcastSettingsUpdated,
+      syncWindows: syncWindowsFromSettings,
+      validateSettingsPatch,
+      sendChatMessage: (content) => aiService?.sendMessage(content) ?? Promise.reject(new Error("AI service is unavailable"))
     },
-    showPetMenu: showPetContextMenu,
-    showPet: () => updatePetSettings({ isVisible: true }),
-    hidePet: () => updatePetSettings({ isVisible: false }),
-    getPetSettings: () => database?.getSettings() ?? null,
-    setOnboardingActive: (active: boolean) => {
-      onboardingActive = active;
-      const pw = petWindow;
-      if (!pw || pw.isDestroyed()) return;
-      if (active) { pw.hide(); }
-      else if (database?.getSettings().pet.isVisible) { pw.showInactive(); pw.setAlwaysOnTop(true, "screen-saver"); }
-    },
-    latestSuggestion: getLatestSuggestion,
-    suggestionControls: getSuggestionDeliveryControls,
-    serializeOp: serializeSuggestionOperation,
-    dismissSuggestion: async (suggestionId: string) => {
-      const s = getLatestSuggestion();
-      if (s?.id === suggestionId && database) {
-        database.setAppState("suggestion:latest", JSON.stringify({ ...s, status: "dismissed" as const }));
+    window: {
+      getAppInfo: () => ({ name: app.getName(), version: app.getVersion(), platform: process.platform, isPackaged: app.isPackaged }),
+      showMainWindow: showMainWindowAndFocusSearch,
+      showMainWindowAndFocusSearch,
+      createSettingsWindow,
+      openLogs: async () => {
+        const result = await shell.openPath(logger?.directory ?? path.join(app.getPath("userData"), "logs"));
+        if (result) throw new Error(result);
       }
     },
-    snoozeSuggestions: async (minutes: number) => {
-      if (suggestionEngine) await suggestionEngine.snoozeUntil(new Date(Date.now() + minutes * 60_000));
-    },
-    setSuggestionEnabled: async (enabled: boolean) => {
-      if (suggestionEngine) { if (enabled) await suggestionEngine.enable(); else await suggestionEngine.disable(); }
-    },
-    updateSuggestionPolicy: async (policy: any) => {
-      const current = getSuggestionDeliveryControls();
-      const next: any = { ...current, policy: { timeZoneOffsetMinutes: -new Date().getTimezoneOffset(), ...policy } };
-      saveSuggestionDeliveryControls(next);
-      return next;
-    },
-    diagnosticsReport: createSupportDiagnosticsReport,
-    exportDiagnostics: async (_selection: any) => {
-      if (!diagnosticsService) throw new Error("Diagnostics not initialized");
-      const report = createSupportDiagnosticsReport();
-      const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-      const opts = { title: "导出诊断", defaultPath: path.join(app.getPath("documents"), `ProjectD-${date}.json`), filters: [{ name: "JSON", extensions: ["json"] }], properties: ["createDirectory"] as any };
-      const result = settingsWindow ? await dialog.showSaveDialog(settingsWindow, opts) : await dialog.showSaveDialog(opts);
-      if (result.canceled || !result.filePath) return { status: "cancelled", filename: null };
-      fs.writeFileSync(result.filePath, diagnosticsService.serializeForExport(report, { consent: true }), "utf8");
-      return { status: "saved", filename: path.basename(result.filePath) };
-    },
-    actionEngine,
-    interruptedRecoveries: () => interruptedActionRecoveries,
-    searchService,
-    presentResult: toWorkspaceSearchResult,
-    resolvePath: resolveWorkspaceSearchResultPath,
-    pinToScene: async (resultId: string, sceneId: string) => {
-      if (!sceneService) throw new Error("Scene service is unavailable");
-      const target = searchResultRegistry.resolve(resultId);
-      const resolvedPath = await resolveWorkspaceSearchResultPath(resultId);
-      if (target.origin === "desktop") {
-        const file = database?.getDesktopFileById(target.fileId);
-        if (!file) throw new Error("Desktop resource is unavailable");
-        sceneService.pinResource(sceneId, { origin: "desktop", fileId: target.fileId, path: resolvedPath, label: file.displayName || file.filename });
-      } else if (target.origin === "portal") {
-        sceneService.pinResource(sceneId, { origin: "portal", portalId: target.portalId, path: resolvedPath, label: path.basename(resolvedPath) });
-      } else {
-        sceneService.pinResource(sceneId, { origin: "external", provider: target.provider, path: resolvedPath, label: path.basename(resolvedPath) });
+    pet: {
+      getPetBounds: currentPetBounds,
+      movePet: movePetWindow,
+      resetPet: resetPetWindow,
+      setPetInteractive: (interactive) => {
+        const current = petWindow;
+        if (current && !current.isDestroyed()) current.setIgnoreMouseEvents(!interactive, { forward: true });
+      },
+      showPetMenu: showPetContextMenu,
+      showPet: () => updatePetSettings({ isVisible: true }),
+      hidePet: () => updatePetSettings({ isVisible: false }),
+      getSettings: () => database?.getSettings() ?? null,
+      setOnboardingActive: (active) => {
+        onboardingActive = active;
+        const current = petWindow;
+        if (!current || current.isDestroyed()) return;
+        if (active) current.hide();
+        else if (database?.getSettings().pet.isVisible) {
+          current.showInactive();
+          current.setAlwaysOnTop(true, "screen-saver");
+        }
       }
     },
-    authorizePortal: authorizeSearchResultPortal,
-    sceneService,
-    portalService,
-    portalWatcher,
-    syncPortals: syncPortalWatcher,
-    approvedSelections: approvedPortalSelections,
-    broadcastPortals: broadcastPortalsUpdated,
-    saveSuggestion: (s: any) => database?.setAppState("suggestion:latest", JSON.stringify(s)),
-    appInfo: () => ({ name: app.getName(), version: app.getVersion(), platform: process.platform, isPackaged: app.isPackaged }),
-    logger,
-    rescan: async () => { await fileScanner?.scanDesktop(); },
-    exportData: exportAllUserData,
-    resetData: resetAllUserData,
-    getPrivacyNetworkState: readPrivacyNetworkState,
-    setPrivacyNetworkPaused: updatePrivacyNetworkPaused,
-    getRecoverySystemStatus,
-    setPeekShortcut,
-    updateService,
-    getRuntimeState: () => pauseArbiter.snapshot,
-    setRuntimeManualPaused,
-    getRuntimeMetrics: () => runtimeMetricsService?.report() ?? {
-      generatedAt: new Date().toISOString(), sampleCount: 0, windowMinutes: 0,
-      cpuMedianPercent: 0, cpuP95Percent: 0, peakWorkingSetBytes: 0,
-      memoryGrowthPercent: 0, pausedSampleCount: 0, samples: []
+    suggestions: {
+      getLatestSuggestion,
+      getSuggestionControls: getSuggestionDeliveryControls,
+      serializeOp: serializeSuggestionOperation,
+      dismissSuggestion: async (suggestionId) => {
+        const suggestion = getLatestSuggestion();
+        if (suggestion?.id === suggestionId && database) {
+          database.setAppState("suggestion:latest", JSON.stringify({ ...suggestion, status: "dismissed" as const }));
+        }
+      },
+      snoozeSuggestions: async (minutes) => {
+        if (suggestionEngine) await suggestionEngine.snoozeUntil(new Date(Date.now() + minutes * 60_000));
+      },
+      setSuggestionEnabled: async (enabled) => {
+        if (!suggestionEngine) return;
+        if (enabled) await suggestionEngine.enable();
+        else await suggestionEngine.disable();
+      },
+      updateSuggestionPolicy: async (policy) => {
+        const next: SuggestionDeliveryControls = {
+          ...getSuggestionDeliveryControls(),
+          policy: { ...policy, timeZoneOffsetMinutes: -new Date().getTimezoneOffset() }
+        };
+        saveSuggestionDeliveryControls(next);
+        return next;
+      },
+      getDiagnosticsReport: createSupportDiagnosticsReport,
+      exportDiagnostics: async () => {
+        if (!diagnosticsService) throw new Error("Diagnostics not initialized");
+        const report = createSupportDiagnosticsReport();
+        const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+        const options = {
+          title: "导出诊断",
+          defaultPath: path.join(app.getPath("documents"), `ProjectD-${date}.json`),
+          filters: [{ name: "JSON", extensions: ["json"] }]
+        };
+        const result = settingsWindow
+          ? await dialog.showSaveDialog(settingsWindow, options)
+          : await dialog.showSaveDialog(options);
+        if (result.canceled || !result.filePath) return { status: "cancelled", filename: null };
+        fs.writeFileSync(result.filePath, diagnosticsService.serializeForExport(report, { consent: true }), "utf8");
+        return { status: "saved", filename: path.basename(result.filePath) };
+      }
     },
-    getWallpaperDisplays,
-    assignWallpaperToDisplay
+    actions: {
+      getEngine: () => actionEngine,
+      getDesktopFiles: () => database?.getDesktopFiles() ?? [],
+      getLatestSuggestion,
+      saveLatestSuggestion: (suggestion) => database?.setAppState("suggestion:latest", JSON.stringify(suggestion)),
+      isPlanAvailable: () => Boolean(database),
+      isRescanAvailable: () => Boolean(fileScanner),
+      rescanDesktop: async () => { await fileScanner?.scanDesktop(); },
+      broadcastDesktopFiles: broadcastDesktopFilesUpdated,
+      getInterruptedRecoveries: () => interruptedActionRecoveries
+    },
+    search: {
+      getService: () => searchService,
+      presentResult: toWorkspaceSearchResult,
+      resolveResultPath: resolveWorkspaceSearchResultPath,
+      pinToScene: async (resultId, sceneId) => {
+        if (!sceneService) throw new Error("Scene service is unavailable");
+        const target = searchResultRegistry.resolve(resultId);
+        const resolvedPath = await resolveWorkspaceSearchResultPath(resultId);
+        if (target.origin === "desktop") {
+          const file = database?.getDesktopFileById(target.fileId);
+          if (!file) throw new Error("Desktop resource is unavailable");
+          sceneService.pinResource(sceneId, { origin: "desktop", fileId: target.fileId, path: resolvedPath, label: file.displayName || file.filename });
+        } else if (target.origin === "portal") {
+          sceneService.pinResource(sceneId, { origin: "portal", portalId: target.portalId, path: resolvedPath, label: path.basename(resolvedPath) });
+        } else {
+          sceneService.pinResource(sceneId, { origin: "external", provider: target.provider, path: resolvedPath, label: path.basename(resolvedPath) });
+        }
+      },
+      authorizePortal: authorizeSearchResultPortal
+    },
+    scenes: {
+      getService: () => sceneService,
+      getSettings: () => database?.getSettings() ?? null,
+      applyWallpaper: applyWallpaperById,
+      syncWindows: syncWindowsFromSettings,
+      syncPortalWatcher,
+      broadcastPortals: broadcastPortalsUpdated,
+      broadcastSettings: broadcastSettingsUpdated,
+      broadcastDesktopFiles: broadcastDesktopFilesUpdated,
+      log: (message, data) => logger?.info("app", message, data)
+    },
+    portals: {
+      getService: () => portalService,
+      approvedSelections: approvedPortalSelections,
+      syncWatcher: syncPortalWatcher,
+      broadcastUpdated: broadcastPortalsUpdated,
+      log: (message, data) => logger?.info("app", message, data)
+    },
+    privacy: {
+      exportData: exportAllUserData,
+      resetData: resetAllUserData,
+      getNetworkState: readPrivacyNetworkState,
+      setNetworkPaused: updatePrivacyNetworkPaused
+    },
+    recovery: { getSystemStatus: getRecoverySystemStatus },
+    shortcuts: { setPeekShortcut },
+    autoRules: { getStore: () => database },
+    updates: {
+      getStatus: () => {
+        if (!updateService) throw new Error("Update service is unavailable");
+        return updateService.getStatus();
+      },
+      setChannel: (channel) => {
+        if (!updateService) throw new Error("Update service is unavailable");
+        return updateService.setChannel(channel);
+      },
+      checkForUpdates: () => updateService?.checkForUpdates() ?? Promise.reject(new Error("Update service is unavailable")),
+      downloadUpdate: () => updateService?.downloadUpdate() ?? Promise.reject(new Error("Update service is unavailable")),
+      installDownloadedUpdate: () => {
+        if (!updateService) throw new Error("Update service is unavailable");
+        updateService.installDownloadedUpdate();
+      }
+    },
+    runtime: {
+      getState: () => pauseArbiter.snapshot,
+      setManualPaused: setRuntimeManualPaused,
+      getMetrics: () => runtimeMetricsService?.report() ?? {
+        generatedAt: new Date().toISOString(), sampleCount: 0, windowMinutes: 0,
+        cpuMedianPercent: 0, cpuP95Percent: 0, peakWorkingSetBytes: 0,
+        memoryGrowthPercent: 0, pausedSampleCount: 0, samples: []
+      }
+    },
+    wallpaper: {
+      getDisplays: getWallpaperDisplays,
+      assignDisplay: assignWallpaperToDisplay
+    }
   };
 }
 
@@ -2159,6 +2240,28 @@ async function initializeCoreServices(): Promise<void> {
     database.updateSettings({ wallpaper: { isDynamic: false }, pet: { isVisible: false } });
   }
   database.syncMediaAssets(WALLPAPER_LIBRARY);
+  const operationsPublicKey = (process.env.PROJECTD_OPERATIONS_PUBLIC_KEY
+    ?? database.getAppState("operations_public_key"))?.replace(/\\n/g, "\n") ?? null;
+  operationsControl = new OperationsControlService({
+    appVersion: app.getVersion(),
+    configId: process.env.PROJECTD_OPERATIONS_CONFIG_ID ?? "project-d-production",
+    endpoint: process.env.PROJECTD_OPERATIONS_CONFIG_URL ?? database.getAppState("operations_config_url"),
+    publicKey: operationsPublicKey,
+    state: {
+      get: (key) => database?.getAppState(key) ?? null,
+      set: (key, value) => database?.setAppState(key, value)
+    },
+    logger: {
+      info: (message, data) => logger?.info("app", message, data),
+      warn: (message, data) => logger?.warn("app", message, data)
+    }
+  });
+  await operationsControl.initialize();
+  operationsTelemetry = new OperationsTelemetryService(app.getVersion(), {
+    get: (key) => database?.getAppState(key) ?? null,
+    set: (key, value) => database?.setAppState(key, value)
+  });
+  operationsTelemetry.start();
   runtimeMetricsService = createRuntimeMetricsService();
   runtimeMetricsService.start();
   pauseArbiter.update({
@@ -2183,7 +2286,8 @@ async function initializeCoreServices(): Promise<void> {
       warn: (message, data) => logger?.warn("app", message, data),
       error: (message, data) => logger?.error("error", message, data)
     },
-    onStatusChanged: broadcastUpdateStatus
+    onStatusChanged: broadcastUpdateStatus,
+    distributionAllowed: () => operationsControl?.version().distributionAllowed ?? true
   });
   wallpaperHost = new WallpaperHost(logger);
   wallpaperSupervisor = new WallpaperHostSupervisor({
@@ -2220,8 +2324,8 @@ async function initializeCoreServices(): Promise<void> {
     })
   });
   explorerMonitor.start();
-  weatherService = new WeatherService(database, logger);
-  aiService = new AiService(database, weatherService, logger);
+  weatherService = new WeatherService(database, logger, () => operationsFeatureEnabled("online.weather"));
+  aiService = new AiService(database, weatherService, logger, () => operationsFeatureEnabled("online.ai"));
   aiService.setSettingsChangedHandler((settings) => {
     syncWindowsFromSettings(settings);
     broadcastSettingsUpdated();
@@ -2371,6 +2475,10 @@ async function shutdownSafely(): Promise<void> {
       explorerMonitor = null;
       updateService?.dispose();
       updateService = null;
+      operationsControl?.dispose();
+      operationsControl = null;
+      operationsTelemetry?.finish();
+      operationsTelemetry = null;
       portalWatcher = null;
       rendererResilience.disposeAll();
       closeOverlayWindow();
@@ -2497,6 +2605,11 @@ app.on("child-process-gone", (_event, details) => {
     serviceName: details.serviceName,
     name: details.name
   });
+  operationsTelemetry?.recordCrash(
+    details.type === "GPU" ? "gpu" : details.type === "Utility" ? "utility" : "unknown",
+    `${details.type}:${details.reason}:${details.serviceName ?? "unknown"}`,
+    false
+  );
   if (!shutdownInProgress && (details.type === "GPU" || details.type === "Utility")) {
     setTimeout(() => {
       void rendererResilience.probeAll(`child-process-gone:${details.type}`);

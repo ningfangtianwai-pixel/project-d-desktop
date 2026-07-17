@@ -17,11 +17,16 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm verify:assets
+      - run: node scripts/verify-asset-ledger.cjs check
+      - run: node scripts/verify-asset-ledger.cjs report
+      - name: Enforce commercial asset evidence on release tags
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: node scripts/verify-asset-ledger.cjs check --commercial
+      - run: node scripts/qa-release-lifecycle.cjs --mode fixture
       - run: pnpm test
       - run: pnpm typecheck
       - run: pnpm build
-      - run: pnpm audit --audit-level high
+      - run: node scripts/generate-supply-chain-evidence.cjs --audit-level high
       - uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -33,4 +38,8 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: projectd-quality-evidence
-          path: artifacts/projectd-sbom.cdx.json
+          path: |
+            artifacts/projectd-sbom.cdx.json
+            artifacts/security/*.json
+            artifacts/asset-ledger-report.json
+            artifacts/qa/release-lifecycle-*/report.json

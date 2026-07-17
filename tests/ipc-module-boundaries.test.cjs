@@ -20,3 +20,16 @@ test("search, scene, and portal IPC handlers stay in their owning modules", () =
     assert.match(owner, new RegExp(`(?:ipc|ipcMain)\\.handle\\(IPC_CHANNELS\\.${channel}`));
   }
 });
+
+test("IPC composition keeps module contracts instead of an any-based service bag", () => {
+  const registration = fs.readFileSync(path.join(root, "src/main/ipc/register-all.ts"), "utf8");
+  const serviceContract = registration.slice(
+    registration.indexOf("export interface ServiceDeps"),
+    registration.indexOf("export function registerAllIpcHandlers")
+  );
+
+  assert.doesNotMatch(serviceContract, /\bany\b/);
+  for (const dependency of ["DesktopIpcDependencies", "SettingsIpcDependencies", "UpdateIpcDependencies", "WallpaperIpcDependencies"]) {
+    assert.match(serviceContract, new RegExp(`HandlerDependencies<${dependency}>`));
+  }
+});
