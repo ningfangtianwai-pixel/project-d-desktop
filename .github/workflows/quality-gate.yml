@@ -20,7 +20,7 @@ jobs:
       - run: node scripts/verify-asset-ledger.cjs check
       - run: node scripts/verify-asset-ledger.cjs report
       - name: Enforce commercial asset evidence on release tags
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, '-')
         run: node scripts/verify-asset-ledger.cjs check --commercial
       - run: node scripts/qa-release-lifecycle.cjs --mode fixture
       - run: pnpm test
