@@ -21,3 +21,9 @@ test("bootstrap fixes app identity and user data before loading main", () => {
   assert.ok(loadMainIndex > setUserDataIndex);
   assert.match(source, /process\.exit\(1\)/);
 });
+
+test("packaged QA auto-quit requires an explicit run marker", () => {
+  const source = fs.readFileSync(path.join(projectRoot, "src", "main", "main.ts"), "utf8");
+  assert.match(source, /argument\.startsWith\("--projectd-qa-run="\)/);
+  assert.match(source, /qaRunEnabled && Number\.isFinite\(autoQuitMs\)/);
+});

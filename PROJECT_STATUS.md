@@ -915,3 +915,16 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - A production HTTPS remote-config service, protected signing key, server-side telemetry transport, hosted dashboard, and alert destination remain open; the client refresh/cache/decision path and local dashboard are implemented.
 - The commercial service uses in-memory adapters and test verification only; production storage, authentication, channel SDKs, merchant credentials, deployment, penetration testing, and disaster recovery remain open.
 - All 35 files distributed under `public` and `assets` are now tracked; every entry still requires auditable commercial-license evidence.
+
+## Stage 41 - 0.2.0-beta.1 Internal Beta Candidate
+
+- Internal-test decision: approved for controlled Windows x64 testing with no known P0 defect in the exercised scope.
+- Fixed expiring date literals in signed operations-control tests.
+- Serialized complete wallpaper-host repairs and added bounded second-frame confirmation after a transient compositor blank; the 120-second accelerated stress replay then passed with zero error-log entries.
+- Added a marker-gated packaged runtime smoke path. The packaged product reached core-ready, exited with code 0, completed shutdown, and wrote no error entries.
+- `pnpm quality`: passed 167/167 tests, all TypeScript targets, production build, 358-component SBOM, zero known dependency findings, and release lifecycle fixture QA.
+- Forced-kill restart passed all seven checks, including database integrity and desktop-state restoration.
+- Hidden idle preflight passed: CPU median 0.257%, P95 0.508%; the short run does not establish long-term memory stability.
+- Electron 43.1.1 package verification passed 39/39 modules.
+- Installer: `release\ProjectD-0.2.0-beta.1-Setup.exe`, 239,167,131 bytes, SHA-256 `585CC4AE3B183497AFA92B307944D2291A02AFD2DB41655D4B6209993FCBC145`, Authenticode `NotSigned`.
+- Full release comparison and operating limits: `docs/INTERNAL_BETA_0.2.0-beta.1.md`.

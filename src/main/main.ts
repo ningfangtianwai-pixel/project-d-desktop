@@ -11,7 +11,7 @@ import { AppLogger } from "./logger.js";
 import { AiService } from "./ai-service.js";
 import { WeatherService } from "./weather-service.js";
 import { WallpaperHost, type WallpaperAttachResult } from "./wallpaper-host.js";
-import { presentWallpaperWindow, WallpaperAttachQueue, WallpaperHostSupervisor, retryWallpaperAttach } from "./wallpaper-supervisor.js";
+import { confirmWallpaperFrame, presentWallpaperWindow, WallpaperAttachQueue, WallpaperHostSupervisor, retryWallpaperAttach } from "./wallpaper-supervisor.js";
 import { createPetMenuTemplate } from "./pet-menu.js";
 import { ActionEngine } from "./actions/action-engine.js";
 import { SceneService } from "./scenes/scene-service.js";
@@ -50,6 +50,7 @@ import type { PerformanceMode, RuntimePauseSnapshot, ThermalState } from "../sha
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
 const SAFE_RENDERER_ARG = "--projectd-safe-renderer";
 const START_HIDDEN_ARG = "--projectd-start-hidden";
+const qaRunEnabled = process.argv.some((argument) => argument.startsWith("--projectd-qa-run="));
 const safeRendererMode = process.argv.includes(SAFE_RENDERER_ARG);
 const startHidden = process.argv.includes(START_HIDDEN_ARG);
 if (safeRendererMode) app.disableHardwareAcceleration();
@@ -103,6 +104,7 @@ const systemPresenceMonitor = new SystemPresenceMonitor(undefined, 1_800);
 const pauseArbiter = new PauseArbiter({}, handleRuntimeStateChanged);
 const searchResultRegistry = new SearchResultRegistry();
 const wallpaperAttachQueue = new WallpaperAttachQueue();
+const wallpaperRepairQueue = new WallpaperAttachQueue();
 const cleanDesktopEscapeGuard = new CleanDesktopEscapeGuard(globalShortcut, () => {
   void exitCleanDesktop("escape-key");
 });
@@ -186,6 +188,10 @@ function superviseRendererWindow(
 }
 
 function scheduleQaRendererFaultInjection(): void {
+  const autoQuitMs = Number(process.env.PROJECTD_QA_AUTO_QUIT_MS);
+  if (qaRunEnabled && Number.isFinite(autoQuitMs) && autoQuitMs >= 1_000) {
+    setTimeout(() => app.quit(), autoQuitMs);
+  }
   if (app.isPackaged) return;
   const requestedRole = process.env.PROJECTD_QA_CRASH_RENDERER as WindowRole | undefined;
   const windowsByRole: Partial<Record<WindowRole, BrowserWindow | null>> = {
@@ -206,10 +212,6 @@ function scheduleQaRendererFaultInjection(): void {
     else setTimeout(crash, 500);
   }
 
-  const autoQuitMs = Number(process.env.PROJECTD_QA_AUTO_QUIT_MS);
-  if (Number.isFinite(autoQuitMs) && autoQuitMs >= 1_000) {
-    setTimeout(() => app.quit(), autoQuitMs);
-  }
 }
 
 function scheduleQaSoakChurn(): void {
@@ -947,6 +949,10 @@ function stopWallpaperRepairTimer(): void {
 }
 
 async function repairWallpaperHost(reason = "manual"): Promise<void> {
+  return wallpaperRepairQueue.run(() => performWallpaperHostRepair(reason));
+}
+
+async function performWallpaperHostRepair(reason: string): Promise<void> {
   let windows = [...wallpaperWindows.entries()].filter(([, window]) => !window.isDestroyed());
   if (windows.length === 0) {
     if (!database?.getSettings().wallpaper.isDynamic) return;
@@ -971,24 +977,25 @@ async function repairWallpaperHost(reason = "manual"): Promise<void> {
       startup.renderReady = false;
     }
     if (result.attached) {
-      let renderReady = await waitForWallpaperRendererReady(window);
-      if (startup?.window === window) startup.renderReady = renderReady;
-      if (renderReady) {
-        window.setIgnoreMouseEvents(true, { forward: true });
-        presentWallpaperWindow(window, startup);
-        renderReady = await verifyVisibleWallpaperFrame(window);
-        if (startup?.window === window) startup.renderReady = renderReady;
-        if (renderReady) {
-          attachedCount += 1;
-          database?.setAppState("wallpaper_host", result.parentKind ?? "attached");
-          logger?.info("app", "wallpaper host repair completed", { reason, displayId, ...result, renderReady });
-        } else {
+      const renderReady = await confirmWallpaperFrame({
+        attempts: 2,
+        waitForRendererReady: () => waitForWallpaperRendererReady(window),
+        present: () => {
+          window.setIgnoreMouseEvents(true, { forward: true });
           presentWallpaperWindow(window, startup);
-          logger?.error("error", "wallpaper host repair rejected a visible blank frame", { reason, displayId, ...result });
+        },
+        verifyVisibleFrame: () => verifyVisibleWallpaperFrame(window),
+        onRenderReady: (ready) => {
+          if (startup?.window === window) startup.renderReady = ready;
         }
+      });
+      if (renderReady) {
+        attachedCount += 1;
+        database?.setAppState("wallpaper_host", result.parentKind ?? "attached");
+        logger?.info("app", "wallpaper host repair completed", { reason, displayId, ...result, renderReady });
       } else {
         presentWallpaperWindow(window, startup);
-        logger?.error("error", "wallpaper host repair rejected a blank frame", { reason, displayId, ...result });
+        logger?.error("error", "wallpaper host repair rejected a blank frame after bounded retry", { reason, displayId, ...result });
       }
     } else {
       presentWallpaperWindow(window, startup);

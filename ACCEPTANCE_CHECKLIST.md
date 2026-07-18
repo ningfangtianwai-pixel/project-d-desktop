@@ -664,3 +664,18 @@
 - [ ] Production remote-config delivery, telemetry, alert transport, and operational dashboards are deployed.
 - [ ] Production account/payment/entitlement service and real merchant channels pass security and disaster-recovery review.
 - [ ] Legal counsel approves all commercial terms and privacy disclosures.
+
+## Stage 41 Internal Beta Qualification
+
+- [x] Version is uniquely identified as `0.2.0-beta.1` instead of reusing the `0.1.0` artifact name.
+- [x] No known P0 remains in the exercised startup, renderer, database, desktop recovery, wallpaper recovery, shutdown, and packaging scope.
+- [x] Automated quality gate passes 167/167 tests and all build, type, SBOM, audit, asset, and release-fixture checks.
+- [x] Forced-process restart restores an integral database and `idle` desktop state.
+- [x] Accelerated 120-second renderer stress replay exits cleanly with zero error-log entries after wallpaper-repair serialization.
+- [x] Hidden idle preflight meets the CPU target with zero error-log entries.
+- [x] Packaged runtime loads 39/39 declared modules.
+- [x] Packaged product reaches core-ready and completes a graceful marker-gated shutdown with no errors.
+- [x] Installer SHA-256 and a detailed comparison with the prior 0.1.0 baseline are recorded.
+- [ ] Four-hour interactive and 24-hour idle soak evidence is complete.
+- [ ] Physical Windows/GPU/multi-display/DPI/sleep-wake matrix is complete.
+- [ ] Authenticode signature is valid and all commercial asset evidence is approved.

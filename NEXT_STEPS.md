@@ -138,3 +138,13 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 6. Obtain legal review for the privacy policy, user agreement, membership/payment terms, refund flow, and data-retention schedule.
 7. Execute signed N-2/N-1 installer/update/rollback/uninstall acceptance on clean Windows 10 and Windows 11 accounts.
 8. Complete the real Windows/GPU/multi-display/DPI/refresh-rate matrix and commercial asset-license evidence.
+
+## After Stage 41 Internal Beta
+
+1. Run a controlled tester cohort on clean Windows 10 and Windows 11 x64 accounts; collect diagnostics only with explicit user consent.
+2. Execute `pnpm qa:soak:4h` and `pnpm qa:soak:24h`, retaining JSON/CSV evidence and investigating any sustained memory growth.
+3. Complete the physical Intel/AMD/NVIDIA, 1080p/2K/4K, 100/125/150/200 percent DPI, multi-display, hot-plug, sleep/wake, and mixed-refresh matrix.
+4. Obtain Authenticode signing and a timestamp service before widening distribution beyond controlled internal testers.
+5. Replace the disabled update endpoint with signed production infrastructure and replay real N-2/N-1 upgrade and rollback scenarios.
+6. Close all 35 commercial asset-license records before public or paid distribution.
+7. Keep real payment channels disabled until the server, merchant account, legal review, reconciliation, fraud controls, and disaster recovery are production-ready.

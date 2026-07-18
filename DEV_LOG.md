@@ -1332,3 +1332,17 @@
 - Review fixes: made order idempotency atomic, wrapped payment settlement in a rollback-capable transaction port, stopped optional poster failure from rejecting video playback, expanded the ledger to all distributed assets, and connected signed operations controls plus privacy-safe crash telemetry to the main process.
 - Preserved the highest accepted operations-config cursor independently of an expired or corrupt cached envelope, preventing a stale revision from being accepted after cache rejection.
 - Final `pnpm dist`: passed. `pnpm verify:packaged`: passed 39/39 runtime modules, including all operations-control modules. Installer size: 239,167,277 bytes; SHA-256 `6DF1082EA41160C357751AD53FF459E6CE189FD2DB4CDD6AE47F2E28A89040F0`; Authenticode `NotSigned`.
+
+## 2026-07-18 Stage 41 Internal Beta Qualification
+
+- First `pnpm quality`: failed because two signed remote-config fixtures expired at the fixed timestamp. Replaced fixed validity dates with relative bounded timestamps; focused 3/3 regression passed.
+- First 120-second stress preflight: failed with two wallpaper-repair error entries during overlapping renderer reloads. Serialized the complete repair operation and added a bounded second visible-frame confirmation.
+- Repeated 120-second stress preflight: passed with clean exit, completed shutdown, zero errors, and no safe-renderer relaunch.
+- 30-second hidden idle preflight: passed; CPU median 0.257%, P95 0.508%, zero errors. Memory trend was correctly reported as insufficient evidence.
+- `pnpm qa:crash-restart`: passed all seven recovery checks; database integrity remained `ok` and desktop state returned to `idle`.
+- First manual packaged smoke did not auto-exit because packaged mode intentionally disabled QA hooks. Added an explicit run-marker gate and reusable `pnpm qa:packaged-smoke` command.
+- Final packaged smoke: passed core-ready, clean exit, shutdown-complete, and zero-error checks.
+- Final `pnpm quality`: passed 167/167 tests, all type checks, production build, SBOM/audit, asset gate, and release fixture QA.
+- Final `pnpm verify:packaged`: passed 39/39 modules.
+- Promoted version from repeated `0.1.0` artifacts to traceable internal beta `0.2.0-beta.1`.
+- Installer: 239,167,131 bytes; SHA-256 `585CC4AE3B183497AFA92B307944D2291A02AFD2DB41655D4B6209993FCBC145`; Authenticode remains `NotSigned`.

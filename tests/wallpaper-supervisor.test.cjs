@@ -1,7 +1,7 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 
-const { presentWallpaperWindow, WallpaperAttachQueue, WallpaperHostSupervisor, retryWallpaperAttach } = require("../dist/main/wallpaper-supervisor.js");
+const { confirmWallpaperFrame, presentWallpaperWindow, WallpaperAttachQueue, WallpaperHostSupervisor, retryWallpaperAttach } = require("../dist/main/wallpaper-supervisor.js");
 
 test("wallpaper presentation stays hidden until desktop attachment is confirmed", () => {
   const calls = [];
@@ -44,6 +44,30 @@ test("wallpaper attach retries a transient failure and returns the recovered res
   assert.equal(attempts, 2);
   assert.deepEqual(waits, [350]);
   assert.equal(result.attached, true);
+});
+
+test("wallpaper frame confirmation retries a transient compositor blank", async () => {
+  let visibleAttempts = 0;
+  const readyStates = [];
+  const presentations = [];
+  const waits = [];
+  const confirmed = await confirmWallpaperFrame({
+    attempts: 2,
+    waitForRendererReady: async () => true,
+    present: () => presentations.push("shown"),
+    verifyVisibleFrame: async () => {
+      visibleAttempts += 1;
+      return visibleAttempts === 2;
+    },
+    onRenderReady: (ready) => readyStates.push(ready),
+    wait: async (milliseconds) => waits.push(milliseconds)
+  });
+
+  assert.equal(confirmed, true);
+  assert.equal(visibleAttempts, 2);
+  assert.deepEqual(presentations, ["shown", "shown"]);
+  assert.deepEqual(readyStates, [true, false, true, true]);
+  assert.deepEqual(waits, [200]);
 });
 
 test("wallpaper supervisor coalesces repair requests and stops cleanly", async () => {

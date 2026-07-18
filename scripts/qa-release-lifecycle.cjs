@@ -5,7 +5,8 @@ const { spawnSync } = require("node:child_process");
 
 const root = path.resolve(__dirname, "..");
 const mode = readArgument("--mode") ?? "fixture";
-const installerPath = path.resolve(readArgument("--installer") ?? path.join(root, "release", "ProjectD-0.1.0-Setup.exe"));
+const packageVersion = require(path.join(root, "package.json")).version;
+const installerPath = path.resolve(readArgument("--installer") ?? path.join(root, "release", `ProjectD-${packageVersion}-Setup.exe`));
 const runId = new Date().toISOString().replace(/[:.]/g, "-");
 const runDir = path.join(root, "artifacts", "qa", `release-lifecycle-${runId}`);
 const reportPath = path.join(runDir, "report.json");

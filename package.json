@@ -1,6 +1,6 @@
 {
   "name": "project-d",
-  "version": "0.1.0",
+  "version": "0.2.0-beta.1",
   "description": "Project D Windows desktop organizer and ambient desktop shell.",
   "author": "Project D",
   "private": true,
@@ -29,6 +29,7 @@
     "qa:soak:24h": "pnpm build && node scripts/qa-soak.cjs --seconds 86400 --mode idle",
     "qa:crash-restart": "pnpm build && node scripts/qa-crash-restart.cjs",
     "qa:release-lifecycle": "node scripts/qa-release-lifecycle.cjs --mode fixture",
+    "qa:packaged-smoke": "node scripts/qa-packaged-smoke.cjs",
     "qa:clean-desktop-escape": "node scripts/qa-clean-desktop-escape.cjs",
     "verify:packaged": "node scripts/verify-packaged-runtime.cjs",
     "preview": "vite preview --host 127.0.0.1",

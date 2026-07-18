@@ -6,6 +6,7 @@ const { OperationsControlService } = require("../dist/main/operations/operations
 const { remoteConfigSigningBytes, sha256Hex } = require("../dist/main/operations/remote-config.js");
 
 function signedEnvelope(keys, revision = 1) {
+  const now = Date.now();
   const payload = {
     featureOverrides: [{ key: "online.ai", enabled: false }],
     disabledAssets: [{ assetId: "wallpaper.bad", reason: "render failure" }],
@@ -16,8 +17,8 @@ function signedEnvelope(keys, revision = 1) {
     schemaVersion: 1,
     configId: "project-d-production",
     revision,
-    issuedAt: "2026-07-17T00:00:00.000Z",
-    expiresAt: "2026-07-18T00:00:00.000Z",
+    issuedAt: new Date(now - 60_000).toISOString(),
+    expiresAt: new Date(now + 24 * 60 * 60 * 1_000).toISOString(),
     payloadSha256: sha256Hex(payload),
     payload
   };

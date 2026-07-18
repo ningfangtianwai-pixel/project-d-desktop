@@ -12,6 +12,15 @@ interface WallpaperHostSupervisorOptions {
   onError?: (error: unknown, reason: string) => void;
 }
 
+interface ConfirmWallpaperFrameOptions {
+  attempts?: number;
+  waitForRendererReady: () => Promise<boolean>;
+  present: () => void;
+  verifyVisibleFrame: () => Promise<boolean>;
+  onRenderReady?: (ready: boolean) => void;
+  wait?: (milliseconds: number) => Promise<void>;
+}
+
 export interface WallpaperAttachmentPresentationState {
   settled: boolean;
   attached: boolean;
@@ -54,6 +63,24 @@ export async function retryWallpaperAttach(options: RetryWallpaperAttachOptions)
     }
   }
   return result;
+}
+
+export async function confirmWallpaperFrame(options: ConfirmWallpaperFrameOptions): Promise<boolean> {
+  const attempts = Math.max(1, Math.round(options.attempts ?? 2));
+  const wait = options.wait ?? ((milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)));
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const rendererReady = await options.waitForRendererReady();
+    options.onRenderReady?.(rendererReady);
+    if (rendererReady) {
+      options.present();
+      const visible = await options.verifyVisibleFrame();
+      options.onRenderReady?.(visible);
+      if (visible) return true;
+    }
+    if (attempt < attempts) await wait(200);
+  }
+  return false;
 }
 
 export class WallpaperAttachQueue {
