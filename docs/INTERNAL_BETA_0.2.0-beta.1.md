@@ -5,6 +5,8 @@
 - Version: `0.2.0-beta.1`
 - Snapshot date: 2026-07-18
 - Git tag: `v0.2.0-beta.1`
+- Public repository: `https://github.com/ningfangtianwai-pixel/project-d-desktop`
+- GitHub pre-release: `https://github.com/ningfangtianwai-pixel/project-d-desktop/releases/tag/v0.2.0-beta.1`
 - Intended audience: controlled internal testers on Windows 10/11 x64
 - Installer: `release/ProjectD-0.2.0-beta.1-Setup.exe`
 - Installer size: 239,167,131 bytes
@@ -47,12 +49,16 @@ This is not a public commercial release. Code signing, licensed-asset evidence, 
 - 30-second hidden idle preflight: CPU median 0.257%, P95 0.508%, clean exit, zero error-log entries. It is too short for a memory-leak conclusion.
 - Packaged runtime: 39/39 declared modules loaded from `app.asar`.
 - Packaged product smoke: core ready, exit code 0, shutdown complete, zero error-log entries.
+- GitHub Actions: both the `main` push and `v0.2.0-beta.1` tag quality gates passed on Windows; the independent Linux Gitleaks job scanned the complete Git history and found no secret.
 
 ## Issues found and closed during snapshot qualification
 
 1. Fixed date literals made remote-operations tests expire after midnight. Signed fixtures now use bounded relative timestamps.
 2. Aggressive renderer churn exposed overlapping wallpaper repairs and a transient visible blank frame. The complete repair operation is now serialized and the compositor receives one bounded second confirmation before failure is recorded.
 3. Packaged QA could not exit gracefully because all QA hooks were disabled in packaged mode. Auto-exit now works only when both a dedicated `--projectd-qa-run=` marker and the QA environment value are present, preserving normal user startup behavior.
+4. Clean GitHub checkouts exposed two generated pet preview files incorrectly listed as distributed assets. The ledger now excludes `_grid` and `_preview` production aids and hashes text assets consistently across line-ending conventions.
+5. Gitleaks Action's Windows installer requested a nonexistent `.tar.gz` asset. Secret scanning now runs as an isolated Linux job while the product quality gate remains on Windows.
+6. Anchore's tag default attempted to write the SBOM directly to the GitHub Release. Duplicate release upload is disabled, preserving read-only workflow permissions while the evidence bundle still contains the generated SBOM.
 
 ## Known non-P0 limitations
 
@@ -60,7 +66,7 @@ This is not a public commercial release. Code signing, licensed-asset evidence, 
 - The production update URL remains intentionally disabled; no signed N-2/N-1 update has been replayed.
 - Four-hour and 24-hour tests are scripted but not completed for this snapshot.
 - Multi-display/DPI code is covered by automated geometry tests, but the full physical Windows/GPU/display matrix is not complete.
-- All 35 distributed assets are inventoried but still lack approved commercial-license evidence.
+- All 33 distributed assets are inventoried but still lack approved commercial-license evidence.
 - Payment/account code is an in-memory domain skeleton; no real merchant channel, production database, authentication service, or financial reconciliation is enabled.
 - Remote operations and crash alerting have client/local implementations, but no production cloud endpoint or alert transport is deployed.
 
