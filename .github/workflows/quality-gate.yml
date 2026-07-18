@@ -9,6 +9,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v6
         with:
           version: 10
@@ -27,9 +29,6 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm build
       - run: node scripts/generate-supply-chain-evidence.cjs --audit-level high
-      - uses: gitleaks/gitleaks-action@v3
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: anchore/sbom-action@v0
         with:
           path: .
@@ -43,3 +42,13 @@ jobs:
             artifacts/security/*.json
             artifacts/asset-ledger-report.json
             artifacts/qa/release-lifecycle-*/report.json
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
