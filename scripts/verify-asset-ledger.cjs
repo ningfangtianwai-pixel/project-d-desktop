@@ -21,7 +21,12 @@ function portablePath(file) {
 }
 
 function digest(file) {
-  return crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+  const contents = fs.readFileSync(file);
+  const normalized = new Set([".css", ".html", ".js", ".json", ".md", ".svg", ".txt", ".xml", ".yml", ".yaml"])
+    .has(path.extname(file).toLowerCase())
+    ? contents.toString("utf8").replace(/\r\n/g, "\n")
+    : contents;
+  return crypto.createHash("sha256").update(normalized).digest("hex");
 }
 
 function listFiles(directory) {
@@ -30,6 +35,17 @@ function listFiles(directory) {
     const absolute = path.join(directory, entry.name);
     return entry.isDirectory() ? listFiles(absolute) : [absolute];
   });
+}
+
+function isGeneratedPreview(relative) {
+  return /^public\/pet\/[^/]+\/(?:_grid|_preview)\.[^/]+$/i.test(relative.split("\\").join("/"));
+}
+
+function assetFiles() {
+  return assetDirectories
+    .flatMap(listFiles)
+    .filter((absolute) => !isGeneratedPreview(portablePath(absolute)))
+    .sort();
 }
 
 function generatedAssetId(relative, usedIds) {
@@ -42,11 +58,14 @@ function generatedAssetId(relative, usedIds) {
 }
 
 function synchronize() {
+  const retainedAssets = ledger.assets.filter((asset) => !isGeneratedPreview(asset.file));
+  const removedGeneratedPreviews = ledger.assets.length - retainedAssets.length;
+  ledger.assets = retainedAssets;
   const entries = new Map(ledger.assets.map((asset) => [asset.file.split("\\").join("/"), asset]));
   const usedIds = new Set(ledger.assets.map((asset) => asset.assetId));
   let added = 0;
   let hashesUpdated = 0;
-  for (const absolute of assetDirectories.flatMap(listFiles).sort()) {
+  for (const absolute of assetFiles()) {
     const relative = portablePath(absolute);
     const fileSha256 = digest(absolute);
     const existing = entries.get(relative);
@@ -76,15 +95,15 @@ function synchronize() {
     entries.set(relative, asset);
     added += 1;
   }
-  if (added > 0 || hashesUpdated > 0) {
+  if (added > 0 || hashesUpdated > 0 || removedGeneratedPreviews > 0) {
     ledger.assets.sort((a, b) => a.file.localeCompare(b.file));
     fs.writeFileSync(ledgerPath, `${JSON.stringify(ledger, null, 2)}\n`, "utf8");
   }
-  return { added, hashesUpdated, preservedManualAuthorizationFields: true };
+  return { added, hashesUpdated, removedGeneratedPreviews, preservedManualAuthorizationFields: true };
 }
 
 function inspect() {
-  const files = assetDirectories.flatMap(listFiles).sort();
+  const files = assetFiles();
   const entries = new Map(ledger.assets.map((asset) => [asset.file.split("\\").join("/"), asset]));
   const untracked = [];
   const missing = [];

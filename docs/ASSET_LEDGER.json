@@ -143,34 +143,6 @@
       "distributionEnabled": false
     },
     {
-      "assetId": "pet-luna-q-grid",
-      "file": "public/pet/luna-q/_grid.jpg",
-      "author": null,
-      "originalUrl": null,
-      "acquiredAt": "2026-07-17",
-      "licenseType": "evidence-required",
-      "licenseSnapshot": null,
-      "evidenceSha256": null,
-      "fileSha256": "929a58a052a8093958cfc6769e51ba5721b4c95c49a96c8f4142a5772d4f4cb3",
-      "version": 1,
-      "reviewStatus": "pending-evidence",
-      "distributionEnabled": false
-    },
-    {
-      "assetId": "pet-luna-q-preview",
-      "file": "public/pet/luna-q/_preview.jpg",
-      "author": null,
-      "originalUrl": null,
-      "acquiredAt": "2026-07-17",
-      "licenseType": "evidence-required",
-      "licenseSnapshot": null,
-      "evidenceSha256": null,
-      "fileSha256": "5f87a97196d07f4d6ed45d874da2d181c79572f6a785ec2a08c6a6fadc87f87c",
-      "version": 1,
-      "reviewStatus": "pending-evidence",
-      "distributionEnabled": false
-    },
-    {
       "assetId": "pet-luna-q-default",
       "file": "public/pet/luna-q/default.png",
       "author": null,
