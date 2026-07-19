@@ -10,13 +10,14 @@ test("diagnostics source accepts known levels and skips unknown log records", (t
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   const logPath = path.join(directory, "error.log");
   fs.writeFileSync(logPath, [
-    JSON.stringify({ at: "2026-07-13T00:00:00Z", level: "debug", message: "skip me" }),
+    JSON.stringify({ at: "2026-07-13T00:00:00Z", level: "debug", message: "debug context" }),
     JSON.stringify({ at: "2026-07-13T00:01:00Z", level: "error", message: "lowercase error", data: { code: "E_TEST" } }),
     JSON.stringify({ at: "2026-07-13T00:02:00Z", level: "WARN", message: "warning" }),
     "not-json"
   ].join("\n"));
 
   assert.deepEqual(readRecentLogMetadata(logPath), [
+    { level: "info", code: "debug context", summary: "debug context", occurredAt: "2026-07-13T00:00:00Z" },
     { level: "error", code: "E_TEST", summary: "lowercase error", occurredAt: "2026-07-13T00:01:00Z" },
     { level: "warn", code: "warning", summary: "warning", occurredAt: "2026-07-13T00:02:00Z" }
   ]);

@@ -1,5 +1,17 @@
 # Next Steps
 
+## After Stage 42
+
+1. Obtain an Authenticode certificate, legal publisher identity, and timestamp service; sign the executable, installer, uninstaller, and update packages.
+2. Provide a production HTTPS update/operations host, then replay signed stable/beta `N-1 -> N` updates, rollback, staged rollout, config expiry, and revision-replay rejection.
+3. Run the real Win10/Win11, Intel/AMD/NVIDIA, 1/2/3-display, 100/125/150/200% DPI, sleep/wake, lock/unlock, hot-plug, and fullscreen matrix.
+4. Complete the 4-hour interactive and 24-hour idle runs. Retain CPU/GPU/private-memory/handle/frame/log evidence against the exact build hash.
+5. Close all 33 asset-ledger `pending-evidence` records with author, source, license, commercial scope, and approval evidence.
+6. Continue code work with a bounded Playwright Electron P0 suite, window/lifecycle extraction from `main.ts`, renderer error boundaries, and measurable startup/search/animation SLO gates.
+7. Keep real payment disabled until merchant credentials, production server/database/KMS, callback verification, reconciliation, disaster recovery, and legal review are available.
+
+The complete acceptance split and external-input list is in `docs/PROJECT_ACCEPTANCE_AUDIT_2026-07-19.md`.
+
 ## Stage 33 Immediate Queue
 
 1. Obtain the production HTTPS update domain and Windows code-signing certificate, replace the `.invalid` build URL, then publish signed `0.1.0` and `0.1.1` artifacts with immutable metadata.

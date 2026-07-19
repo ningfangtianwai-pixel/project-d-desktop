@@ -679,3 +679,23 @@
 - [ ] Four-hour interactive and 24-hour idle soak evidence is complete.
 - [ ] Physical Windows/GPU/multi-display/DPI/sleep-wake matrix is complete.
 - [ ] Authenticode signature is valid and all commercial asset evidence is approved.
+
+## Stage 42 Acceptance Audit And Hardening
+
+- [x] External assessment claims are reconciled against current repository evidence.
+- [x] API keys cannot fall back to plaintext storage or plaintext reads when Windows credential encryption is unavailable; migrated plaintext values are cleared.
+- [x] Provider configuration uses Electron `safeStorage` through the production database service.
+- [x] Logs have structured levels, bounded rotation, serialization containment, and non-fatal write failure handling.
+- [x] Tray and shortcut lifecycle ownership is outside `main.ts` and covered by focused tests.
+- [x] Every BrowserWindow has sandbox, context isolation, web security, and Node integration regression coverage.
+- [x] Application source has no explicit TypeScript `any` residue.
+- [x] CI enforces 80% line, 70% branch, and 80% function coverage thresholds.
+- [x] Quality gate passes 175/175 tests and coverage passes at 81.57%/75.52%/83.31%.
+- [x] Current-source force-kill restart restores an integral database and `idle` desktop state.
+- [x] Current unpacked package loads 39/39 modules, starts core services, exits cleanly, completes shutdown, and writes no error entry.
+- [x] Test cleanup leaves no Project D process and restores Explorer `HideIcons=0`.
+- [ ] Installer, uninstaller, and update package are Authenticode-signed and timestamped.
+- [ ] Production update, operations, telemetry, account, payment, and entitlement infrastructure is deployed and reviewed.
+- [ ] Physical Windows/GPU/display/DPI/sleep-wake and real 4-hour/24-hour evidence is complete.
+- [ ] All 33 distributed assets have approved commercial license evidence.
+- [ ] Legal counsel approves the final privacy policy, user agreement, payment terms, and operating-entity disclosures.

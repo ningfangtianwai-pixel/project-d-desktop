@@ -6,6 +6,7 @@ import {
   Image as ImageIcon, Inbox, LayoutGrid, LocateFixed, MapPin, Palette, PanelRightOpen,
   Pencil, RefreshCcw, Save, Search, Sparkles, Undo2, X
 } from "lucide-vue-next";
+import type { LucideIcon } from "lucide-vue-next";
 import { wallpaperDisplayLabel } from "@shared/wallpaper-library";
 import { CONTAINER_ACCENT_OPTIONS, containerAccentOption, type ContainerAccent } from "@shared/container-accents";
 import type {
@@ -66,7 +67,7 @@ let unsubscribeSuggestionUpdate: (() => void) | null = null;
 let unsubscribeSearchFocus: (() => void) | null = null;
 let previewRequestToken = 0;
 let searchRequestToken = 0;
-const fileIconMap: Record<string, any> = {
+const fileIconMap: Record<string, LucideIcon> = {
   program: AppWindow, document: FileText, image: ImageIcon,
   media: Film, code: Code2, archive: Archive, folder: Folder,
   design: Palette, other: FileQuestion

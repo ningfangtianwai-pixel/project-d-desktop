@@ -1,75 +1,67 @@
-const fs = require("node:fs");
 const path = require("node:path");
-const initSqlJs = require("sql.js");
+const { app, safeStorage } = require("electron");
+
+const PRODUCT_NAME = "Project D";
+
+app.setName(PRODUCT_NAME);
+app.setPath("userData", path.join(app.getPath("appData"), PRODUCT_NAME));
 
 async function main() {
-  const dbPath = process.env.PROJECTD_DB_PATH || path.join(process.env.APPDATA ?? "", "Project D", "database.sqlite");
-  if (!fs.existsSync(dbPath)) {
-    console.error(`Database not found: ${dbPath}`);
-    process.exitCode = 1;
-    return;
+  if (!app.requestSingleInstanceLock()) {
+    throw new Error("Close Project D before changing provider configuration");
   }
 
-  const SQL = await initSqlJs({
-    locateFile: (file) => path.join(process.cwd(), "node_modules", "sql.js", "dist", file)
-  });
-  const db = new SQL.Database(fs.readFileSync(dbPath));
+  await app.whenReady();
   const weatherKey = (process.env.PROJECTD_OPENWEATHER_API_KEY || "").trim();
   const deepSeekKey = (process.env.PROJECTD_DEEPSEEK_API_KEY || "").trim();
+  if ((weatherKey || deepSeekKey) && !safeStorage.isEncryptionAvailable()) {
+    throw new Error("System credential encryption is unavailable; no API key was saved");
+  }
 
-  db.run("INSERT INTO weather_config(id) SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM weather_config)");
-  db.run("INSERT INTO ai_config(id) SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM ai_config)");
+  const { AppLogger } = require("../dist/main/logger.js");
+  const { DatabaseService } = require("../dist/main/database.js");
+  const dbPath = process.env.PROJECTD_DB_PATH ? path.resolve(process.env.PROJECTD_DB_PATH) : undefined;
+  const logger = new AppLogger();
+  const database = new DatabaseService(logger, dbPath);
 
-  db.run(
-    `UPDATE weather_config
-     SET mode = 'auto',
-         api_key = CASE WHEN ? <> '' THEN ? ELSE api_key END,
-         city = NULL,
-         latitude = NULL,
-         longitude = NULL,
-         last_fetched_at = NULL
-     WHERE id = (SELECT id FROM weather_config ORDER BY id LIMIT 1)`,
-    [weatherKey, weatherKey]
-  );
-
-  db.run(
-    `UPDATE ai_config
-     SET provider = 'deepseek',
-         api_key = CASE WHEN ? <> '' THEN ? ELSE api_key END,
-         api_endpoint = 'https://api.deepseek.com/chat/completions',
-         model = 'deepseek-chat',
-         enabled = 1
-     WHERE id = (SELECT id FROM ai_config ORDER BY id LIMIT 1)`,
-    [deepSeekKey, deepSeekKey]
-  );
-
-  db.run(
-    `INSERT INTO app_state(key, value, updated_at)
-     VALUES ('provider_configured_at', ?, datetime('now'))
-     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')`,
-    [new Date().toISOString()]
-  );
-
-  fs.writeFileSync(dbPath, Buffer.from(db.export()));
-  db.close();
-
-  console.log(
-    JSON.stringify(
-      {
-        dbPath,
-        weatherMode: "auto",
-        weatherApiKeyConfigured: weatherKey.length > 0,
-        weatherLocation: "ip-auto",
-        aiProvider: "deepseek",
-        aiApiKeyConfigured: deepSeekKey.length > 0
+  try {
+    await database.initialize();
+    database.updateSettings({
+      weather: {
+        mode: "auto",
+        city: null,
+        latitude: null,
+        longitude: null,
+        ...(weatherKey ? { apiKey: weatherKey } : {})
       },
-      null,
-      2
-    )
-  );
+      ai: {
+        provider: "deepseek",
+        apiEndpoint: "https://api.deepseek.com/chat/completions",
+        model: "deepseek-chat",
+        enabled: true,
+        ...(deepSeekKey ? { apiKey: deepSeekKey } : {})
+      }
+    });
+    database.setAppState("provider_configured_at", new Date().toISOString());
+
+    const settings = database.getSettings();
+    process.stdout.write(`${JSON.stringify({
+      dbPath: dbPath ?? path.join(app.getPath("userData"), "database.sqlite"),
+      weatherMode: settings.weather.mode,
+      weatherApiKeyConfigured: settings.weather.apiKeyConfigured,
+      weatherLocation: "ip-auto",
+      aiProvider: settings.ai.provider,
+      aiApiKeyConfigured: settings.ai.apiKeyConfigured,
+      secretStorage: "electron-safeStorage"
+    }, null, 2)}\n`);
+  } finally {
+    database.close();
+  }
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+main()
+  .then(() => app.quit())
+  .catch((error) => {
+    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    app.exit(1);
+  });

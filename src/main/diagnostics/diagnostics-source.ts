@@ -38,7 +38,7 @@ function parseLogLine(line: string): RecentLogMetadata[] {
   try {
     const entry = JSON.parse(line) as Record<string, unknown>;
     const rawLevel = typeof entry.level === "string" ? entry.level.toUpperCase() : "";
-    if (rawLevel !== "ERROR" && rawLevel !== "WARN" && rawLevel !== "INFO") return [];
+    if (rawLevel !== "ERROR" && rawLevel !== "WARN" && rawLevel !== "INFO" && rawLevel !== "DEBUG") return [];
     const level = rawLevel === "ERROR" ? "error" : rawLevel === "WARN" ? "warn" : "info";
     const data = typeof entry.data === "object" && entry.data !== null
       ? entry.data as Record<string, unknown>

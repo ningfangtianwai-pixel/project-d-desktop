@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, globalShortcut, Menu, nativeImage, powerMonitor, screen, shell, Tray } from "electron";
+import { app, BrowserWindow, dialog, globalShortcut, Menu, powerMonitor, screen, shell } from "electron";
 import type { IpcMainInvokeEvent, OpenDialogOptions } from "electron";
 import { autoUpdater } from "electron-updater";
 import fs from "node:fs";
@@ -40,10 +40,12 @@ import { defaultPetWindowForWorkArea, fitPetWindowToWorkArea } from "./pet-windo
 import { validateSettingsPatch } from "./settings-patch-validator.js";
 import { OperationsControlService } from "./operations/operations-control.js";
 import { OperationsTelemetryService } from "./operations/operations-telemetry.js";
+import { ShortcutManager } from "./shortcut-manager.js";
+import { ProjectTrayManager } from "./tray-manager.js";
 import { IPC_CHANNELS, MENU_COMMANDS, type MenuCommand } from "../shared/ipc.js";
 import { registerAllIpcHandlers, type ServiceDeps } from "./ipc/register-all.js";
 import { WALLPAPER_LIBRARY } from "../shared/wallpaper-library.js";
-import type { ActionExecution, DesktopStatus, InterruptedActionRecovery, PetWindowBounds, PrivacyNetworkState, RecoveryHealthCode, RecoverySystemStatus, SettingsPatch, SettingsSnapshot, SuggestionDeliveryControls, SuggestionPolicy, SuggestionRecord, SupportDiagnosticsReport, WallpaperDisplayInfo, WorkspaceSearchResult } from "../shared/types.js";
+import type { ActionExecution, DesktopStatus, FilePreviewData, InterruptedActionRecovery, PetWindowBounds, PrivacyNetworkState, RecoveryHealthCode, RecoverySystemStatus, SettingsPatch, SettingsSnapshot, SuggestionDeliveryControls, SuggestionPolicy, SuggestionRecord, SupportDiagnosticsReport, WallpaperDisplayInfo, WorkspaceSearchResult } from "../shared/types.js";
 import type { UpdateStatus } from "../shared/update.js";
 import type { PerformanceMode, RuntimePauseSnapshot, ThermalState } from "../shared/runtime.js";
 
@@ -69,7 +71,8 @@ const wallpaperStartupAttachments = new Map<string, {
   promise: Promise<WallpaperAttachResult>;
   resolve: (result: WallpaperAttachResult) => void;
 }>();
-let tray: Tray | null = null;
+let trayManager: ProjectTrayManager | null = null;
+let shortcutManager: ShortcutManager | null = null;
 let logger: AppLogger | null = null;
 let database: DatabaseService | null = null;
 let fileScanner: FileScanner | null = null;
@@ -353,7 +356,8 @@ function createWindow(): BrowserWindow {
       preload: preloadPath(),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true
+      sandbox: true,
+      webSecurity: true
     }
   });
 
@@ -428,7 +432,8 @@ function createSettingsWindow(): BrowserWindow {
       preload: preloadPath(),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true
+      sandbox: true,
+      webSecurity: true
     }
   });
 
@@ -481,7 +486,8 @@ function createOverlayWindow(safeMode: boolean): BrowserWindow {
       preload: preloadPath(),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true
+      sandbox: true,
+      webSecurity: true
     }
   });
 
@@ -592,7 +598,8 @@ function createWallpaperWindowForDisplay(displayId: string, bounds: Electron.Rec
       preload: preloadPath(),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true
+      sandbox: true,
+      webSecurity: true
     }
   });
 
@@ -835,7 +842,8 @@ function createPetWindow(): BrowserWindow {
       preload: preloadPath(),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true
+      sandbox: true,
+      webSecurity: true
     }
   });
 
@@ -1348,27 +1356,6 @@ function sendMenuCommand(command: MenuCommand): void {
   }
 }
 
-function registerGlobalShortcuts(): void {
-  const savedAccelerator = database?.getAppState("shortcut_peek") || "Control+Alt+Space";
-  const accelerator = isValidPeekAccelerator(savedAccelerator) ? savedAccelerator : "Control+Alt+Space";
-  globalShortcut.unregister(accelerator);
-  const registered = globalShortcut.register(accelerator, createPeekShortcutHandler(accelerator));
-  if (accelerator !== savedAccelerator) database?.setAppState("shortcut_peek", accelerator);
-  database?.setAppState("shortcut_peek_status", registered ? "ready" : "conflict");
-  logger?.[registered ? "info" : "warn"]("app", "workspace shortcut registration", { accelerator, registered });
-
-  const emergencyAccelerator = "Control+Alt+Shift+Escape";
-  globalShortcut.unregister(emergencyAccelerator);
-  const emergencyRegistered = globalShortcut.register(emergencyAccelerator, () => {
-    void emergencyRestoreDesktop("emergency-shortcut");
-  });
-  database?.setAppState("shortcut_emergency_status", emergencyRegistered ? "ready" : "conflict");
-  logger?.[emergencyRegistered ? "info" : "warn"]("app", "emergency desktop shortcut registration", {
-    accelerator: emergencyAccelerator,
-    registered: emergencyRegistered
-  });
-}
-
 function broadcastDesktopFilesUpdated(): void {
   for (const window of BrowserWindow.getAllWindows()) {
     window.webContents.send(IPC_CHANNELS.DESKTOP_FILES_UPDATED);
@@ -1692,144 +1679,51 @@ function updateDesktopStatus(mode: DesktopStatus["mode"]): DesktopStatus {
   return desktopStatus;
 }
 
-function createTrayIcon() {
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-      <rect width="64" height="64" rx="14" fill="#14161a"/>
-      <path d="M16 18h18c9 0 16 6 16 14s-7 14-16 14H16V18z" fill="#8dd8ff"/>
-      <path d="M27 27h8c3 0 6 2 6 5s-3 5-6 5h-8V27z" fill="#14161a"/>
-    </svg>
-  `;
-
-  return nativeImage.createFromDataURL(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`);
-}
-
-function createTray(): Tray {
-  const appTray = new Tray(createTrayIcon());
-  appTray.setToolTip("Project D");
-
-  const menu = Menu.buildFromTemplate([
-    {
-      label: "显示 Project D",
-      click: () => {
-        showMainWindowAndFocusSearch();
-      }
+function startTray(): void {
+  trayManager?.destroy();
+  trayManager = new ProjectTrayManager({
+    showMain: showMainWindowAndFocusSearch,
+    activateDesktop: async () => {
+      desktopStatus = (await desktopController?.activate()) ?? updateDesktopStatus("safe-mode");
+      createOverlayWindow(desktopStatus.mode === "safe-mode");
+      mainWindow?.hide();
+      sendMenuCommand(MENU_COMMANDS.ACTIVATE_DESKTOP);
     },
-    {
-      label: "启动整理",
-      click: async () => {
-        desktopStatus = (await desktopController?.activate()) ?? updateDesktopStatus("safe-mode");
-        createOverlayWindow(desktopStatus.mode === "safe-mode");
-        mainWindow?.hide();
-        sendMenuCommand(MENU_COMMANDS.ACTIVATE_DESKTOP);
-      }
+    deactivateDesktop: async () => {
+      desktopStatus = (await desktopController?.deactivate()) ?? updateDesktopStatus("idle");
+      closeOverlayWindow();
+      mainWindow?.show();
+      sendMenuCommand(MENU_COMMANDS.DEACTIVATE_DESKTOP);
     },
-    {
-      label: "安全归位",
-      click: async () => {
-        desktopStatus = (await desktopController?.deactivate()) ?? updateDesktopStatus("idle");
-        closeOverlayWindow();
-        mainWindow?.show();
-        sendMenuCommand(MENU_COMMANDS.DEACTIVATE_DESKTOP);
-      }
+    enterCleanDesktop: async () => { await enterCleanDesktop(); },
+    exitCleanDesktop: async () => { await exitCleanDesktop(); },
+    emergencyRestore: () => emergencyRestoreDesktop("tray-menu"),
+    startWallpaper: () => { createWallpaperWindow(); },
+    stopWallpaper: closeWallpaperWindow,
+    pauseEffects: () => { setRuntimeManualPaused(true); },
+    resumeEffects: () => { setRuntimeManualPaused(false); },
+    showPet: () => { updatePetSettings({ isVisible: true }); },
+    hidePet: () => { updatePetSettings({ isVisible: false }); },
+    resetPet: () => { resetPetWindow(); },
+    openSettings: () => {
+      createSettingsWindow();
+      sendMenuCommand(MENU_COMMANDS.OPEN_SETTINGS);
     },
-    {
-      label: "纯净桌面（Esc 退出）",
-      click: async () => {
-        await enterCleanDesktop();
-      }
+    checkForUpdates: async () => {
+      createSettingsWindow();
+      await updateService?.checkForUpdates();
     },
-    {
-      label: "恢复桌面",
-      click: async () => {
-        await exitCleanDesktop();
-      }
-    },
-    {
-      label: "紧急安全归位",
-      click: async () => {
-        await emergencyRestoreDesktop("tray-menu");
-      }
-    },
-    { type: "separator" },
-    {
-      label: "启动动态壁纸",
-      click: () => {
-        createWallpaperWindow();
-      }
-    },
-    {
-      label: "关闭动态壁纸",
-      click: () => {
-        closeWallpaperWindow();
-      }
-    },
-    {
-      label: "暂停动态效果",
-      click: () => {
-        setRuntimeManualPaused(true);
-      }
-    },
-    {
-      label: "继续动态效果",
-      click: () => {
-        setRuntimeManualPaused(false);
-      }
-    },
-    { type: "separator" },
-    {
-      label: "显示桌宠",
-      click: () => {
-        updatePetSettings({ isVisible: true });
-      }
-    },
-    {
-      label: "隐藏桌宠",
-      click: () => {
-        updatePetSettings({ isVisible: false });
-      }
-    },
-    {
-      label: "复位桌宠位置",
-      click: () => {
-        resetPetWindow();
-      }
-    },
-    { type: "separator" },
-    {
-      label: "设置",
-      click: () => {
-        createSettingsWindow();
-        sendMenuCommand(MENU_COMMANDS.OPEN_SETTINGS);
-      }
-    },
-    {
-      label: "检查更新",
-      click: () => {
-        createSettingsWindow();
-        void updateService?.checkForUpdates().catch((error) => {
-          logger?.warn("app", "tray update check failed", {
-            message: error instanceof Error ? error.message : String(error)
-          });
-        });
-      }
-    },
-    { type: "separator" },
-    {
-      label: "退出",
-      click: () => {
-        sendMenuCommand(MENU_COMMANDS.QUIT);
-        app.quit();
-      }
+    quit: () => {
+      sendMenuCommand(MENU_COMMANDS.QUIT);
+      app.quit();
     }
-  ]);
-
-  appTray.setContextMenu(menu);
-  appTray.on("click", () => {
-    showMainWindowAndFocusSearch();
+  }, (action, error) => {
+    logger?.warn("app", "tray action failed", {
+      action,
+      message: error instanceof Error ? error.message : String(error)
+    });
   });
-
-  return appTray;
+  trayManager.create();
 }
 
 function registerIpc(): void {
@@ -1854,55 +1748,8 @@ function hasConfiguredBundledUpdateFeed(): boolean {
   }
 }
 
-async function setPeekShortcut(accelerator: unknown): Promise<{ success: boolean; accelerator: string }> {
-    if (typeof accelerator !== "string" || !isValidPeekAccelerator(accelerator)) {
-      throw new Error("invalid");
-    }
-    const oldAccelerator = database?.getAppState("shortcut_peek") || "Control+Alt+Space";
-
-    if (oldAccelerator === accelerator) {
-      if (!globalShortcut.isRegistered(accelerator)) {
-        const restored = globalShortcut.register(accelerator, createPeekShortcutHandler(accelerator));
-        database?.setAppState("shortcut_peek_status", restored ? "ready" : "conflict");
-        if (!restored) throw new Error("conflict");
-      }
-      return { success: true, accelerator };
-    }
-
-    const registered = globalShortcut.register(accelerator, createPeekShortcutHandler(accelerator));
-
-    if (!registered) {
-      database?.setAppState("shortcut_peek_status", "conflict");
-      throw new Error("conflict");
-    }
-
-    globalShortcut.unregister(oldAccelerator);
-    database?.setAppState("shortcut_peek", accelerator);
-    database?.setAppState("shortcut_peek_status", "ready");
-    logger?.info("app", "peek shortcut changed", { from: oldAccelerator, to: accelerator });
-
-    return { success: true, accelerator };
-}
-
-function createPeekShortcutHandler(accelerator: string): () => void {
-  return () => {
-    showMainWindowAndFocusSearch();
-    logger?.info("app", "workspace shortcut invoked", { accelerator });
-  };
-}
-
-function isValidPeekAccelerator(accelerator: string): boolean {
-  if (accelerator.length < 3 || accelerator.length > 80 || /[\x00-\x1f\x7f]/.test(accelerator)) return false;
-  const parts = accelerator.split("+");
-  if (parts.some((part) => !part) || new Set(parts).size !== parts.length) return false;
-  const modifiers = new Set(["Control", "Alt", "Shift", "Meta", "CommandOrControl"]);
-  const key = parts.at(-1) ?? "";
-  if (!parts.slice(0, -1).every((part) => modifiers.has(part)) || parts.length < 2) return false;
-  return /^(?:[A-Z0-9]|Space|Enter|Tab|Backspace|Delete|Insert|Home|End|PageUp|PageDown|Up|Down|Left|Right|Plus|F(?:[1-9]|1\d|2[0-4]))$/.test(key);
-}
-
 /** @internal File preview logic extracted from old registerIpc */
-async function readFilePreviewImpl(fileId: number): Promise<any> {
+async function readFilePreviewImpl(fileId: number): Promise<FilePreviewData> {
   const file = database?.getDesktopFileById(fileId);
   if (!file) throw new Error("File not found");
   const { readFile, open } = await import("node:fs/promises");
@@ -1961,14 +1808,16 @@ async function getRecoverySystemStatus(): Promise<RecoverySystemStatus> {
       ? recoveryHealth("degraded", `壁纸宿主处于安全回退 · ${host}`)
       : recoveryHealth("checking", `壁纸宿主状态 · ${host}`);
 
-  const accelerator = database?.getAppState("shortcut_peek") ?? "Control+Alt+Space";
-  const shortcutState = database?.getAppState("shortcut_peek_status") ?? "unknown";
-  const shortcutReady = shortcutState === "ready" && globalShortcut.isRegistered(accelerator);
-  const shortcut = shortcutReady
-    ? recoveryHealth("ready", `工作区快捷键可用 · ${accelerator}`)
-    : shortcutState === "conflict"
-      ? recoveryHealth("degraded", `快捷键冲突 · ${accelerator}`)
-      : recoveryHealth("checking", `快捷键状态 · ${shortcutState}`);
+  const shortcutStatus = shortcutManager?.peekStatus() ?? {
+    accelerator: database?.getAppState("shortcut_peek") ?? "Control+Alt+Space",
+    persistedState: database?.getAppState("shortcut_peek_status") ?? "unknown",
+    registered: false
+  };
+  const shortcut = shortcutStatus.registered
+    ? recoveryHealth("ready", `工作区快捷键可用 · ${shortcutStatus.accelerator}`)
+    : shortcutStatus.persistedState === "conflict"
+      ? recoveryHealth("degraded", `快捷键冲突 · ${shortcutStatus.accelerator}`)
+      : recoveryHealth("checking", `快捷键状态 · ${shortcutStatus.persistedState}`);
 
   let runtimeRecovery: RecoverySystemStatus["runtimeRecovery"] = recoveryHealth("checking", "尚无桌面运行时恢复记录");
   const rawRecovery = database?.getAppState("desktop_runtime_recovery");
@@ -2150,7 +1999,10 @@ function buildIpcDeps(): ServiceDeps {
       setNetworkPaused: updatePrivacyNetworkPaused
     },
     recovery: { getSystemStatus: getRecoverySystemStatus },
-    shortcuts: { setPeekShortcut },
+    shortcuts: {
+      setPeekShortcut: (accelerator) => shortcutManager?.setPeekShortcut(accelerator)
+        ?? Promise.reject(new Error("Shortcut manager is unavailable"))
+    },
     autoRules: { getStore: () => database },
     updates: {
       getStatus: () => {
@@ -2411,7 +2263,14 @@ async function initializeCoreServices(): Promise<void> {
     saveDeliveryControls: saveSuggestionDeliveryControls
   });
   await inspectInterruptedActions();
-  registerGlobalShortcuts();
+  shortcutManager = new ShortcutManager(globalShortcut, database, {
+    info: (message, data) => logger?.info("app", message, data),
+    warn: (message, data) => logger?.warn("app", message, data)
+  }, {
+    showWorkspace: showMainWindowAndFocusSearch,
+    restoreDesktop: () => emergencyRestoreDesktop("emergency-shortcut")
+  });
+  shortcutManager.registerAll();
 
   logger.info("app", "core services ready", status);
 
@@ -2491,9 +2350,11 @@ async function shutdownSafely(): Promise<void> {
       closeOverlayWindow();
       closeWallpaperWindow();
       closePetWindow();
+      shortcutManager?.dispose();
+      shortcutManager = null;
       database?.close();
-      tray?.destroy();
-      tray = null;
+      trayManager?.destroy();
+      trayManager = null;
     }, 8_000, () => {
       writeBootstrapLog("shutdown deadline exceeded", { timeoutMs: 8_000 });
       logger?.error("error", "shutdown deadline exceeded; forcing process exit", { timeoutMs: 8_000 });
@@ -2569,7 +2430,7 @@ if (!singleInstanceLock) {
       startRuntimePresenceMonitor();
       registerIpc();
 
-      tray = createTray();
+      startTray();
       const startupSettings = database?.getSettings();
       if (startupSettings?.wallpaper.isDynamic) {
         createWallpaperWindow();

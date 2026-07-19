@@ -1,6 +1,24 @@
 # Project D Status
 
-Current stage: Stage 33 - automatic-update client and staged channels, force-kill restart recovery, support documentation, accelerated soak tooling, and update-aware NSIS packaging are complete; hosted signed update replay and the real 24-hour soak remain.
+Current stage: Stage 42 - external commercial audit reconciled, plaintext secret fallback removed, structured rotating logs and coverage gates added, tray/shortcut ownership extracted, and current-source recovery/package acceptance passed. Controlled internal Beta is conditionally accepted; public and paid release gates remain open.
+
+## Stage 42 Acceptance Audit And Code Hardening
+
+- [x] Reconciled the external commercial assessment against the actual Stage 41 code and separated stale findings from real release blockers.
+- [x] API keys now fail closed when Electron `safeStorage` is unavailable; legacy plaintext values are removed instead of silently reused.
+- [x] Provider configuration runs through Electron and the production `DatabaseService` secret path instead of writing secret columns directly with SQL.
+- [x] Logging supports `DEBUG/INFO/WARN/ERROR`, structured JSON, bounded rotation, serialization containment, and non-fatal write errors.
+- [x] Tray and global-shortcut ownership moved out of `main.ts`; shortcut conflicts preserve the previously active binding and shutdown releases owned resources.
+- [x] All five desktop windows explicitly enforce sandbox, context isolation, web security, and disabled Node integration; static security regression tests cover the baseline.
+- [x] Explicit TypeScript `any` usage was removed from the application source.
+- [x] CI now enforces line 80%, branch 70%, and function 80% coverage thresholds and uploads coverage evidence.
+- [x] `pnpm quality` passed 175/175 tests; actual coverage is 81.57% lines, 75.52% branches, and 83.31% functions.
+- [x] Current-source force-kill/restart passed all seven checks with database integrity `ok` and desktop state `idle`.
+- [x] A fresh Electron 43.1.1 unpacked build loaded 39/39 modules and passed packaged core-ready, clean-exit, shutdown-complete, and zero-error checks.
+- [x] Post-test system state has no Project D residual process and Explorer reports `HideIcons=0`.
+- [ ] Authenticode signing, production HTTPS update/operations services, the physical hardware matrix, licensed asset evidence, legal approval, and real 4-hour/24-hour runs remain release gates.
+
+Detailed judgment: `docs/PROJECT_ACCEPTANCE_AUDIT_2026-07-19.md`.
 
 ## Stage 33 Update And Stability Preflight
 

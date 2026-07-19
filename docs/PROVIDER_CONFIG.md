@@ -11,7 +11,7 @@ Project D supports these weather paths:
 
 The OpenWeatherMap key supplied by the user is stored only as an Electron `safeStorage` encrypted value in the local SQLite database under `weather_config.api_key`. It is decrypted only inside the main process at request time and is not written to source code or `.env.example`.
 
-`pnpm configure:providers` can enable auto weather and store the key from `PROJECTD_OPENWEATHER_API_KEY`.
+`pnpm configure:providers` can enable auto weather and store the key from `PROJECTD_OPENWEATHER_API_KEY`. The command must run while Project D is closed. It starts through Electron and refuses to save a key when Windows credential encryption is unavailable; it never writes a plaintext compatibility value.
 `pnpm verify:weather` performs a real IP geolocation and weather request, then writes the latest weather cache locally.
 
 ## AI Providers
@@ -28,5 +28,5 @@ Real provider calls fall back to the local assistant if the key, endpoint, or lo
 
 Stored AI provider keys use Electron `safeStorage` encryption in `ai_config.api_key`. Renderer snapshots expose only whether a key is configured, never the raw key.
 
-`pnpm configure:providers` can configure DeepSeek from `PROJECTD_DEEPSEEK_API_KEY`.
+`pnpm configure:providers` can configure DeepSeek from `PROJECTD_DEEPSEEK_API_KEY` through the same Electron `safeStorage` path. Existing legacy plaintext values are removed during migration and must be re-entered after credential encryption is available.
 `pnpm verify:ai` performs a small DeepSeek chat-completion request and reports only a short response preview.

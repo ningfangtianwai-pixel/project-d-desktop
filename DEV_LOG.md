@@ -1346,3 +1346,22 @@
 - Final `pnpm verify:packaged`: passed 39/39 modules.
 - Promoted version from repeated `0.1.0` artifacts to traceable internal beta `0.2.0-beta.1`.
 - Installer: 239,167,131 bytes; SHA-256 `585CC4AE3B183497AFA92B307944D2291A02AFD2DB41655D4B6209993FCBC145`; Authenticode remains `NotSigned`.
+
+## 2026-07-19 Stage 42 Acceptance Audit And Code Hardening
+
+- Read and reconciled the supplied external commercial assessment with the current repository instead of accepting stale claims at face value.
+- Reworked `scripts/configure-providers.cjs` to run under Electron, acquire the application lock, use the compiled `DatabaseService`, and refuse secret writes without `safeStorage`.
+- Removed database plaintext-secret fallback. Legacy plaintext keys are cleared during migration, are no longer treated as configured, and must be re-entered securely.
+- Added structured logger levels, JSON containment, bounded size rotation, retention limits, and non-fatal logging failures.
+- Extracted tray and shortcut ownership from `src/main/main.ts` into typed managers; the file is now 2325 lines and still needs later window/lifecycle extraction.
+- Added explicit BrowserWindow `webSecurity`, removed application-source `any` types, and added logger, shortcut, provider-secret, window-security, and ownership regression tests.
+- Added `pnpm test:coverage` with 80/70/80 line/branch/function thresholds and connected it to GitHub Actions with retained coverage artifacts.
+- First `pnpm typecheck` after extraction found tray callbacks returning `Promise<DesktopStatus>` where `Promise<void>` was required; wrapped those callbacks and reran successfully.
+- Focused regression: 10/10 passed after aligning diagnostics with the `DEBUG` log level.
+- `pnpm quality`: passed 175/175 tests, coverage 81.57%/75.52%/83.31%, all type checks, production build, 33-entry asset structure gate, 358-component SBOM, zero known audit vulnerabilities, and release-lifecycle fixture QA.
+- `pnpm qa:crash-restart`: passed all seven checks; database integrity remained `ok`, desktop state returned to `idle`, and no temporary database was left behind.
+- `pnpm exec electron-builder --dir`: passed with Electron 43.1.1. `pnpm verify:packaged` loaded 39/39 modules and `pnpm qa:packaged-smoke` passed core readiness, clean exit, completed shutdown, and an empty error log.
+- Rebuilt and repeated packaged smoke after the final plaintext-removal change; final report is `artifacts/qa/packaged-smoke-2026-07-19T04-36-59-420Z/report.json`.
+- Ran `pnpm configure:providers` against an isolated QA database with dummy weather/AI keys; both were reported configured through `electron-safeStorage`. A subsequent read-only check confirmed the real user database still stores both configured keys in encrypted form.
+- Final machine check: no Project D process remained and Explorer `HideIcons=0`; Authenticode remains `NotSigned`.
+- Wrote `docs/PROJECT_ACCEPTANCE_AUDIT_2026-07-19.md`. Controlled internal Beta is conditionally accepted; public Beta and paid GA are not accepted.

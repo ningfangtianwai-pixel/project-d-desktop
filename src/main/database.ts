@@ -1395,6 +1395,12 @@ export class DatabaseService {
   }
 
   private migrateSecretsToSafeStorage(): void {
+    if (!safeStorage.isEncryptionAvailable()) {
+      this.removeLegacyPlaintextSecret("weather_config", "api_key");
+      this.removeLegacyPlaintextSecret("ai_config", "api_key");
+      this.logger.warn("app", "safeStorage is unavailable; legacy plaintext provider secrets were removed");
+      return;
+    }
     this.encryptSingletonSecret("weather_config", "api_key");
     this.encryptSingletonSecret("ai_config", "api_key");
   }
@@ -1410,6 +1416,14 @@ export class DatabaseService {
       this.getDb().run(`UPDATE ${table} SET ${column} = ? WHERE id = ?`, [encrypted, Number(row.id)]);
       this.setAppState("safe_storage_last_migration", new Date().toISOString());
     }
+  }
+
+  private removeLegacyPlaintextSecret(table: string, column: string): void {
+    const row = this.selectRows(`SELECT id, ${column} FROM ${table} WHERE ${column} IS NOT NULL AND length(${column}) > 0 ORDER BY id LIMIT 1`)[0];
+    if (!row || typeof row[column] !== "string" || row[column].startsWith(SAFE_SECRET_PREFIX)) return;
+
+    this.getDb().run(`UPDATE ${table} SET ${column} = NULL WHERE id = ?`, [Number(row.id)]);
+    this.setAppState("legacy_plaintext_secret_removed_at", new Date().toISOString());
   }
 
   private locateSqlJsFile(file: string): string {
@@ -1475,8 +1489,7 @@ export class DatabaseService {
     }
 
     if (!safeStorage.isEncryptionAvailable()) {
-      this.logger.warn("app", "safeStorage is unavailable; secret kept in legacy storage");
-      return value;
+      throw new Error("System credential encryption is unavailable; the API key was not saved");
     }
 
     return `${SAFE_SECRET_PREFIX}${safeStorage.encryptString(value).toString("base64")}`;
@@ -1488,7 +1501,8 @@ export class DatabaseService {
     }
 
     if (!value.startsWith(SAFE_SECRET_PREFIX)) {
-      return value;
+      this.logger.warn("app", "legacy plaintext provider secret ignored until it can be encrypted");
+      return null;
     }
 
     if (!safeStorage.isEncryptionAvailable()) {
@@ -1507,7 +1521,7 @@ export class DatabaseService {
   }
 
   private hasSecretValue(value: unknown): boolean {
-    return typeof value === "string" && value.length > 0;
+    return typeof value === "string" && value.startsWith(SAFE_SECRET_PREFIX) && value.length > SAFE_SECRET_PREFIX.length;
   }
 
   private pickString(value: unknown, allowed: string[], maxLength: number): string | undefined {
