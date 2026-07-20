@@ -30,13 +30,8 @@ if (!window.projectD) {
     phase: "manual",
     channel: "stable",
     currentVersion: APP_VERSION,
-    availableVersion: null,
-    progressPercent: null,
-    transferredBytes: null,
-    totalBytes: null,
     lastCheckedAt: null,
     feedConfigured: true,
-    stagedRolloutSupported: false,
     message: "手动更新模式：在 GitHub Releases 查看新版本"
   };
   const now = () => new Date().toISOString();

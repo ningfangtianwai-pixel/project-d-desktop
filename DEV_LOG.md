@@ -1394,7 +1394,9 @@
 - Enhanced fixture install/upgrade/rollback/uninstall QA to verify settings, database bytes, desktop icon state, system wallpaper state, program-file removal, and process-marker cleanup.
 - Added clean checkout verification, release evidence generation, profile-aware 4-hour/24-hour soak thresholds, completion ratios, claim eligibility, and residual-process checks.
 - `pnpm quality:v4`: passed 184 Node tests, 2 component tests, 8 Electron E2E, type checks, build, SBOM, audit, and lifecycle QA.
-- `pnpm verify:clean-checkout -- --full`: passed from a detached checkout with a fresh pnpm store, then a shell-free quick replay also passed.
+- `pnpm verify:clean-checkout -- --full`: passed from a detached checkout with a fresh pnpm store, minimal sanitized environment, no local `.env`, and no absolute workspace path across tracked runtime/config files.
+- Closed independent-review findings by assigning stable tray menu ids, proving the primary instance receives `second-instance`, and binding release readiness to the current Commit SHA/version/installer digest instead of timestamps alone.
+- Removed obsolete automatic-update download/install/recovery states from the shared status model; the remaining surface represents manual GitHub Releases mode only.
 - `pnpm dist`, package budget, 38/38 runtime import verification, packaged smoke, and release evidence generation passed.
 - Final package metadata is generated after the source commit into `release/SHA256SUMS.txt`, `release/COMMIT_SHA.txt`, and `release/BUILD_SUMMARY.json`, avoiding a stale commit or digest in tracked documentation; Authenticode remains `NotSigned`.
 - `pnpm verify:release-ready` correctly passes the MIT/manual-update/document/package checks and blocks draft legal text, 33 pending asset records, and missing Authenticode signing.

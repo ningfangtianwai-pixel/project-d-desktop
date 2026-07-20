@@ -727,7 +727,7 @@
 - [x] Database, tray, update, IPC registry/composition, wallpaper host/supervisor, desktop recovery, lifecycle, shutdown, and renderer recovery appear in numeric high-risk coverage gates.
 - [x] Full compiled main/shared inventory coverage passes at 73.27% lines, 75.17% branches, and 70.88% functions.
 - [x] Diagnostics export removes API keys, tokens, authorization values, email addresses, named-user fields, private filenames, and complete paths.
-- [x] Clean checkout with fresh dependency store passes without local `.env`, absolute workspace dependencies, uncommitted source, or existing `node_modules`.
+- [x] Clean checkout with fresh dependency store and sanitized minimal environment passes without local `.env`, project environment variables, absolute workspace dependencies in tracked runtime/config text, uncommitted source, or existing `node_modules`.
 - [x] Fixture install/upgrade/rollback/uninstall checks preserve settings/database and desktop state while removing program files and process markers.
 - [x] SHA256SUMS, CycloneDX SBOM, source commit SHA, and machine-readable build summary are generated for the final installer.
 - [x] 4-hour and 24-hour soak scripts enforce profile thresholds, completion ratio, claim eligibility, and residual-process checks.

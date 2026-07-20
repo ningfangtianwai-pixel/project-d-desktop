@@ -67,7 +67,7 @@ export class ProjectTrayManager {
   }
 
   private item(label: string, actionName: string, action: TrayAction): Electron.MenuItemConstructorOptions {
-    return { label, click: () => this.invoke(actionName, action) };
+    return { id: actionName, label, click: () => this.invoke(actionName, action) };
   }
 
   private invoke(actionName: string, action: TrayAction): void {

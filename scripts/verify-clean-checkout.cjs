@@ -9,6 +9,7 @@ const checkout = path.join(tempRoot, "source");
 const store = path.join(tempRoot, "pnpm-store");
 const full = process.argv.includes("--full");
 const report = { schemaVersion: 2, generatedAt: new Date().toISOString(), full, checks: {}, passed: false };
+const cleanEnvironment = createCleanEnvironment(process.env);
 
 function run(command, args, cwd = root) {
   const pnpmCli = command === "pnpm" ? process.env.npm_execpath : null;
@@ -16,6 +17,7 @@ function run(command, args, cwd = root) {
   const executableArgs = pnpmCli ? [pnpmCli, ...args] : args;
   const result = spawnSync(executable, executableArgs, {
     cwd,
+    env: cleanEnvironment,
     encoding: "utf8",
     windowsHide: true,
     shell: false,
@@ -44,6 +46,7 @@ try {
   report.absoluteWorkspacePathFiles = scanFiles(checkout, trackedRuntimeFiles, [root, root.replaceAll("\\", "/")]);
   report.checks.noAbsoluteWorkspaceDependency = report.absoluteWorkspacePathFiles.length === 0;
   report.checks.noLocalEnvDependency = !fs.existsSync(path.join(checkout, ".env"));
+  report.checks.noProjectEnvironmentDependency = !Object.keys(cleanEnvironment).some((key) => /^(?:VITE_|PROJECTD_)/i.test(key));
   report.passed = Object.values(report.checks).every(Boolean);
 } catch (error) {
   report.failure = error instanceof Error ? error.message.slice(-8_000) : String(error);
@@ -66,6 +69,24 @@ function listTrackedRuntimeFiles(directory) {
     ".sh", ".ts", ".tsx", ".vue", ".yaml", ".yml"
   ]);
   return output.split("\0").filter((file) => runtimeExtensions.has(path.extname(file).toLowerCase()));
+}
+
+function createCleanEnvironment(source) {
+  const allowed = new Set([
+    "ALLUSERSPROFILE", "APPDATA", "COMMONPROGRAMFILES", "COMMONPROGRAMFILES(X86)",
+    "COMMONPROGRAMW6432", "COMSPEC", "HOME", "HOMEDRIVE", "HOMEPATH", "LOCALAPPDATA",
+    "NUMBER_OF_PROCESSORS", "OS", "PATH", "PATHEXT", "PROCESSOR_ARCHITECTURE",
+    "PROCESSOR_IDENTIFIER", "PROGRAMDATA", "PROGRAMFILES", "PROGRAMFILES(X86)",
+    "PROGRAMW6432", "SYSTEMDRIVE", "SYSTEMROOT", "TEMP", "TMP", "USERDOMAIN",
+    "USERNAME", "USERPROFILE", "WINDIR"
+  ]);
+  const environment = {};
+  for (const [key, value] of Object.entries(source)) {
+    const upper = key.toUpperCase();
+    const proxyVariable = /^(?:ALL|HTTP|HTTPS|NO)_PROXY$/.test(upper);
+    if (value !== undefined && (allowed.has(upper) || proxyVariable)) environment[key] = value;
+  }
+  return environment;
 }
 
 function scanFiles(directory, files, forbiddenValues) {

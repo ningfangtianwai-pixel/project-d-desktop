@@ -1,5 +1,5 @@
 import { _electron as electron, expect, type ElectronApplication, type Page } from "@playwright/test";
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -193,26 +193,20 @@ export async function forceKillProjectD(testApp: ProjectDTestApp): Promise<void>
 }
 
 export async function assertDuplicateLaunchRejected(testApp: ProjectDTestApp): Promise<void> {
-  let duplicate: ElectronApplication | null = null;
-  try {
-    duplicate = await electron.launch({
-      args: [testApp.root, `--projectd-qa-run=duplicate-${Date.now()}`],
-      cwd: testApp.root,
-      env: testApp.env,
-      timeout: 15_000
-    });
-    const outcome = await Promise.race([
-      duplicate.firstWindow().then(() => "window" as const),
-      duplicate.waitForEvent("close").then(() => "closed" as const),
-      new Promise<"timeout">((resolve) => setTimeout(() => resolve("timeout"), 5_000))
-    ]);
-    expect(outcome).toBe("closed");
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    expect(message).toMatch(/closed|exited|launch|target|connection/i);
-  } finally {
-    await duplicate?.close().catch(() => undefined);
-  }
+  const electronExecutable = require("electron") as string;
+  const duplicate = spawn(electronExecutable, [testApp.root, `--projectd-qa-run=duplicate-${Date.now()}`], {
+    cwd: testApp.root,
+    env: testApp.env,
+    windowsHide: true,
+    stdio: "ignore"
+  });
+  const exitCode = await new Promise<number | null>((resolve, reject) => {
+    duplicate.once("error", reject);
+    duplicate.once("exit", resolve);
+  });
+  expect(exitCode).toBe(0);
+  const log = await waitForLog(testApp.userDataDir, "bootstrap.log", "second instance detected");
+  expect(log).toContain('"locked":false');
 }
 
 export async function waitForLog(userDataDir: string, filename: string, text: string, timeoutMs = 15_000): Promise<string> {

@@ -1,4 +1,5 @@
 const { execFileSync } = require("node:child_process");
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 
@@ -34,6 +35,26 @@ const packageInputModifiedAt = Math.max(
 );
 const installerModifiedAt = fs.existsSync(installer) ? fs.statSync(installer).mtimeMs : 0;
 check("installer:fresh", installerModifiedAt >= packageInputModifiedAt, installerModifiedAt >= packageInputModifiedAt ? "newer than package inputs" : "rebuild required after source/config changes");
+const buildSummaryPath = path.join(root, "release", "BUILD_SUMMARY.json");
+let evidenceDetail = "BUILD_SUMMARY.json missing or invalid";
+let evidenceMatches = false;
+try {
+  const summary = JSON.parse(fs.readFileSync(buildSummaryPath, "utf8"));
+  const head = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
+  const installerHash = fs.existsSync(installer)
+    ? crypto.createHash("sha256").update(fs.readFileSync(installer)).digest("hex").toUpperCase()
+    : "";
+  evidenceMatches = summary.commitSha === head
+    && summary.version === pkg.version
+    && summary.installer?.filename === path.basename(installer)
+    && summary.installer?.sha256 === installerHash;
+  evidenceDetail = evidenceMatches
+    ? `commit ${head.slice(0, 12)}, version and SHA256 match`
+    : "commit, version, filename, or SHA256 does not match the current source/artifact";
+} catch {
+  // The release gate reports malformed or missing evidence as a blocker below.
+}
+check("installer:evidence-bound", evidenceMatches, evidenceDetail);
 let packageBudget = "not checked";
 try {
   execFileSync(process.execPath, [path.join(root, "scripts", "verify-package-budget.cjs")], { cwd: root, stdio: "pipe" });

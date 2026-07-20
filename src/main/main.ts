@@ -2360,6 +2360,7 @@ if (!singleInstanceLock) {
   app.quit();
 } else {
   app.on("second-instance", () => {
+    writeBootstrapLog("second instance detected");
     if (mainWindow) {
       if (mainWindow.isMinimized()) {
         mainWindow.restore();

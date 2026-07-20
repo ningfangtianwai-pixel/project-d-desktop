@@ -1,4 +1,4 @@
-import type { UpdateChannel, UpdateRecoveryState, UpdateStatus } from "../shared/update.js";
+import type { UpdateChannel, UpdateStatus } from "../shared/update.js";
 
 interface UpdateStateStore {
   get: (key: string) => string | null;
@@ -71,7 +71,7 @@ export class UpdateService {
   }
 
   getStatus(): UpdateStatus {
-    return { ...this.status, recovery: this.status.recovery ? { ...this.status.recovery } : undefined };
+    return { ...this.status };
   }
 
   setChannel(channel: UpdateChannel): UpdateStatus {
@@ -105,15 +105,9 @@ export class UpdateService {
       phase,
       channel: this.channel,
       currentVersion: this.currentVersion,
-      availableVersion: null,
-      progressPercent: null,
-      transferredBytes: null,
-      totalBytes: null,
       lastCheckedAt: null,
       feedConfigured: Boolean(this.releasesUrl),
-      stagedRolloutSupported: false,
-      message,
-      recovery: emptyRecoveryState(this.currentVersion, this.now().toISOString())
+      message
     };
   }
 
@@ -126,24 +120,4 @@ export class UpdateService {
     this.onStatusChanged?.(this.getStatus());
     return this.getStatus();
   }
-}
-
-function emptyRecoveryState(currentVersion: string, now: string): UpdateRecoveryState {
-  return {
-    schemaVersion: 1,
-    failureCount: 0,
-    maxFailureCount: 0,
-    retryBlocked: false,
-    lastFailureAt: null,
-    lastFailureMessage: null,
-    lastFailureOperation: null,
-    lastSuccessfulVersion: currentVersion,
-    lastSuccessfulAt: now,
-    pendingInstallVersion: null,
-    pendingInstallRequestedAt: null,
-    pendingInstallFailureRecorded: false,
-    recoveryAction: "none",
-    recoveryReason: null,
-    recoveryCreatedAt: null
-  };
 }

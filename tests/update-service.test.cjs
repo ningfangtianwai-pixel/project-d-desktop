@@ -39,7 +39,7 @@ test("manual mode starts without updater network work", () => {
   const status = service.getStatus();
   assert.equal(status.phase, "manual");
   assert.equal(status.feedConfigured, true);
-  assert.equal(status.stagedRolloutSupported, false);
+  assert.equal("progressPercent" in status, false);
   assert.doesNotThrow(() => service.dispose());
 });
 

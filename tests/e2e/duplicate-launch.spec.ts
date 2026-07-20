@@ -5,7 +5,7 @@ test("a duplicate launch exits while the existing instance remains usable", asyn
   const testApp = await launchProjectD("duplicate-launch");
   try {
     await assertDuplicateLaunchRejected(testApp);
-    const log = await waitForLog(testApp.userDataDir, "bootstrap.log", "single instance lock result");
+    const log = await waitForLog(testApp.userDataDir, "bootstrap.log", "second instance detected");
     expect(log).toContain('"locked":false');
     expect(await testApp.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().filter((window) => !window.isDestroyed()).length)).toBe(1);
     await expect(testApp.window.locator(".app-shell")).toBeVisible();

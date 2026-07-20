@@ -215,13 +215,8 @@ const updateStatus = ref<UpdateStatus>({
   phase: "disabled",
   channel: "stable",
   currentVersion: "0.0.0",
-  availableVersion: null,
-  progressPercent: null,
-  transferredBytes: null,
-  totalBytes: null,
   lastCheckedAt: null,
   feedConfigured: false,
-  stagedRolloutSupported: true,
   message: "正在载入更新状态"
 });
 const weatherTestStatus = ref("");
