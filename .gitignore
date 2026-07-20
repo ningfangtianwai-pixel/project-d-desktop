@@ -3,6 +3,8 @@ dist/
 release/
 logs/*.log
 artifacts/
+test-results/
+playwright-report/
 .codex-remote-attachments/
 *.log
 *_out.txt

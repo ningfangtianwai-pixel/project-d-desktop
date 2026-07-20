@@ -35,14 +35,20 @@ pnpm dev
 
 ```powershell
 pnpm typecheck
+pnpm lint
 pnpm test
 pnpm test:coverage
+pnpm test:component
+pnpm test:e2e
 pnpm build
 pnpm verify:assets
 pnpm verify:supply-chain
 pnpm qa:crash-restart
 pnpm dist
+pnpm verify:package-budget
 ```
+
+`pnpm quality:v4` 运行本地代码质量、单元覆盖率、组件测试、构建、供应链审计和隔离 Electron E2E。`pnpm verify:release-ready` 是更严格的公开发布门禁；缺少许可证、法律定稿、素材授权、代码签名或正式更新源时会主动失败。
 
 更长时间的稳定性测试：
 
@@ -72,4 +78,3 @@ pnpm qa:soak:24h
 ## 许可证状态
 
 **尚未选择许可证。** 当前仓库公开可见不表示已授予复制、修改、再分发或商用许可；在仓库加入经所有权利人确认的正式 `LICENSE` 前，默认保留全部权利。不要复制其他项目的许可证文本来替代权利人决策。
-

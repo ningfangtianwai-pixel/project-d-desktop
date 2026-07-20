@@ -92,6 +92,7 @@ let runtimeRecovery: DesktopRuntimeRecovery | null = null;
 let explorerMonitor: ExplorerProcessMonitor | null = null;
 let updateService: UpdateService | null = null;
 let systemEventManager: SystemEventManager | null = null;
+let disposeIpcHandlers: (() => void) | null = null;
 let operationsControl: OperationsControlService | null = null;
 let operationsTelemetry: OperationsTelemetryService | null = null;
 let runtimePresenceTimer: NodeJS.Timeout | null = null;
@@ -1294,7 +1295,7 @@ function applyWallpaperById(wallpaperId: string): SettingsSnapshot {
 }
 
 function scheduleDemoAutorun(): void {
-  if (process.env.PROJECTD_DEMO_AUTORUN !== "1") {
+  if (qaRunEnabled || process.env.PROJECTD_DEMO_AUTORUN !== "1") {
     return;
   }
 
@@ -1698,7 +1699,8 @@ function startTray(): void {
 }
 
 function registerIpc(): void {
-  registerAllIpcHandlers(buildIpcDeps());
+  disposeIpcHandlers?.();
+  disposeIpcHandlers = registerAllIpcHandlers(buildIpcDeps());
 }
 
 function broadcastUpdateStatus(status: UpdateStatus): void {
@@ -2034,26 +2036,41 @@ async function exportAllUserData(): Promise<{ cancelled: boolean; filename: stri
 async function resetAllUserData(): Promise<void> {
   if (shutdownInProgress) return;
   shutdownInProgress = true;
+  const marker = path.join(app.getPath("userData"), "reset-requested.json");
+  let resetCommitted = false;
   try {
+    await desktopController?.deactivate();
+    fs.writeFileSync(marker, JSON.stringify({ requestedAt: new Date().toISOString(), version: 1 }), "utf8");
+    resetCommitted = true;
     portalWatcher?.stop();
     suggestionEngine?.disable();
+    disposeIpcHandlers?.();
+    disposeIpcHandlers = null;
     systemEventManager?.dispose();
     systemEventManager = null;
     wallpaperSupervisor?.stop();
     stopWallpaperRepairTimer();
-    await desktopController?.deactivate();
     closeOverlayWindow();
     closePetWindow();
     closeWallpaperWindow();
     database?.close();
-    const marker = path.join(app.getPath("userData"), "reset-requested.json");
-    fs.writeFileSync(marker, JSON.stringify({ requestedAt: new Date().toISOString(), version: 1 }), "utf8");
     logger?.info("app", "reset requested, relaunching");
     app.relaunch();
     app.exit(0);
   } catch (error) {
-    shutdownInProgress = false;
     logger?.error("app", "reset failed", { message: error instanceof Error ? error.message : String(error) });
+    if (resetCommitted) {
+      writeBootstrapLog("reset failed after commit; forcing clean relaunch", {
+        message: error instanceof Error ? error.message : String(error)
+      });
+      try {
+        app.relaunch();
+      } finally {
+        app.exit(1);
+      }
+      return;
+    }
+    shutdownInProgress = false;
     throw error;
   }
 }
@@ -2068,8 +2085,9 @@ async function initializeCoreServices(): Promise<void> {
 
   database = new DatabaseService(logger);
   const status = await database.initialize();
-  if (!app.isPackaged && process.env.PROJECTD_QA_IDLE === "1") {
+  if (qaRunEnabled && process.env.PROJECTD_QA_IDLE === "1") {
     database.updateSettings({ wallpaper: { isDynamic: false }, pet: { isVisible: false } });
+    database.setAppState("privacy_network_paused", "true");
   }
   database.syncMediaAssets(WALLPAPER_LIBRARY);
   const operationsPublicKey = (process.env.PROJECTD_OPERATIONS_PUBLIC_KEY
@@ -2300,6 +2318,8 @@ async function shutdownSafely(): Promise<void> {
       }
       await fileScanner?.stopWatching();
       portalWatcher?.stop();
+      disposeIpcHandlers?.();
+      disposeIpcHandlers = null;
       stopRuntimePresenceMonitor();
       runtimeMetricsService?.stop();
       const qaMetricsPath = process.env.PROJECTD_QA_METRICS_PATH;

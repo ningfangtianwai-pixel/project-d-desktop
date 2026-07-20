@@ -40,6 +40,11 @@ const summary = {
     branches: Number(total[2]),
     functions: Number(total[3])
   } : null,
+  measurementScope: {
+    covered: ["Node unit tests importing dist/main and dist/shared modules"],
+    verifiedSeparately: ["Vue components via Vitest", "Electron main/preload/renderer integration via Playwright"],
+    excludedFromNumericCoverage: ["dist/main/main.js", "dist/main/bootstrap.js", "dist/preload/preload.js", "dist/renderer/**"]
+  },
   passed: result.status === 0 && Boolean(total)
 };
 fs.writeFileSync(path.join(outputDirectory, "summary.json"), `${JSON.stringify(summary, null, 2)}\n`, "utf8");

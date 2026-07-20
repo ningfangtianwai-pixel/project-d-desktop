@@ -8,6 +8,8 @@ declare module "*.vue" {
 }
 
 declare global {
+  const __PROJECTD_VERSION__: string;
+
   interface Window {
     projectD: import("./shared/types").ProjectDApi;
   }

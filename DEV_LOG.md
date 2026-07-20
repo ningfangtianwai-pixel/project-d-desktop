@@ -1365,3 +1365,21 @@
 - Ran `pnpm configure:providers` against an isolated QA database with dummy weather/AI keys; both were reported configured through `electron-safeStorage`. A subsequent read-only check confirmed the real user database still stores both configured keys in encrypted form.
 - Final machine check: no Project D process remained and Explorer `HideIcons=0`; Authenticode remains `NotSigned`.
 - Wrote `docs/PROJECT_ACCEPTANCE_AUDIT_2026-07-19.md`. Controlled internal Beta is conditionally accepted; public Beta and paid GA are not accepted.
+
+## 2026-07-20 Stage 43 V4 Free Release Baseline
+
+- Created branch `codex/v4-free-release` from `1c1b890` and advanced version `0.2.0-beta.1 -> 0.2.0-beta.2`.
+- Added build-time version injection, ESLint, Vitest/happy-dom component tests, Playwright Electron E2E, CI steps, coverage-scope disclosure, package budgets, and release-readiness checks.
+- First component run failed because the test used the wrong onboarding storage key; corrected it to `ONBOARDING_STORAGE_KEY` and passed 2/2.
+- First E2E invocation used a global Playwright shim; switched validation to the project-local `pnpm exec playwright`, then passed 1/1. Package scripts already resolve the local binary.
+- First `pnpm quality:v4` stopped on one high-severity transitive dev vulnerability from `@vue/test-utils -> js-beautify -> ini@1.3.4`. Replaced the helper with Vue's own `createApp` test harness, removed the vulnerable dependency, and restored zero known vulnerabilities.
+- Extracted system event ownership, removed updater listeners on dispose, and added an IPC handler registry with idempotent cleanup. Focused and full tests passed.
+- `pnpm install --frozen-lockfile`: passed.
+- Final `pnpm quality:v4`: passed; 181 Node tests, 2 component tests, 1 Electron E2E, coverage thresholds, 485-component SBOM, zero audit findings.
+- `pnpm dist`, `pnpm verify:packaged`, `pnpm verify:package-budget`, `pnpm qa:packaged-smoke`, and `pnpm qa:crash-restart`: passed.
+- 60-second hidden idle QA passed with CPU average 0.31%, median 0.26%, P95 0.77%; memory trend evidence was correctly marked insufficient.
+- `pnpm verify:release-ready`: intentionally blocked on missing LICENSE, final legal documents, 33 unapproved assets, unsigned installer, and placeholder update feed.
+- A post-package smoke run exposed that packaged QA did not honor idle mode and briefly created a real wallpaper host. Restricted packaged idle mode to explicit `--projectd-qa-run` markers, enabled it in the smoke script, rebuilt, and passed with no wallpaper/pet window creation and no error log.
+- Independent review found five release-baseline P1 risks. QA launch isolation now blocks inherited demo autorun, Electron E2E rejects nearly all-white captures, destructive reset has a relaunch-or-exit commit point, release gates validate legal/assets/update inputs, and the final packaged smoke report passed at `artifacts/qa/packaged-smoke-2026-07-20T05-19-34-418Z/report.json`.
+- Final installer is 140,424,966 bytes (133.92 MiB), SHA-256 `EB0D71B430723B708B20E0D8D6321CB6F05C6520BC49CE5F1B581DE3B47AC1DC`; `app.asar` is 55.35 MiB and all 39 packaged modules load.
+- Final machine state: no Project D process, Explorer `HideIcons=0`.

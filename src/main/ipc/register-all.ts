@@ -16,6 +16,7 @@ import { registerRecoveryIpcHandlers, type RecoveryIpcDependencies } from "./rec
 import { registerUpdateIpcHandlers, type UpdateIpcDependencies } from "./update-ipc.js";
 import { registerRuntimeIpcHandlers, type RuntimeIpcDependencies } from "./runtime-ipc.js";
 import { registerWallpaperIpcHandlers, type WallpaperIpcDependencies } from "./wallpaper-ipc.js";
+import { createIpcHandlerRegistry } from "./handler-registry.js";
 
 type HandlerDependencies<T> = Omit<T, "ipc" | "assertTrustedSender">;
 
@@ -39,22 +40,30 @@ export interface ServiceDeps {
   wallpaper: HandlerDependencies<WallpaperIpcDependencies>;
 }
 
-export function registerAllIpcHandlers(deps: ServiceDeps): void {
+export function registerAllIpcHandlers(deps: ServiceDeps): () => void {
   const assertTrustedSender = deps.assertTrustedSender;
-  registerDesktopIpcHandlers({ ipc: ipcMain, assertTrustedSender, ...deps.desktop });
-  registerSettingsIpcHandlers({ ipc: ipcMain, assertTrustedSender, ...deps.settings });
-  registerWindowIpcHandlers({ ipc: ipcMain, assertTrustedSender, ...deps.window });
-  registerPetIpcHandlers({ ipc: ipcMain, assertTrustedSender, ...deps.pet });
-  registerSuggestionIpcHandlers({ ipc: ipcMain, assertTrustedSender, ...deps.suggestions });
-  registerActionIpcHandlers({ ipc: ipcMain, assertTrustedSender, ...deps.actions });
-  registerSearchIpcHandlers({ ipc: ipcMain, assertTrustedSender, ...deps.search });
-  registerSceneIpcHandlers({ ipc: ipcMain, assertTrustedSender, ...deps.scenes });
-  registerPortalIpcHandlers({ ipc: ipcMain, assertTrustedSender, ...deps.portals });
-  registerPrivacyIpcHandlers({ ipc: ipcMain, assertTrustedSender, ...deps.privacy });
-  registerRecoveryIpcHandlers({ ipc: ipcMain, assertTrustedSender, ...deps.recovery });
-  registerShortcutIpcHandlers({ ipc: ipcMain, assertTrustedSender, ...deps.shortcuts });
-  registerAutoRulesIpcHandlers({ ipc: ipcMain, assertTrustedSender, ...deps.autoRules });
-  registerUpdateIpcHandlers({ ipc: ipcMain, assertTrustedSender, ...deps.updates });
-  registerRuntimeIpcHandlers({ ipc: ipcMain, assertTrustedSender, ...deps.runtime });
-  registerWallpaperIpcHandlers({ ipc: ipcMain, assertTrustedSender, ...deps.wallpaper });
+  const registry = createIpcHandlerRegistry(ipcMain);
+  const ipc = registry.ipc;
+  try {
+    registerDesktopIpcHandlers({ ipc, assertTrustedSender, ...deps.desktop });
+    registerSettingsIpcHandlers({ ipc, assertTrustedSender, ...deps.settings });
+    registerWindowIpcHandlers({ ipc, assertTrustedSender, ...deps.window });
+    registerPetIpcHandlers({ ipc, assertTrustedSender, ...deps.pet });
+    registerSuggestionIpcHandlers({ ipc, assertTrustedSender, ...deps.suggestions });
+    registerActionIpcHandlers({ ipc, assertTrustedSender, ...deps.actions });
+    registerSearchIpcHandlers({ ipc, assertTrustedSender, ...deps.search });
+    registerSceneIpcHandlers({ ipc, assertTrustedSender, ...deps.scenes });
+    registerPortalIpcHandlers({ ipc, assertTrustedSender, ...deps.portals });
+    registerPrivacyIpcHandlers({ ipc, assertTrustedSender, ...deps.privacy });
+    registerRecoveryIpcHandlers({ ipc, assertTrustedSender, ...deps.recovery });
+    registerShortcutIpcHandlers({ ipc, assertTrustedSender, ...deps.shortcuts });
+    registerAutoRulesIpcHandlers({ ipc, assertTrustedSender, ...deps.autoRules });
+    registerUpdateIpcHandlers({ ipc, assertTrustedSender, ...deps.updates });
+    registerRuntimeIpcHandlers({ ipc, assertTrustedSender, ...deps.runtime });
+    registerWallpaperIpcHandlers({ ipc, assertTrustedSender, ...deps.wallpaper });
+    return registry.dispose;
+  } catch (error) {
+    registry.dispose();
+    throw error;
+  }
 }

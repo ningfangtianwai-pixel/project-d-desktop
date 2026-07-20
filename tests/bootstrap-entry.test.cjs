@@ -27,3 +27,18 @@ test("packaged QA auto-quit requires an explicit run marker", () => {
   assert.match(source, /argument\.startsWith\("--projectd-qa-run="\)/);
   assert.match(source, /qaRunEnabled && Number\.isFinite\(autoQuitMs\)/);
 });
+
+test("packaged idle QA requires the explicit run marker before disabling desktop visuals", () => {
+  const source = fs.readFileSync(path.join(projectRoot, "src", "main", "main.ts"), "utf8");
+  assert.match(source, /qaRunEnabled && process\.env\.PROJECTD_QA_IDLE === "1"/);
+  const smoke = fs.readFileSync(path.join(projectRoot, "scripts", "qa-packaged-smoke.cjs"), "utf8");
+  assert.match(smoke, /PROJECTD_QA_IDLE: "1"/);
+  assert.match(source, /qaRunEnabled \|\| process\.env\.PROJECTD_DEMO_AUTORUN !== "1"/);
+  assert.match(source, /setAppState\("privacy_network_paused", "true"\)/);
+});
+
+test("committed data reset failures force a clean relaunch instead of leaving dead IPC", () => {
+  const source = fs.readFileSync(path.join(projectRoot, "src", "main", "main.ts"), "utf8");
+  assert.match(source, /resetCommitted = true/);
+  assert.match(source, /reset failed after commit; forcing clean relaunch/);
+});

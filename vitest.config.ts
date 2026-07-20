@@ -1,7 +1,7 @@
 import { fileURLToPath, URL } from "node:url";
 import { readFileSync } from "node:fs";
 import vue from "@vitejs/plugin-vue";
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 
 const packageVersion = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")).version as string;
 
@@ -10,8 +10,6 @@ export default defineConfig({
   define: {
     __PROJECTD_VERSION__: JSON.stringify(packageVersion)
   },
-  root: ".",
-  base: "./",
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src/renderer", import.meta.url)),
@@ -19,13 +17,9 @@ export default defineConfig({
       "@shared": fileURLToPath(new URL("./src/shared", import.meta.url))
     }
   },
-  build: {
-    outDir: "dist/renderer",
-    emptyOutDir: true,
-    sourcemap: false
-  },
-  server: {
-    port: 5173,
-    strictPort: true
+  test: {
+    environment: "happy-dom",
+    include: ["tests/component/**/*.test.ts"],
+    clearMocks: true
   }
 });

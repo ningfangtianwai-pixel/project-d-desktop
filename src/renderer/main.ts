@@ -6,6 +6,8 @@ import type { ActionExecution, ActionPlan, ChatMessage, PortalConfig, PortalReso
 import type { AutoRule } from "../shared/auto-rules";
 import type { UpdateStatus } from "../shared/update";
 
+const APP_VERSION = __PROJECTD_VERSION__;
+
 if (!window.projectD) {
   const memoryState = new Map<string, string>();
   memoryState.set("wallpaper_host", "Progman");
@@ -27,7 +29,7 @@ if (!window.projectD) {
   let mockUpdateStatus: UpdateStatus = {
     phase: "disabled",
     channel: "stable",
-    currentVersion: "0.1.0",
+    currentVersion: APP_VERSION,
     availableVersion: null,
     progressPercent: null,
     transferredBytes: null,
@@ -90,7 +92,7 @@ if (!window.projectD) {
     }
   };
   const mockApi: ProjectDApi = {
-    getAppInfo: async () => ({ name: "Project D", version: "0.1.0", platform: "win32", isPackaged: false }),
+    getAppInfo: async () => ({ name: "Project D", version: APP_VERSION, platform: "win32", isPackaged: false }),
     showMain: async () => undefined,
     setOnboardingActive: async () => undefined,
     getDesktopStatus: async () => ({ mode: "idle", lastChangedAt: now(), message: "浏览器预览模式" }),
@@ -258,7 +260,7 @@ if (!window.projectD) {
     updateSuggestionPolicy: async (policy) => ({ snoozedUntil: null, mutedUntil: null, disabled: false, policy }),
     getDiagnosticsReport: async () => ({
       generatedAt: now(),
-      app: { version: "0.1.0", platform: "win32", architecture: "x64" },
+      app: { version: APP_VERSION, platform: "win32", architecture: "x64" },
       health: "healthy",
       counts: { desktopFiles: 4, portals: 0, recentErrors: 0, configuredProviders: 0, schemaVersion: 2, migrationCount: 1 },
       statusCodes: { database: "ok", desktop: "ok", wallpaperHost: "ok", aiProvider: "not-configured" },

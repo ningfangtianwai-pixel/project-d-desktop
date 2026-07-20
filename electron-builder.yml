@@ -8,18 +8,10 @@ directories:
 
 files:
   - dist/**/*
-  - assets/**/*
-  - resources/**/*
   - package.json
 
 asarUnpack:
   - node_modules/sql.js/dist/sql-wasm.wasm
-
-extraResources:
-  - from: assets/
-    to: assets/
-  - from: resources/
-    to: resources/
 
 publish:
   - provider: generic

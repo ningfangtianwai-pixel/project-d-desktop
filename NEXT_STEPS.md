@@ -1,5 +1,15 @@
 # Next Steps
 
+## After Stage 43
+
+1. Choose the source license as repository owner; do not claim open-source permissions until the final `LICENSE` is committed.
+2. Approve or replace all 33 blocked assets, then rerun `pnpm verify:assets:commercial` and rebuild the installer.
+3. Finalize legally reviewed `docs/PRIVACY_POLICY.md` and `docs/USER_AGREEMENT.md` with the real operator and support contact.
+4. Supply an Authenticode certificate and production HTTPS update host; sign and replay real N-1 to N update, interrupted update, rollback, and uninstall recovery.
+5. Run the physical Win10/Win11, Intel/AMD/NVIDIA, 1/2/3-display, 100/125/150/200% DPI, refresh-rate, hot-plug, sleep/wake, and fullscreen matrix.
+6. Run 4-hour interactive and 24-hour idle soak against the exact signed build hash; retain CPU/GPU/memory/handle/frame/log evidence.
+7. After external gates close, rerun `pnpm quality:v4`, `pnpm dist`, `pnpm verify:release-ready`, packaged smoke, and malware scanning before publishing.
+
 ## After Stage 42
 
 1. Obtain an Authenticode certificate, legal publisher identity, and timestamp service; sign the executable, installer, uninstaller, and update packages.

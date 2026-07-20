@@ -304,8 +304,8 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - `pnpm typecheck`: passed.
 - `pnpm build`: passed.
 - `pnpm dev`: smoke test passed.
-- Database created at `C:\Users\34395\AppData\Roaming\Project D\database.sqlite`.
-- Logs created under `C:\Users\34395\AppData\Roaming\Project D\logs`.
+- Database created at `%APPDATA%\Project D\database.sqlite`.
+- Logs created under `%APPDATA%\Project D\logs`.
 - Database content check: 12 tables, 7 containers, 1 layout, 1 wallpaper config, 1 weather config, 1 pet config, 1 AI config, 5 app_state rows.
 
 ## Stage 2 Scope
@@ -360,7 +360,7 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - `pnpm build`: passed.
 - `pnpm verify:db`: passed.
 - `pnpm dev`: smoke test passed without triggering real activate.
-- Recovery script exists at `C:\Users\34395\AppData\Roaming\Project D\ProjectD-Recover-Desktop.bat`.
+- Recovery script exists at `%APPDATA%\Project D\ProjectD-Recover-Desktop.bat`.
 - Desktop takeover demo passed: app hid Windows desktop icons, showed the Project D overlay, then restored Windows desktop icons.
 - Final registry check after demo: `HideIcons` returned `0x0`.
 
@@ -946,3 +946,16 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Electron 43.1.1 package verification passed 39/39 modules.
 - Installer: `release\ProjectD-0.2.0-beta.1-Setup.exe`, 239,167,131 bytes, SHA-256 `585CC4AE3B183497AFA92B307944D2291A02AFD2DB41655D4B6209993FCBC145`, Authenticode `NotSigned`.
 - Full release comparison and operating limits: `docs/INTERNAL_BETA_0.2.0-beta.1.md`.
+
+## Stage 43 - V4 Free Release Code Baseline (Local QA Complete)
+
+- Promoted the unique build identity to `0.2.0-beta.2`; renderer preview, About, diagnostics, package metadata, and installer now share the package version.
+- Added ESLint, two Vue component tests, one isolated Electron E2E, honest coverage-scope metadata, Windows CI integration, package-size budgets, and a machine-readable public-release gate.
+- Added owned cleanup for screen/power listeners, delayed recovery probes, updater events, and all registered IPC handlers.
+- Removed build-only packages and duplicate source resources from the production package without removing runtime wallpaper or pet assets; disabled production source maps.
+- `pnpm quality:v4` passed: 181/181 Node tests, 2/2 component tests, 1/1 Electron E2E, coverage thresholds, type checks, build, fixture lifecycle QA, and zero known dependency vulnerabilities.
+- Final package checks passed: 39/39 modules, packaged core-ready/clean shutdown/no errors, crash-restart database integrity and desktop restoration.
+- Installer: `release\ProjectD-0.2.0-beta.2-Setup.exe`, 140,424,966 bytes, SHA-256 `EB0D71B430723B708B20E0D8D6321CB6F05C6520BC49CE5F1B581DE3B47AC1DC`.
+- Package size dropped from about 227.9 MiB to 133.92 MiB; `app.asar` dropped from about 195.1 MiB to 55.35 MiB.
+- A 60-second hidden idle preflight passed with CPU median 0.26%, P95 0.77%, clean shutdown, and no error entries. It is not long enough to establish memory stability.
+- Local QA is accepted with no known P0 in the exercised scope. Public distribution remains blocked by LICENSE selection, approved legal documents, 33 asset evidence records, Authenticode signing, production update feed, real hardware matrix, and long soak evidence.

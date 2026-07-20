@@ -54,6 +54,8 @@ function stopTree(pid) {
       env: {
         ...process.env,
         PROJECTD_QA_USER_DATA_DIR: userDataDir,
+        PROJECTD_QA_IDLE: "1",
+        PROJECTD_DEMO_AUTORUN: "0",
         PROJECTD_QA_AUTO_QUIT_MS: "20000"
       }
     });

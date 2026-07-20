@@ -33,6 +33,8 @@ import type { RuntimeMetricsReport, RuntimePauseSnapshot } from "@shared/runtime
 import type { UpdateChannel, UpdateStatus } from "@shared/update";
 import type { AutoRule, AutoRuleAction, AutoRuleCondition, AutoRuleExecution } from "@shared/auto-rules";
 import { PET_PERSONALITIES } from "@shared/pet-behavior";
+
+const appVersionFallback = __PROJECTD_VERSION__;
 import { PET_CHARACTERS } from "@shared/pet-characters";
 import { WALLPAPER_STYLES } from "@shared/wallpaper-library";
 
@@ -804,7 +806,7 @@ async function saveSettings(): Promise<void> {
       </nav>
       <div class="sidebar-runtime">
         <span>{{ wallpaperHostLabel }}</span>
-        <small>v{{ appInfo?.version ?? "0.1.0" }}</small>
+        <small>v{{ appInfo?.version ?? appVersionFallback }}</small>
       </div>
     </aside>
 
@@ -1222,7 +1224,7 @@ async function saveSettings(): Promise<void> {
         <section v-else class="settings-pane about-pane">
           <div class="about-mark">D</div>
           <h2>Project D</h2>
-          <p>v{{ appInfo?.version ?? "0.1.0" }} · {{ appInfo?.platform ?? "win32" }}</p>
+          <p>v{{ appInfo?.version ?? appVersionFallback }} · {{ appInfo?.platform ?? "win32" }}</p>
           <dl>
             <div><dt>壁纸宿主</dt><dd>{{ wallpaperHostLabel }}</dd></div>
             <div><dt>天气定位</dt><dd>{{ locationSourceLabel }}</dd></div>

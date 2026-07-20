@@ -699,3 +699,22 @@
 - [ ] Physical Windows/GPU/display/DPI/sleep-wake and real 4-hour/24-hour evidence is complete.
 - [ ] All 33 distributed assets have approved commercial license evidence.
 - [ ] Legal counsel approves the final privacy policy, user agreement, payment terms, and operating-entity disclosures.
+
+## Stage 43 V4 Free Release Code Baseline
+
+- [x] `0.2.0-beta.2` is injected from one package version into renderer preview, About, diagnostics, and packaging.
+- [x] ESLint, 181 Node tests, 2 Vue component tests, and 1 isolated Electron E2E pass.
+- [x] Coverage thresholds pass at 82.00% lines, 75.70% branches, and 83.75% functions; Electron/renderer scope is disclosed separately.
+- [x] Screen/power listeners, recovery timers, updater listeners, and IPC handlers have idempotent cleanup.
+- [x] Supply-chain audit reports zero known info/low/moderate/high/critical vulnerabilities after removing the vulnerable test helper.
+- [x] Production package excludes duplicate source assets, build-only dependencies, and source maps while retaining runtime wallpaper/pet assets.
+- [x] Installer and `app.asar` pass 180 MiB / 110 MiB budgets at 133.92 MiB / 55.35 MiB.
+- [x] Final package loads 39/39 modules and completes core-ready, graceful shutdown, and zero-error packaged smoke.
+- [x] Crash-restart restores an integral database and `idle` desktop state; final machine has zero Project D processes and `HideIcons=0`.
+- [x] README, SECURITY, CONTRIBUTING, CHANGELOG, V4 scope, external gates, and beta snapshot documentation exist.
+- [ ] Repository owner selects and commits a final LICENSE.
+- [ ] Legally approved privacy policy and user agreement replace the drafts.
+- [ ] All 33 distributed assets have approved distribution evidence.
+- [ ] Installer, executable, uninstaller, and update packages are Authenticode signed and timestamped.
+- [ ] Production HTTPS update feed and real upgrade/rollback evidence exist.
+- [ ] Physical hardware matrix and 4-hour/24-hour soak evidence are complete.

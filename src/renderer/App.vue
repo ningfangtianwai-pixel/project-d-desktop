@@ -33,6 +33,8 @@ import OnboardingFlow from "./components/OnboardingFlow.vue";
 import { wallpaperDisplayLabel } from "@shared/wallpaper-library";
 import { containerAccentOption } from "@shared/container-accents";
 import { readOnboardingState, shouldShowOnboarding } from "@shared/onboarding";
+
+const appVersionFallback = __PROJECTD_VERSION__;
 import type { ActionExecution, ActionPlan, AppInfo, ContainerWithFiles, CurrentWeather, DatabaseStatus, DesktopFileRecord, DesktopStatus, ScanResult, SettingsSnapshot, SuggestionRecord, WallpaperLibraryItem, WorkspaceSearchResult } from "@shared/types";
 
 const appInfo = ref<AppInfo | null>(null);
@@ -586,7 +588,7 @@ onUnmounted(() => {
             </div>
             <div>
               <dt>版本</dt>
-              <dd>{{ appInfo?.version ?? "0.1.0" }} · {{ appInfo?.platform ?? "win32" }}</dd>
+              <dd>{{ appInfo?.version ?? appVersionFallback }} · {{ appInfo?.platform ?? "win32" }}</dd>
             </div>
           </dl>
           <div v-if="selectedFile" class="file-preview">
