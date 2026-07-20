@@ -718,3 +718,22 @@
 - [ ] Installer, executable, uninstaller, and update packages are Authenticode signed and timestamped.
 - [ ] Production HTTPS update feed and real upgrade/rollback evidence exist.
 - [ ] Physical hardware matrix and 4-hour/24-hour soak evidence are complete.
+
+## Stage 44 V4 Final Code Closure
+
+- [x] Complete branch diff review found no net removal of existing product features, tests, or active runtime resources.
+- [x] Eight independent Electron E2E scenarios pass for startup, duplicate launch, settings persistence, tray exit, white-screen recovery, force-kill recovery, AI fallback, and corrupt configuration recovery.
+- [x] Automatic updater dependency, invalid feed, startup request, download/install IPC, and in-client install states are removed; manual update opens trusted GitHub Releases.
+- [x] Database, tray, update, IPC registry/composition, wallpaper host/supervisor, desktop recovery, lifecycle, shutdown, and renderer recovery appear in numeric high-risk coverage gates.
+- [x] Full compiled main/shared inventory coverage passes at 73.27% lines, 75.17% branches, and 70.88% functions.
+- [x] Diagnostics export removes API keys, tokens, authorization values, email addresses, named-user fields, private filenames, and complete paths.
+- [x] Clean checkout with fresh dependency store passes without local `.env`, absolute workspace dependencies, uncommitted source, or existing `node_modules`.
+- [x] Fixture install/upgrade/rollback/uninstall checks preserve settings/database and desktop state while removing program files and process markers.
+- [x] SHA256SUMS, CycloneDX SBOM, source commit SHA, and machine-readable build summary are generated for the final installer.
+- [x] 4-hour and 24-hour soak scripts enforce profile thresholds, completion ratio, claim eligibility, and residual-process checks.
+- [x] README, MIT LICENSE, SECURITY, CHANGELOG, PRIVACY, DISCLAIMER, CONTRIBUTING, and asset registry skeleton exist.
+- [x] Final package passes 38/38 module imports, size budgets, core-ready startup, clean shutdown, no error entries, no residual process, and `HideIcons=0`.
+- [ ] Formal privacy/user-agreement text has legal approval.
+- [ ] All 33 asset records have approved distribution evidence.
+- [ ] Installer has valid Authenticode signature and timestamp.
+- [ ] Real Windows install/upgrade/uninstall, physical hardware matrix, and claim-eligible 4-hour/24-hour reports are complete.

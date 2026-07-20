@@ -1,5 +1,15 @@
 # Next Steps
 
+## After Stage 44
+
+1. Have qualified counsel replace the draft privacy/user-agreement material with approved final text.
+2. Resolve all 33 `pending-evidence` asset records without changing their status until source, license, evidence hash, and distribution scope are verified.
+3. Obtain Authenticode signing and timestamping, then rebuild and regenerate all release evidence against the signed installer.
+4. Execute the real clean-account install, overwrite-upgrade, and uninstall matrix on Windows 10 and Windows 11; fixture results are not a substitute.
+5. Run `pnpm qa:soak:4h` and `pnpm qa:soak:24h` to completion and retain reports whose `claimEligible` field is `true`.
+6. Complete Intel/AMD/NVIDIA, single/multi-display, 100/125/150/200% DPI, mixed refresh, hot-plug, sleep/wake, and fullscreen-game physical tests.
+7. After external gates close, rerun `pnpm quality:v4`, full clean checkout, `pnpm dist`, evidence generation, packaged smoke, malware scan, and `pnpm verify:release-ready` before any public Release.
+
 ## After Stage 43
 
 1. Choose the source license as repository owner; do not claim open-source permissions until the final `LICENSE` is committed.

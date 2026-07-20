@@ -1383,3 +1383,19 @@
 - Independent review found five release-baseline P1 risks. QA launch isolation now blocks inherited demo autorun, Electron E2E rejects nearly all-white captures, destructive reset has a relaunch-or-exit commit point, release gates validate legal/assets/update inputs, and the final packaged smoke report passed at `artifacts/qa/packaged-smoke-2026-07-20T05-19-34-418Z/report.json`.
 - Final installer is 140,424,966 bytes (133.92 MiB), SHA-256 `EB0D71B430723B708B20E0D8D6321CB6F05C6520BC49CE5F1B581DE3B47AC1DC`; `app.asar` is 55.35 MiB and all 39 packaged modules load.
 - Final machine state: no Project D process, Explorer `HideIcons=0`.
+
+## 2026-07-20 Stage 44 V4 Free Release Final Closure
+
+- Audited `main...HEAD`; no net deletion of an existing feature, test, or active runtime resource was found.
+- Split the Electron smoke into eight isolated Playwright specs and passed all 8/8 against real preload IPC and temporary user data.
+- Removed `electron-updater`, the `.invalid` builder feed, startup checks, download/install IPC, and automatic update UI states. Manual update opens only the repository GitHub Releases page.
+- Added unreadable-database backup/rebuild recovery, behavior tests for database/tray/IPC/wallpaper host, and stronger diagnostics redaction for email, username fields, filenames, paths, tokens, and API keys.
+- Expanded coverage to the complete compiled main/shared inventory. Final result: 73.27% lines, 75.17% branches, 70.88% functions; all declared high-risk module gates passed.
+- Enhanced fixture install/upgrade/rollback/uninstall QA to verify settings, database bytes, desktop icon state, system wallpaper state, program-file removal, and process-marker cleanup.
+- Added clean checkout verification, release evidence generation, profile-aware 4-hour/24-hour soak thresholds, completion ratios, claim eligibility, and residual-process checks.
+- `pnpm quality:v4`: passed 184 Node tests, 2 component tests, 8 Electron E2E, type checks, build, SBOM, audit, and lifecycle QA.
+- `pnpm verify:clean-checkout -- --full`: passed from a detached checkout with a fresh pnpm store, then a shell-free quick replay also passed.
+- `pnpm dist`, package budget, 38/38 runtime import verification, packaged smoke, and release evidence generation passed.
+- Final package: 140,019,106 bytes; SHA-256 `80E4A18C55AC5607EB6096F1AC214F3C262AED95646926CBDB10E6A3DB347E37`; Authenticode remains `NotSigned`.
+- `pnpm verify:release-ready` correctly passes the MIT/manual-update/document/package checks and blocks draft legal text, 33 pending asset records, and missing Authenticode signing.
+- Final machine state: no Project D process and Explorer `HideIcons=0`.

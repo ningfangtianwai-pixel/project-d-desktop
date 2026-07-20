@@ -959,3 +959,16 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Package size dropped from about 227.9 MiB to 133.92 MiB; `app.asar` dropped from about 195.1 MiB to 55.35 MiB.
 - A 60-second hidden idle preflight passed with CPU median 0.26%, P95 0.77%, clean shutdown, and no error entries. It is not long enough to establish memory stability.
 - Local QA is accepted with no known P0 in the exercised scope. Public distribution remains blocked by LICENSE selection, approved legal documents, 33 asset evidence records, Authenticode signing, production update feed, real hardware matrix, and long soak evidence.
+
+## Stage 44 - V4 Free Release Final Code Closure
+
+- Reviewed the complete `main...codex/v4-free-release` diff: no existing product feature, tracked test, or active renderer resource was removed. The old single Electron smoke test was replaced by eight independently runnable scenarios.
+- Electron E2E now passes 8/8: first launch, duplicate launch, settings restart persistence, tray exit, renderer/white-screen recovery, force-kill recovery, AI no-key fallback, and malformed configuration recovery.
+- Replaced the disabled generic updater with a trusted manual GitHub Releases link. Project D no longer configures an update feed, starts an update timer, downloads packages, or exposes install/download IPC.
+- Added behavior coverage for database persistence/corruption recovery, tray ownership, full IPC registration, wallpaper host parsing/recovery, diagnostics redaction, and the manual update service.
+- Complete `dist/main` + `dist/shared` inventory coverage passes at 73.27% lines, 75.17% branches, and 70.88% functions; all 11 high-risk module thresholds pass.
+- `pnpm quality:v4` passes: 184/184 Node tests, 2/2 component tests, 8/8 Electron E2E, type checks, production build, 480-component CycloneDX SBOM, zero dependency findings, and release lifecycle fixture QA.
+- Clean checkout acceptance passes from a detached tracked worktree with a fresh pnpm store, no local `.env`, no absolute workspace dependency, all tests, Electron E2E, and NSIS packaging.
+- Final installer is `release\ProjectD-0.2.0-beta.2-Setup.exe`, 140,019,106 bytes (133.53 MiB), SHA-256 `80E4A18C55AC5607EB6096F1AC214F3C262AED95646926CBDB10E6A3DB347E37`; `app.asar` is 53.27 MiB and 38/38 packaged modules load.
+- Generated `release\SHA256SUMS.txt`, `release\ProjectD-SBOM.cdx.json`, `release\COMMIT_SHA.txt`, and `release\BUILD_SUMMARY.json`; packaged smoke exits cleanly with no error-log entry.
+- MIT source license and free-release documentation skeletons are present. Public distribution remains blocked by draft legal text, 33 pending asset-evidence records, missing Authenticode signature, physical hardware/install matrix, and real 4-hour/24-hour soak evidence.

@@ -52,7 +52,7 @@ try {
 
 const outputDir = path.join(root, "artifacts", "qa");
 fs.mkdirSync(outputDir, { recursive: true });
-const output = path.join(outputDir, "clean-checkout.json");
+const output = path.join(outputDir, full ? "clean-checkout-full.json" : "clean-checkout.json");
 fs.writeFileSync(output, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 console.log(JSON.stringify({ ...report, reportPath: output }, null, 2));
 process.exitCode = report.passed ? 0 : 1;
