@@ -11,12 +11,14 @@ const full = process.argv.includes("--full");
 const report = { schemaVersion: 1, generatedAt: new Date().toISOString(), full, checks: {}, passed: false };
 
 function run(command, args, cwd = root) {
-  const isPnpmOnWindows = process.platform === "win32" && command === "pnpm";
-  const result = spawnSync(command, args, {
+  const pnpmCli = command === "pnpm" ? process.env.npm_execpath : null;
+  const executable = pnpmCli ? process.execPath : command;
+  const executableArgs = pnpmCli ? [pnpmCli, ...args] : args;
+  const result = spawnSync(executable, executableArgs, {
     cwd,
     encoding: "utf8",
     windowsHide: true,
-    shell: isPnpmOnWindows,
+    shell: false,
     maxBuffer: 64 * 1024 * 1024
   });
   if (result.error) throw result.error;
