@@ -725,7 +725,7 @@
 - [x] Eight independent Electron E2E scenarios pass for startup, duplicate launch, settings persistence, tray exit, white-screen recovery, force-kill recovery, AI fallback, and corrupt configuration recovery.
 - [x] Automatic updater dependency, invalid feed, startup request, download/install IPC, and in-client install states are removed; manual update opens trusted GitHub Releases.
 - [x] Database, tray, update, IPC registry/composition, wallpaper host/supervisor, desktop recovery, lifecycle, shutdown, and renderer recovery appear in numeric high-risk coverage gates.
-- [x] Full compiled main/shared inventory coverage passes at 73.27% lines, 75.17% branches, and 70.88% functions.
+- [x] Full compiled main/shared inventory coverage passes at 73.19% lines, 75.20% branches, and 70.84% functions.
 - [x] Diagnostics export removes API keys, tokens, authorization values, email addresses, named-user fields, private filenames, and complete paths.
 - [x] Clean checkout with fresh dependency store and sanitized minimal environment passes without local `.env`, project environment variables, absolute workspace dependencies in tracked runtime/config text, uncommitted source, or existing `node_modules`.
 - [x] Fixture install/upgrade/rollback/uninstall checks preserve settings/database and desktop state while removing program files and process markers.

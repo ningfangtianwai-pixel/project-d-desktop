@@ -1390,7 +1390,7 @@
 - Split the Electron smoke into eight isolated Playwright specs and passed all 8/8 against real preload IPC and temporary user data.
 - Removed `electron-updater`, the `.invalid` builder feed, startup checks, download/install IPC, and automatic update UI states. Manual update opens only the repository GitHub Releases page.
 - Added unreadable-database backup/rebuild recovery, behavior tests for database/tray/IPC/wallpaper host, and stronger diagnostics redaction for email, username fields, filenames, paths, tokens, and API keys.
-- Expanded coverage to the complete compiled main/shared inventory. Final result: 73.27% lines, 75.17% branches, 70.88% functions; all declared high-risk module gates passed.
+- Expanded coverage to the complete compiled main/shared inventory. Final result: 73.19% lines, 75.20% branches, 70.84% functions; all declared high-risk module gates passed.
 - Enhanced fixture install/upgrade/rollback/uninstall QA to verify settings, database bytes, desktop icon state, system wallpaper state, program-file removal, and process-marker cleanup.
 - Added clean checkout verification, release evidence generation, profile-aware 4-hour/24-hour soak thresholds, completion ratios, claim eligibility, and residual-process checks.
 - `pnpm quality:v4`: passed 184 Node tests, 2 component tests, 8 Electron E2E, type checks, build, SBOM, audit, and lifecycle QA.
