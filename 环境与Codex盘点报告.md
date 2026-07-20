@@ -1,19 +1,21 @@
 # 环境与 Codex 盘点报告
 
 盘点时间：2026-07-03  
-工作目录：`D:\桌面操作系统`
+工作目录：`<PROJECT_ROOT>`
+
+> 路径已脱敏：`<PROJECT_ROOT>` 表示仓库根目录，`%USERPROFILE%`、`%LOCALAPPDATA%`、`%ProgramFiles%`、`%SystemRoot%` 和 `%CODEX_HOME%` 表示当前机器的环境变量；其他尖括号名称表示机器相关的工具目录。
 
 ## 1. 已阅读的项目文档
 
 本目录下只有两个 Markdown 文档，均已阅览：
 
-1. `D:\桌面操作系统\桌面控制系统.md`
+1. `<PROJECT_ROOT>\桌面控制系统.md`
    - 2382 行，82537 字节。
    - 主题：Project D 完整开发说明书。
    - 技术栈：Electron 28+、Vue 3、TypeScript、Vite、PixiJS 7+、spine-pixi、better-sqlite3、chokidar、OpenWeatherMap、OpenAI Chat Completions 兼容接口、electron-builder。
    - 关键交付：Windows `.exe`、macOS `.dmg`、本地 SQLite、托盘、覆盖窗口、桌面扫描、桌面整理/归位、壁纸天气粒子、桌宠、AI 对话。
 
-2. `D:\桌面操作系统\ProjectD_v1.1_技术细节补充与验收标准.md`
+2. `<PROJECT_ROOT>\ProjectD_v1.1_技术细节补充与验收标准.md`
    - 1247 行，34009 字节。
    - 主题：技术细节补充、异常处理、降级策略、安全、日志、验收标准。
    - 执行顺序：Stage 0 初始化空窗口；Stage 1 数据库与状态；Stage 2 桌面扫描与容器 UI；Stage 3 激活/归位与恢复；Stage 4 壁纸与视觉主题；Stage 5 天气粒子；Stage 6 桌宠；Stage 7 AI 对话；Stage 8 设置、打包与 QA。
@@ -22,8 +24,8 @@
 
 插件缓存根目录：
 
-- `C:\Users\34395\.codex\plugins\cache`
-- `E:\Caches\.codex\plugins\cache`
+- `%CODEX_HOME%\plugins\cache`
+- `<CODEX_CACHE>\plugins\cache`
 
 当前发现的 Codex 插件 manifest：
 
@@ -44,32 +46,32 @@
 
 Codex skill 根目录：
 
-- `C:\Users\34395\.codex\skills`
-- `E:\Caches\.codex\skills`
-- `E:\CodexSkills\installed`
-- `C:\Users\34395\.agents\skills`
-- `E:\Caches\.codex\plugins\cache\...\skills`
+- `%CODEX_HOME%\skills`
+- `<CODEX_CACHE>\skills`
+- `<CODEX_SKILLS_ROOT>\installed`
+- `%USERPROFILE%\.agents\skills`
+- `<CODEX_CACHE>\plugins\cache\...\skills`
 
 当前本轮可见/已缓存 skills：
 
 | Skill | 来源 |
 |---|---|
-| imagegen | `C:\Users\34395\.codex\skills\.system\imagegen` |
-| openai-docs | `C:\Users\34395\.codex\skills\.system\openai-docs` |
-| plugin-creator | `C:\Users\34395\.codex\skills\.system\plugin-creator` |
-| skill-creator | `C:\Users\34395\.codex\skills\.system\skill-creator` |
-| skill-installer | `C:\Users\34395\.codex\skills\.system\skill-installer` |
-| code-coach | `C:\Users\34395\.codex\skills\code-coach` |
-| verified-image-collector | `C:\Users\34395\.codex\skills\verified-image-collector` |
-| yunying-xuexi | `C:\Users\34395\.codex\skills\yunying-xuexi`，description 存在问号乱码，建议后续修复元数据 |
-| using-coze-cli | `C:\Users\34395\.agents\skills\using-coze-cli` |
+| imagegen | `%CODEX_HOME%\skills\.system\imagegen` |
+| openai-docs | `%CODEX_HOME%\skills\.system\openai-docs` |
+| plugin-creator | `%CODEX_HOME%\skills\.system\plugin-creator` |
+| skill-creator | `%CODEX_HOME%\skills\.system\skill-creator` |
+| skill-installer | `%CODEX_HOME%\skills\.system\skill-installer` |
+| code-coach | `%CODEX_HOME%\skills\code-coach` |
+| verified-image-collector | `%CODEX_HOME%\skills\verified-image-collector` |
+| yunying-xuexi | `%CODEX_HOME%\skills\yunying-xuexi`，description 存在问号乱码，建议后续修复元数据 |
+| using-coze-cli | `%USERPROFILE%\.agents\skills\using-coze-cli` |
 | browser:control-in-app-browser | browser 插件 |
 | computer-use:computer-use | computer-use 插件 |
-| hyperframes:gsap | hyperframes 插件或 `E:\CodexSkills\installed` |
-| hyperframes:hyperframes | hyperframes 插件或 `E:\CodexSkills\installed` |
-| hyperframes:hyperframes-cli | hyperframes 插件或 `E:\CodexSkills\installed` |
-| hyperframes:hyperframes-registry | hyperframes 插件或 `E:\CodexSkills\installed` |
-| hyperframes:website-to-hyperframes | hyperframes 插件或 `E:\CodexSkills\installed` |
+| hyperframes:gsap | hyperframes 插件或 `<CODEX_SKILLS_ROOT>\installed` |
+| hyperframes:hyperframes | hyperframes 插件或 `<CODEX_SKILLS_ROOT>\installed` |
+| hyperframes:hyperframes-cli | hyperframes 插件或 `<CODEX_SKILLS_ROOT>\installed` |
+| hyperframes:hyperframes-registry | hyperframes 插件或 `<CODEX_SKILLS_ROOT>\installed` |
+| hyperframes:website-to-hyperframes | hyperframes 插件或 `<CODEX_SKILLS_ROOT>\installed` |
 | remotion:remotion-best-practices | remotion 插件 |
 | documents:documents | documents 插件 |
 | pdf:pdf | pdf 插件 |
@@ -82,94 +84,94 @@ Codex skill 根目录：
 ### 当前进程 PATH
 
 ```text
-C:\Users\34395\.codex\tmp\arg0\codex-arg0MP1gFz
-C:\Users\34395\.cache\codex-runtimes\codex-primary-runtime\dependencies\bin
-D:\Apps\ImageMagick
-C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot\bin
-C:\WINDOWS\system32
-C:\WINDOWS
-C:\WINDOWS\System32\Wbem
-C:\WINDOWS\System32\WindowsPowerShell\v1.0\
-C:\WINDOWS\System32\OpenSSH\
-C:\Program Files\dotnet\
-E:\长城\
+%CODEX_HOME%\tmp\arg0\<session>
+%USERPROFILE%\.cache\codex-runtimes\codex-primary-runtime\dependencies\bin
+<TOOLS_ROOT>\ImageMagick
+%ProgramFiles%\Eclipse Adoptium\<jdk-version>\bin
+%SystemRoot%\system32
+%SystemRoot%
+%SystemRoot%\System32\Wbem
+%SystemRoot%\System32\WindowsPowerShell\v1.0\
+%SystemRoot%\System32\OpenSSH\
+%ProgramFiles%\dotnet\
+<NODE_ROOT>\
 :\Edge下载\Git\cmd
 \Program Files\Docker\Docker\resources\bin
-D:\Edge下载\Git\cmd
-D:\Apps\Ghostscript\bin
-D:\Apps\GitHubCLI\
-C:\Users\34395\AppData\Local\Microsoft\dotnet
-E:\Python
-E:\Python\Scripts
-D:\codex
-D:\Git\cmd
-E:\vscode\Microsoft VS Code\bin
-C:\Users\34395\AppData\Local\Microsoft\WinGet\Links
-C:\Users\34395\AppData\Local\Microsoft\WindowsApps
-D:\Apps\LibreOffice\program
-D:\Apps\Tesseract-OCR
-D:\Apps\FFmpeg\ffmpeg-8.1.1-full_build\bin
-D:\miniforge3
-D:\miniforge3\condabin
-D:\miniforge3\Scripts
-D:\miniforge3\Library\bin
-D:\Go\bin
-D:\rust\.cargo\bin
-C:\Users\34395\AppData\Local\Programs\Python\Launcher
-D:\Apps\Poppler\poppler-25.07.0\Library\bin
-D:\cmake\bin
-C:\Users\34395\AppData\Local\Microsoft\WindowsApps
-C:\Users\34395\AppData\Local\OpenAI\Codex\bin\ada252862d154cdd
-C:\Program Files\WindowsApps\OpenAI.Codex_26.623.11225.0_x64__2p2nqsd0c76g0\app\resources
+<LEGACY_GIT_ROOT>\cmd
+<TOOLS_ROOT>\Ghostscript\bin
+<TOOLS_ROOT>\GitHubCLI\
+%LOCALAPPDATA%\Microsoft\dotnet
+<PYTHON_ROOT>
+<PYTHON_ROOT>\Scripts
+<CODEX_CLI_ROOT>
+<GIT_ROOT>\cmd
+<VSCODE_ROOT>\Microsoft VS Code\bin
+%LOCALAPPDATA%\Microsoft\WinGet\Links
+%LOCALAPPDATA%\Microsoft\WindowsApps
+<TOOLS_ROOT>\LibreOffice\program
+<TOOLS_ROOT>\Tesseract-OCR
+<TOOLS_ROOT>\FFmpeg\<ffmpeg-version>\bin
+<CONDA_ROOT>
+<CONDA_ROOT>\condabin
+<CONDA_ROOT>\Scripts
+<CONDA_ROOT>\Library\bin
+<GO_ROOT>\bin
+<RUST_ROOT>\.cargo\bin
+%LOCALAPPDATA%\Programs\Python\Launcher
+<TOOLS_ROOT>\Poppler\<poppler-version>\Library\bin
+<CMAKE_ROOT>\bin
+%LOCALAPPDATA%\Microsoft\WindowsApps
+%LOCALAPPDATA%\OpenAI\Codex\bin\<version-id>
+%ProgramFiles%\WindowsApps\OpenAI.Codex_<version>_x64__<publisher-id>\app\resources
 ```
 
 ### 用户 PATH
 
 ```text
-C:\Users\34395\AppData\Local\Microsoft\dotnet
-E:\Python
-E:\Python\Scripts
-D:\codex
-D:\Git\cmd
-E:\vscode\Microsoft VS Code\bin
-C:\Users\34395\AppData\Local\Microsoft\WinGet\Links
-C:\Users\34395\AppData\Local\Microsoft\WindowsApps
-D:\Apps\LibreOffice\program
-D:\Apps\Tesseract-OCR
-D:\Apps\ImageMagick
-D:\Apps\FFmpeg\ffmpeg-8.1.1-full_build\bin
-D:\miniforge3
-D:\miniforge3\condabin
-D:\miniforge3\Scripts
-D:\miniforge3\Library\bin
-D:\Go\bin
-D:\rust\.cargo\bin
-C:\Users\34395\AppData\Local\Programs\Python\Launcher
-D:\Apps\Poppler\poppler-25.07.0\Library\bin
-D:\Apps\Ghostscript\bin
-D:\cmake\bin
-E:\长城
-%USERPROFILE%\AppData\Local\Microsoft\WindowsApps
-C:\Program Files\Docker\Docker\resources\bin
+%LOCALAPPDATA%\Microsoft\dotnet
+<PYTHON_ROOT>
+<PYTHON_ROOT>\Scripts
+<CODEX_CLI_ROOT>
+<GIT_ROOT>\cmd
+<VSCODE_ROOT>\Microsoft VS Code\bin
+%LOCALAPPDATA%\Microsoft\WinGet\Links
+%LOCALAPPDATA%\Microsoft\WindowsApps
+<TOOLS_ROOT>\LibreOffice\program
+<TOOLS_ROOT>\Tesseract-OCR
+<TOOLS_ROOT>\ImageMagick
+<TOOLS_ROOT>\FFmpeg\<ffmpeg-version>\bin
+<CONDA_ROOT>
+<CONDA_ROOT>\condabin
+<CONDA_ROOT>\Scripts
+<CONDA_ROOT>\Library\bin
+<GO_ROOT>\bin
+<RUST_ROOT>\.cargo\bin
+%LOCALAPPDATA%\Programs\Python\Launcher
+<TOOLS_ROOT>\Poppler\<poppler-version>\Library\bin
+<TOOLS_ROOT>\Ghostscript\bin
+<CMAKE_ROOT>\bin
+<NODE_ROOT>
+%LOCALAPPDATA%\Microsoft\WindowsApps
+%ProgramFiles%\Docker\Docker\resources\bin
 ```
 
 ### 机器 PATH
 
 ```text
-D:\Apps\ImageMagick
-C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot\bin
-C:\WINDOWS\system32
-C:\WINDOWS
-C:\WINDOWS\System32\Wbem
-C:\WINDOWS\System32\WindowsPowerShell\v1.0\
-C:\WINDOWS\System32\OpenSSH\
-C:\Program Files\dotnet\
-E:\长城\
+<TOOLS_ROOT>\ImageMagick
+%ProgramFiles%\Eclipse Adoptium\<jdk-version>\bin
+%SystemRoot%\system32
+%SystemRoot%
+%SystemRoot%\System32\Wbem
+%SystemRoot%\System32\WindowsPowerShell\v1.0\
+%SystemRoot%\System32\OpenSSH\
+%ProgramFiles%\dotnet\
+<NODE_ROOT>\
 :\Edge下载\Git\cmd
 \Program Files\Docker\Docker\resources\bin
-D:\Edge下载\Git\cmd
-D:\Apps\Ghostscript\bin
-D:\Apps\GitHubCLI\
+<LEGACY_GIT_ROOT>\cmd
+<TOOLS_ROOT>\Ghostscript\bin
+<TOOLS_ROOT>\GitHubCLI\
 ```
 
 ### 损坏或不存在的 PATH 项
@@ -178,30 +180,30 @@ D:\Apps\GitHubCLI\
 |---|---|---|
 | Machine | `:\Edge下载\Git\cmd` | 缺盘符，不存在 |
 | Machine | `\Program Files\Docker\Docker\resources\bin` | 缺 `C:`，不存在 |
-| Machine | `D:\Edge下载\Git\cmd` | 旧 Git 路径，不存在 |
+| Machine | `<LEGACY_GIT_ROOT>\cmd` | 旧 Git 路径，不存在 |
 
 已处理：
 
-- 已把正确 Docker CLI 路径 `C:\Program Files\Docker\Docker\resources\bin` 加入用户 PATH。
+- 已把正确 Docker CLI 路径 `%ProgramFiles%\Docker\Docker\resources\bin` 加入用户 PATH。
 - 未直接清理机器 PATH，因为机器级 PATH 需要管理员权限，强改风险较高。
 
 ## 5. 常用工具状态
 
 | 工具 | 状态 |
 |---|---|
-| Codex | 存在：`D:\codex\codex.cmd`，以及 WindowsApps Codex |
-| Claude | 存在：`D:\codex\claude.cmd`，以及 WinGet Links |
-| Coze | 存在：`D:\codex\coze.cmd` |
-| Node.js | 存在：`v24.15.0`，路径 `E:\长城\node.exe` |
+| Codex | 存在：`<CODEX_CLI_ROOT>\codex.cmd`，以及 WindowsApps Codex |
+| Claude | 存在：`<CODEX_CLI_ROOT>\claude.cmd`，以及 WinGet Links |
+| Coze | 存在：`<CODEX_CLI_ROOT>\coze.cmd` |
+| Node.js | 存在：`v24.15.0`，路径 `<NODE_ROOT>\node.exe` |
 | npm | 存在：`11.12.1` |
 | npx | 存在：`11.12.1` |
 | pnpm | 存在：`11.7.0` |
-| Python | 默认 `Python 3.14.5`，路径 `E:\Python\python.exe` |
-| Python 3.12 | 存在：`C:\Python312\python.exe` |
+| Python | 默认 `Python 3.14.5`，路径 `<PYTHON_ROOT>\python.exe` |
+| Python 3.12 | 存在：`<PYTHON312_ROOT>\python.exe` |
 | pip | 存在：`26.1.1` |
 | uv | 存在：`0.11.16` |
-| Git | 存在：`2.54.0.windows.1`，路径 `D:\Git\cmd\git.exe` |
-| Git Bash | 存在：推荐显式用 `D:\Git\bin\bash.exe` |
+| Git | 存在：`2.54.0.windows.1`，路径 `<GIT_ROOT>\cmd\git.exe` |
+| Git Bash | 存在：推荐显式用 `<GIT_ROOT>\bin\bash.exe` |
 | FFmpeg | 存在：`8.1.1` |
 | ImageMagick | 存在 |
 | Tesseract | 存在 |
@@ -211,7 +213,7 @@ D:\Apps\GitHubCLI\
 | Docker CLI | 存在：`29.4.3`，已修复用户 PATH |
 | CMake | 存在：`4.3.3` |
 | GitHub CLI | 存在：`2.95.0` |
-| VS Code | 存在：`E:\vscode\Microsoft VS Code` |
+| VS Code | 存在：`<VSCODE_ROOT>\Microsoft VS Code` |
 | winget | 存在：`v1.29.280` |
 | Java | 存在：Temurin OpenJDK 17.0.19 |
 | .NET | 仅运行时 6.0.36，未发现 SDK |
@@ -224,14 +226,14 @@ D:\Apps\GitHubCLI\
 ## 6. 已做的环境修复
 
 1. Docker CLI PATH 修复
-   - 发现实际文件存在：`C:\Program Files\Docker\Docker\resources\bin\docker.exe`
+   - 发现实际文件存在：`%ProgramFiles%\Docker\Docker\resources\bin\docker.exe`
    - 已加入用户 PATH。
    - 当前验证：`Docker version 29.4.3, build 055a478`
 
 2. node-gyp Python 指向修复
    - 已设置用户环境变量：
-     - `PYTHON=C:\Python312\python.exe`
-     - `npm_config_python=C:\Python312\python.exe`
+     - `PYTHON=<PYTHON312_ROOT>\python.exe`
+     - `npm_config_python=<PYTHON312_ROOT>\python.exe`
      - `npm_config_msvs_version=2022`
    - 原因：默认 `python` 是 3.14.5，native module 构建更稳妥地使用已安装的 Python 3.12。
 

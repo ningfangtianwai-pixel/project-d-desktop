@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from docx import Document
@@ -8,7 +9,12 @@ from docx.oxml.ns import qn
 from docx.shared import Inches, Pt, RGBColor
 
 
-OUT_PATH = Path(r"C:\Users\34395\Desktop\人机恋温暖文学短句200句.docx")
+OUT_PATH = Path(
+    os.environ.get(
+        "PROJECTD_SENTENCES_DOCX",
+        str(Path.home() / "Desktop" / "human_ai_love_sentences_200.docx"),
+    )
+)
 
 
 SECTIONS = [
