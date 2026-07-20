@@ -11,7 +11,14 @@ const full = process.argv.includes("--full");
 const report = { schemaVersion: 1, generatedAt: new Date().toISOString(), full, checks: {}, passed: false };
 
 function run(command, args, cwd = root) {
-  const result = spawnSync(command, args, { cwd, encoding: "utf8", windowsHide: true, shell: false, maxBuffer: 64 * 1024 * 1024 });
+  const isPnpmOnWindows = process.platform === "win32" && command === "pnpm";
+  const result = spawnSync(command, args, {
+    cwd,
+    encoding: "utf8",
+    windowsHide: true,
+    shell: isPnpmOnWindows,
+    maxBuffer: 64 * 1024 * 1024
+  });
   if (result.error) throw result.error;
   if (result.status !== 0) throw new Error(`${command} ${args.join(" ")} failed\n${result.stdout}\n${result.stderr}`);
   return result.stdout.trim();
@@ -20,16 +27,16 @@ function run(command, args, cwd = root) {
 try {
   run("git", ["worktree", "add", "--detach", checkout, "HEAD"]);
   report.checks.trackedCheckout = !fs.existsSync(path.join(checkout, ".env")) && !fs.existsSync(path.join(checkout, "node_modules"));
-  run("pnpm.cmd", ["install", "--frozen-lockfile", "--store-dir", store], checkout);
+  run("pnpm", ["install", "--frozen-lockfile", "--store-dir", store], checkout);
   report.checks.freshDependencyStore = fs.existsSync(store);
-  run("pnpm.cmd", ["lint"], checkout);
-  run("pnpm.cmd", ["typecheck"], checkout);
-  run("pnpm.cmd", ["test:unit"], checkout);
-  run("pnpm.cmd", ["test:component"], checkout);
-  run("pnpm.cmd", ["build"], checkout);
+  run("pnpm", ["lint"], checkout);
+  run("pnpm", ["typecheck"], checkout);
+  run("pnpm", ["test:unit"], checkout);
+  run("pnpm", ["test:component"], checkout);
+  run("pnpm", ["build"], checkout);
   if (full) {
-    run("pnpm.cmd", ["test:e2e:built"], checkout);
-    run("pnpm.cmd", ["dist"], checkout);
+    run("pnpm", ["test:e2e:built"], checkout);
+    run("pnpm", ["dist"], checkout);
   }
   report.checks.noAbsoluteWorkspaceDependency = !scanFiles(checkout, ["package.json", "pnpm-lock.yaml", "electron-builder.yml"], root);
   report.checks.noLocalEnvDependency = !fs.existsSync(path.join(checkout, ".env"));
