@@ -92,8 +92,6 @@ export const IPC_CHANNELS = {
   UPDATE_GET_STATUS: "update:get-status",
   UPDATE_SET_CHANNEL: "update:set-channel",
   UPDATE_CHECK: "update:check",
-  UPDATE_DOWNLOAD: "update:download",
-  UPDATE_INSTALL: "update:install",
   UPDATE_STATUS_CHANGED: "update:status-changed",
   RUNTIME_GET_STATE: "runtime:get-state",
   RUNTIME_SET_MANUAL_PAUSED: "runtime:set-manual-paused",

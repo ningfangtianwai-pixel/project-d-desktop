@@ -342,7 +342,15 @@ export class DatabaseService {
       fs.writeFileSync(backupPath, rawBytes);
     }
 
-    const migrated = this.migrateInTempDb(rawBytes, currentVersion);
+    let migrated: Uint8Array | null;
+    try {
+      migrated = this.migrateInTempDb(rawBytes, currentVersion);
+    } catch (error) {
+      if (!this.isReadableDatabase(rawBytes)) {
+        return this.recoverCorruptDatabase(rawBytes, error);
+      }
+      throw error;
+    }
 
     if (migrated) {
       const tmpPath = this.dbPath + ".tmp";
@@ -1235,6 +1243,42 @@ export class DatabaseService {
     }
   }
 
+  private isReadableDatabase(rawBytes: Buffer): boolean {
+    let candidate: Database | null = null;
+    try {
+      candidate = new this.SQL!.Database(rawBytes);
+      const integrity = candidate.exec("PRAGMA quick_check");
+      return integrity.length === 1
+        && integrity[0].values.length === 1
+        && String(integrity[0].values[0][0]).toLowerCase() === "ok";
+    } catch {
+      return false;
+    } finally {
+      try { candidate?.close(); } catch { /* best effort */ }
+    }
+  }
+
+  private recoverCorruptDatabase(rawBytes: Buffer, cause: unknown): DatabaseStatus {
+    const backupPath = `${this.dbPath}.corrupt-${Date.now()}.backup`;
+    fs.writeFileSync(backupPath, rawBytes);
+    this.logger.error("app", "database was unreadable; preserved corrupt bytes and created a clean database", {
+      backupPath: path.basename(backupPath),
+      message: cause instanceof Error ? cause.message : String(cause)
+    });
+
+    this.createdNow = true;
+    this.db = new this.SQL!.Database();
+    this.db.run(SCHEMA_SQL);
+    this.db.run("INSERT OR REPLACE INTO app_state(key, value) VALUES ('schema_version', ?)", [String(LATEST_SCHEMA_VERSION)]);
+    this.db.run("INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (?, ?)", [LATEST_SCHEMA_VERSION, new Date().toISOString()]);
+    this.seedDefaults();
+    this.migrateSecretsToSafeStorage();
+    this.setAppState("last_boot_time", new Date().toISOString());
+    this.setAppState("database_recovered_from_corruption", new Date().toISOString());
+    this.persist();
+    return this.getStatus();
+  }
+
   private migrateInTempDb(rawBytes: Buffer, currentVersion: number): Uint8Array | null {
     const SQL = this.SQL!;
     const tempDb = new SQL.Database(rawBytes);
@@ -1427,11 +1471,12 @@ export class DatabaseService {
   }
 
   private locateSqlJsFile(file: string): string {
+    const resourcesPath = process.resourcesPath ?? process.cwd();
     const candidates = [
       path.join(process.cwd(), "node_modules", "sql.js", "dist", file),
       path.join(app.getAppPath(), "node_modules", "sql.js", "dist", file),
-      path.join(process.resourcesPath, "app.asar.unpacked", "node_modules", "sql.js", "dist", file),
-      path.join(process.resourcesPath, "node_modules", "sql.js", "dist", file)
+      path.join(resourcesPath, "app.asar.unpacked", "node_modules", "sql.js", "dist", file),
+      path.join(resourcesPath, "node_modules", "sql.js", "dist", file)
     ];
 
     return candidates.find((candidate) => fs.existsSync(candidate)) ?? candidates[0];

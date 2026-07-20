@@ -8,7 +8,7 @@ const installer = path.join(root, "release", `ProjectD-${pkg.version}-Setup.exe`
 const checks = [];
 const check = (name, passed, detail) => checks.push({ name, passed, detail });
 
-for (const file of ["README.md", "SECURITY.md", "CONTRIBUTING.md", "CHANGELOG.md", "LICENSE"]) {
+for (const file of ["README.md", "SECURITY.md", "CONTRIBUTING.md", "CHANGELOG.md", "LICENSE", "PRIVACY.md", "DISCLAIMER.md", "docs/ASSET_REGISTRY.md"]) {
   check(`document:${file}`, fs.existsSync(path.join(root, file)), fs.existsSync(path.join(root, file)) ? "present" : "missing");
 }
 const legalDocuments = ["docs/PRIVACY_POLICY.md", "docs/USER_AGREEMENT.md"];
@@ -60,15 +60,18 @@ if (fs.existsSync(installer) && process.platform === "win32") {
 check("installer:authenticode", signature === "Valid", signature);
 
 const builderConfig = fs.readFileSync(path.join(root, "electron-builder.yml"), "utf8");
-const updateFeedValue = /^\s*url:\s*(\S+)\s*$/m.exec(builderConfig)?.[1] ?? "";
-let updateFeedValid = false;
-try {
-  const updateFeed = new URL(updateFeedValue);
-  updateFeedValid = updateFeed.protocol === "https:" && !updateFeed.hostname.endsWith(".invalid") && updateFeed.hostname.includes(".");
-} catch {
-  updateFeedValid = false;
-}
-check("updates:production-feed", updateFeedValid, updateFeedValid ? updateFeedValue : `invalid or placeholder feed: ${updateFeedValue || "missing"}`);
+const mainSource = fs.readFileSync(path.join(root, "src", "main", "main.ts"), "utf8");
+const packageSource = fs.readFileSync(path.join(root, "package.json"), "utf8");
+const manualReleaseUrl = /GITHUB_RELEASES_URL\s*=\s*"(https:\/\/github\.com\/[^"/]+\/[^"/]+\/releases)"/.exec(mainSource)?.[1] ?? "";
+const manualUpdateValid = Boolean(manualReleaseUrl)
+  && !/^\s*publish:/m.test(builderConfig)
+  && !packageSource.includes("electron-updater")
+  && !mainSource.includes("scheduleAutomaticCheck()");
+check(
+  "updates:manual-github-releases",
+  manualUpdateValid,
+  manualUpdateValid ? manualReleaseUrl : "automatic updater/feed remains configured or trusted GitHub Releases URL is missing"
+);
 
 const failed = checks.filter((item) => !item.passed);
 const report = { generatedAt: new Date().toISOString(), version: pkg.version, checks, passed: failed.length === 0 };

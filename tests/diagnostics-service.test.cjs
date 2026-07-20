@@ -163,3 +163,20 @@ test("redacts quoted secrets and paths with spaces and bounds the complete expor
   assert.match(serialized, /\[REDACTED\]/);
   assert.match(serialized, /\[PATH\]/);
 });
+
+test("removes emails, named user fields, private filenames, and message-derived codes", () => {
+  const report = createService().createReport(healthyInput({
+    recentLogs: [{
+      level: "error",
+      code: "failed for alice.private@example.com at budget.xlsx",
+      summary: "username=Alice email alice.private@example.com could not open quarterly-plan.xlsx"
+    }]
+  }));
+  const serialized = createService().serializeForExport(report, { consent: true });
+
+  assert.equal(report.recentErrors[0].code, "runtime-error");
+  assert.match(serialized, /\[EMAIL\]/);
+  assert.match(serialized, /\[USER\]/);
+  assert.match(serialized, /\[FILE\]/);
+  assert.doesNotMatch(serialized, /Alice|alice\.private|quarterly-plan|budget\.xlsx/i);
+});

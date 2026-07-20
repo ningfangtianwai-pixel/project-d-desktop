@@ -1,6 +1,5 @@
 import { app, BrowserWindow, dialog, globalShortcut, Menu, powerMonitor, screen, shell } from "electron";
 import type { IpcMainInvokeEvent, OpenDialogOptions } from "electron";
-import { autoUpdater } from "electron-updater";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -32,7 +31,7 @@ import { getPrivacyNetworkState, setPrivacyNetworkPaused } from "./privacy-netwo
 import { inspectInterruptedAction } from "./actions/action-recovery.js";
 import { runWithDeadline } from "./shutdown-deadline.js";
 import { isMostlyWhiteBitmap, WindowResilienceSupervisor, type RendererRecoveryEvent, type WindowRole } from "./window-resilience.js";
-import { UpdateService, validateUpdateFeedUrl } from "./update-service.js";
+import { UpdateService } from "./update-service.js";
 import { PauseArbiter } from "./pause-arbiter.js";
 import { RuntimeMetricsService } from "./runtime-metrics.js";
 import { CleanDesktopEscapeGuard } from "./clean-desktop-escape.js";
@@ -56,6 +55,7 @@ const START_HIDDEN_ARG = "--projectd-start-hidden";
 const qaRunEnabled = process.argv.some((argument) => argument.startsWith("--projectd-qa-run="));
 const safeRendererMode = process.argv.includes(SAFE_RENDERER_ARG);
 const startHidden = process.argv.includes(START_HIDDEN_ARG);
+const GITHUB_RELEASES_URL = "https://github.com/ningfangtianwai-pixel/project-d-desktop/releases";
 if (safeRendererMode) app.disableHardwareAcceleration();
 
 let mainWindow: BrowserWindow | null = null;
@@ -1709,18 +1709,6 @@ function broadcastUpdateStatus(status: UpdateStatus): void {
   window.webContents.send(IPC_CHANNELS.UPDATE_STATUS_CHANGED, status);
 }
 
-function hasConfiguredBundledUpdateFeed(): boolean {
-  if (!app.isPackaged) return false;
-  try {
-    const config = fs.readFileSync(path.join(process.resourcesPath, "app-update.yml"), "utf8");
-    const rawUrl = /^\s*url:\s*['"]?([^\s'"]+)/m.exec(config)?.[1] ?? null;
-    const url = validateUpdateFeedUrl(rawUrl);
-    return Boolean(url && !new URL(url).hostname.endsWith(".invalid"));
-  } catch {
-    return false;
-  }
-}
-
 /** @internal File preview logic extracted from old registerIpc */
 async function readFilePreviewImpl(fileId: number): Promise<FilePreviewData> {
   const file = database?.getDesktopFileById(fileId);
@@ -1986,12 +1974,7 @@ function buildIpcDeps(): ServiceDeps {
         if (!updateService) throw new Error("Update service is unavailable");
         return updateService.setChannel(channel);
       },
-      checkForUpdates: () => updateService?.checkForUpdates() ?? Promise.reject(new Error("Update service is unavailable")),
-      downloadUpdate: () => updateService?.downloadUpdate() ?? Promise.reject(new Error("Update service is unavailable")),
-      installDownloadedUpdate: () => {
-        if (!updateService) throw new Error("Update service is unavailable");
-        updateService.installDownloadedUpdate();
-      }
+      checkForUpdates: () => updateService?.checkForUpdates() ?? Promise.reject(new Error("Update service is unavailable"))
     },
     runtime: {
       getState: () => pauseArbiter.snapshot,
@@ -2121,20 +2104,16 @@ async function initializeCoreServices(): Promise<void> {
   });
   syncLaunchAtLogin();
   updateService = new UpdateService({
-    updater: autoUpdater,
     currentVersion: app.getVersion(),
-    isPackaged: app.isPackaged,
-    enableInDevelopment: process.env.PROJECTD_QA_ENABLE_UPDATER === "1",
-    feedUrl: process.env.PROJECTD_UPDATE_FEED_URL ?? database.getAppState("update_feed_url"),
-    useBundledFeed: hasConfiguredBundledUpdateFeed(),
+    releasesUrl: GITHUB_RELEASES_URL,
+    openExternal: (url) => shell.openExternal(url),
     state: {
       get: (key) => database?.getAppState(key) ?? null,
       set: (key, value) => database?.setAppState(key, value)
     },
     logger: {
       info: (message, data) => logger?.info("app", message, data),
-      warn: (message, data) => logger?.warn("app", message, data),
-      error: (message, data) => logger?.error("error", message, data)
+      warn: (message, data) => logger?.warn("app", message, data)
     },
     onStatusChanged: broadcastUpdateStatus,
     distributionAllowed: () => operationsControl?.version().distributionAllowed ?? true
@@ -2438,7 +2417,6 @@ if (!singleInstanceLock) {
         createPetWindow();
         resizePetWindowForScale(startupSettings.pet.scale);
       }
-      updateService?.scheduleAutomaticCheck();
       scheduleQaRendererFaultInjection();
       scheduleQaSoakChurn();
       setTimeout(() => {

@@ -183,10 +183,13 @@ export function redactDiagnosticText(value: string, maxLength = MAX_ERROR_SUMMAR
       "$1=[REDACTED]"
     )
     .replace(/\b(sk-[A-Za-z0-9_-]{8,}|[A-Za-z0-9_-]{24,})\b/g, "[REDACTED]")
+    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[EMAIL]")
+    .replace(/\b(?:user(?:name)?|display[_-]?name|account)\b\s*[:=]\s*(?:"[^"]*"|'[^']*'|[^\s,;]+)/gi, "user=[USER]")
     .replace(/(["'])(?:[A-Za-z]:[\\/]|\\\\|\/\/)[^"'\r\n]*\1/g, "[PATH]")
     .replace(/(["'])\/[^"'\r\n]*\1/g, "[PATH]")
     .replace(/(?:[A-Za-z]:[\\/]|\\\\|\/\/)[^\r\n,;]*/g, "[PATH]")
     .replace(/(?<![:\w])\/[^\r\n,;]*/g, "[PATH]")
+    .replace(/\b[^\s,;<>:"'\\/]+\.(?:txt|log|md|docx?|xlsx?|pptx?|pdf|png|jpe?g|gif|webp|zip|7z|rar|sql(?:ite)?|db|json|ya?ml|ini|cfg)\b/gi, "[FILE]")
     .replace(/\s+/g, " ")
     .trim();
 
@@ -218,7 +221,11 @@ function calculateHealth(
 }
 
 function controlledErrorCode(value: string | null | undefined): string {
-  const normalized = (value ?? "unknown-error").replace(/[^a-z0-9_-]/gi, "-").toLowerCase();
+  const raw = value ?? "unknown-error";
+  if (/@|[\\/]|\b(?:user(?:name)?|display[_-]?name|account)\b|\.[a-z0-9]{1,8}\b/i.test(raw)) {
+    return "runtime-error";
+  }
+  const normalized = raw.replace(/[^a-z0-9_-]/gi, "-").toLowerCase();
   return normalized.slice(0, 48) || "unknown-error";
 }
 

@@ -10,8 +10,6 @@ export interface UpdateIpcDependencies {
   getStatus: () => UpdateStatus;
   setChannel: (channel: UpdateChannel) => UpdateStatus;
   checkForUpdates: () => Promise<UpdateStatus>;
-  downloadUpdate: () => Promise<UpdateStatus>;
-  installDownloadedUpdate: () => void;
 }
 
 export function registerUpdateIpcHandlers(deps: UpdateIpcDependencies): void {
@@ -29,13 +27,5 @@ export function registerUpdateIpcHandlers(deps: UpdateIpcDependencies): void {
   deps.ipc.handle(IPC_CHANNELS.UPDATE_CHECK, async (event) => {
     trustedSettings(event);
     return deps.checkForUpdates();
-  });
-  deps.ipc.handle(IPC_CHANNELS.UPDATE_DOWNLOAD, async (event) => {
-    trustedSettings(event);
-    return deps.downloadUpdate();
-  });
-  deps.ipc.handle(IPC_CHANNELS.UPDATE_INSTALL, (event) => {
-    trustedSettings(event);
-    deps.installDownloadedUpdate();
   });
 }

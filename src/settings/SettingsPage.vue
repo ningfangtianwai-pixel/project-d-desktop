@@ -418,27 +418,6 @@ async function checkForUpdates(): Promise<void> {
   }
 }
 
-async function downloadUpdate(): Promise<void> {
-  updateBusy.value = true;
-  try {
-    updateStatus.value = await window.projectD.downloadUpdate();
-  } catch (error) {
-    saveStatus.value = error instanceof Error ? error.message : "下载更新失败";
-  } finally {
-    updateBusy.value = false;
-  }
-}
-
-async function installUpdate(): Promise<void> {
-  updateBusy.value = true;
-  try {
-    await window.projectD.installDownloadedUpdate();
-  } catch (error) {
-    updateBusy.value = false;
-    saveStatus.value = error instanceof Error ? error.message : "安装更新失败";
-  }
-}
-
 async function recoverDesktop(): Promise<void> {
   await window.projectD.deactivateDesktop();
   saveStatus.value = "桌面已恢复";
@@ -904,21 +883,18 @@ async function saveSettings(): Promise<void> {
           <div class="settings-group">
             <h2>软件更新</h2>
             <label class="setting-row">
-              <span><strong>更新通道</strong><small>灰度通道会接收分阶段发布和预览版本</small></span>
+              <span><strong>版本偏好</strong><small>Project D 不会在后台请求、下载或安装更新</small></span>
               <select :value="updateStatus.channel" :disabled="updateBusy" @change="changeUpdateChannel(($event.target as HTMLSelectElement).value as UpdateChannel)">
                 <option value="stable">稳定通道</option>
                 <option value="beta">灰度体验</option>
               </select>
             </label>
             <div class="setting-row update-status-row">
-              <span><strong>{{ updateStatus.message }}</strong><small>当前版本 {{ updateStatus.currentVersion }} · 服务器按匿名设备分桶控制灰度比例</small></span>
+              <span><strong>{{ updateStatus.message }}</strong><small>当前版本 {{ updateStatus.currentVersion }} · 下载后请核对 SHA256</small></span>
               <div class="update-actions">
-                <button v-if="updateStatus.phase === 'available'" class="secondary-command" type="button" :disabled="updateBusy" @click="downloadUpdate"><Download :size="16" /><span>下载</span></button>
-                <button v-else-if="updateStatus.phase === 'downloaded'" class="primary-command" type="button" :disabled="updateBusy" @click="installUpdate"><PlayCircle :size="16" /><span>重启安装</span></button>
-                <button v-else class="secondary-command" type="button" :disabled="updateBusy || !updateStatus.feedConfigured || updateStatus.phase === 'checking' || updateStatus.phase === 'downloading'" @click="checkForUpdates"><RefreshCcw :size="16" /><span>检查</span></button>
+                <button class="secondary-command" type="button" :disabled="updateBusy || !updateStatus.feedConfigured" @click="checkForUpdates"><ExternalLink :size="16" /><span>打开 Releases</span></button>
               </div>
             </div>
-            <progress v-if="updateStatus.phase === 'downloading'" class="update-progress" max="100" :value="updateStatus.progressPercent ?? 0" />
           </div>
           <div class="settings-group">
             <h2>快捷键</h2>

@@ -2,6 +2,7 @@ export type UpdateChannel = "stable" | "beta";
 
 export type UpdatePhase =
   | "disabled"
+  | "manual"
   | "idle"
   | "checking"
   | "available"

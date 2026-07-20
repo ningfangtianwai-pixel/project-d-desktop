@@ -3,6 +3,11 @@
   "version": "0.2.0-beta.2",
   "description": "Project D Windows desktop organizer and ambient desktop shell.",
   "author": "Project D",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ningfangtianwai-pixel/project-d-desktop.git"
+  },
   "private": true,
   "os": [
     "win32"
@@ -35,18 +40,20 @@
     "qa:soak:24h": "pnpm build && node scripts/qa-soak.cjs --seconds 86400 --mode idle",
     "qa:crash-restart": "pnpm build && node scripts/qa-crash-restart.cjs",
     "qa:release-lifecycle": "node scripts/qa-release-lifecycle.cjs --mode fixture",
+    "qa:install-lifecycle": "node scripts/qa-release-lifecycle.cjs --mode fixture",
     "qa:packaged-smoke": "node scripts/qa-packaged-smoke.cjs",
     "qa:clean-desktop-escape": "node scripts/qa-clean-desktop-escape.cjs",
     "verify:packaged": "node scripts/verify-packaged-runtime.cjs",
     "verify:package-budget": "node scripts/verify-package-budget.cjs",
     "verify:release-ready": "node scripts/verify-release-readiness.cjs",
+    "verify:clean-checkout": "node scripts/verify-clean-checkout.cjs",
+    "generate:release-evidence": "node scripts/generate-build-evidence.cjs",
     "preview": "vite preview --host 127.0.0.1",
     "quality": "pnpm lint && pnpm verify:assets && pnpm test:coverage && pnpm test:component && pnpm typecheck && pnpm build && pnpm verify:supply-chain && pnpm qa:release-lifecycle",
     "quality:v4": "pnpm quality && pnpm test:e2e:built",
     "dist": "pnpm build && electron-builder"
   },
   "dependencies": {
-    "electron-updater": "^6.8.9",
     "sql.js": "^1.14.1"
   },
   "devDependencies": {

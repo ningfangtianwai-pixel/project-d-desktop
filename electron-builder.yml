@@ -13,11 +13,6 @@ files:
 asarUnpack:
   - node_modules/sql.js/dist/sql-wasm.wasm
 
-publish:
-  - provider: generic
-    url: https://updates.projectd.invalid/releases
-    channel: latest
-
 win:
   target:
     - target: nsis

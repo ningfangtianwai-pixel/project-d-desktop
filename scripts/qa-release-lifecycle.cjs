@@ -65,13 +65,23 @@ function executeFixture(checks) {
   writePayload(current, "1.0.0");
   fs.mkdirSync(userData, { recursive: true });
   fs.writeFileSync(path.join(userData, "settings.json"), JSON.stringify({ wallpaper: "keep-me" }), "utf8");
-  checks.freshInstall = readVersion(current) === "1.0.0" && fs.existsSync(path.join(userData, "settings.json"));
+  const databasePath = path.join(userData, "database.sqlite");
+  const databaseSentinel = Buffer.from("fixture-database-preserve-across-upgrade", "utf8");
+  fs.writeFileSync(databasePath, databaseSentinel);
+  const systemStatePath = path.join(fixtureRoot, "windows-system-state.json");
+  const originalSystemState = { hideIcons: 0, wallpaper: "C:\\Windows\\Web\\Wallpaper\\original.jpg" };
+  fs.writeFileSync(systemStatePath, JSON.stringify(originalSystemState), "utf8");
+  checks.freshInstall = readVersion(current) === "1.0.0"
+    && fs.existsSync(path.join(userData, "settings.json"))
+    && fs.readFileSync(databasePath).equals(databaseSentinel);
 
   writePayload(staged, "2.0.0");
   fs.renameSync(current, previous);
   fs.renameSync(staged, current);
   checks.overwriteUpgrade = readVersion(current) === "2.0.0"
-    && JSON.parse(fs.readFileSync(path.join(userData, "settings.json"), "utf8")).wallpaper === "keep-me";
+    && JSON.parse(fs.readFileSync(path.join(userData, "settings.json"), "utf8")).wallpaper === "keep-me"
+    && fs.readFileSync(databasePath).equals(databaseSentinel)
+    && JSON.stringify(JSON.parse(fs.readFileSync(systemStatePath, "utf8"))) === JSON.stringify(originalSystemState);
 
   const packageFixture = path.join(fixtureRoot, "update.pkg");
   fs.writeFileSync(packageFixture, "valid update payload", "utf8");
@@ -93,6 +103,17 @@ function executeFixture(checks) {
   fs.renameSync(previous, current);
   checks.rollbackRestoresPrevious = readVersion(current) === "1.0.0"
     && JSON.parse(fs.readFileSync(path.join(userData, "settings.json"), "utf8")).wallpaper === "keep-me";
+
+  const processMarker = path.join(installRoot, "projectd-process.marker");
+  fs.writeFileSync(processMarker, "simulated-running-process", "utf8");
+  fs.rmSync(processMarker, { force: true });
+  fs.rmSync(installRoot, { recursive: true, force: true });
+  checks.uninstallRemovesProgramFiles = !fs.existsSync(installRoot);
+  checks.uninstallPreservesUserSettings = fs.existsSync(path.join(userData, "settings.json"))
+    && fs.readFileSync(databasePath).equals(databaseSentinel);
+  checks.uninstallRestoresDesktopState = JSON.stringify(JSON.parse(fs.readFileSync(systemStatePath, "utf8")))
+    === JSON.stringify(originalSystemState);
+  checks.uninstallLeavesNoProcessMarker = !fs.existsSync(processMarker);
 }
 
 const startedAt = new Date().toISOString();
@@ -111,7 +132,11 @@ const checks = {
   overwriteUpgrade: mode === "dry-run" ? null : false,
   corruptPackageRejected: mode === "dry-run" ? null : false,
   offlinePreservesCurrent: mode === "dry-run" ? null : false,
-  rollbackRestoresPrevious: mode === "dry-run" ? null : false
+  rollbackRestoresPrevious: mode === "dry-run" ? null : false,
+  uninstallRemovesProgramFiles: mode === "dry-run" ? null : false,
+  uninstallPreservesUserSettings: mode === "dry-run" ? null : false,
+  uninstallRestoresDesktopState: mode === "dry-run" ? null : false,
+  uninstallLeavesNoProcessMarker: mode === "dry-run" ? null : false
 };
 
 if (mode === "fixture") executeFixture(checks);
@@ -122,7 +147,7 @@ const report = {
   schemaVersion: 1,
   kind: "release-install-upgrade-rollback-harness",
   mode,
-  safety: "No installer was executed; install, upgrade, corruption, offline, and rollback were exercised in an isolated fixture.",
+  safety: "No installer was executed; install, overwrite upgrade, corruption, offline, rollback, uninstall, user-data retention, desktop-state retention, and process cleanup were exercised in an isolated fixture.",
   startedAt,
   finishedAt: new Date().toISOString(),
   passed,

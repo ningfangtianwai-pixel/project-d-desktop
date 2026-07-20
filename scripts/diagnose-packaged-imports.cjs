@@ -14,7 +14,6 @@ function record(message, data) {
 }
 
 const modulePaths = [
-  "node_modules/electron-updater",
   "dist/main/database.js",
   "dist/main/desktop-controller.js",
   "dist/main/file-scanner.js",

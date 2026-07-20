@@ -8,6 +8,16 @@ const secondsArg = Number(process.argv[process.argv.indexOf("--seconds") + 1]);
 const durationSeconds = Number.isFinite(secondsArg) ? Math.max(30, Math.round(secondsArg)) : 120;
 const modeArg = process.argv[process.argv.indexOf("--mode") + 1];
 const mode = modeArg === "idle" ? "idle" : "stress";
+const requestedProfile = durationSeconds >= 86_400 && mode === "idle"
+  ? "idle-24h"
+  : durationSeconds >= 14_400
+    ? "interactive-4h"
+    : "preflight";
+const thresholds = requestedProfile === "idle-24h"
+  ? { completionRatio: 0.995, memorySlopeMiBPerMinute: 1, peakPrivateMiB: 1024, cpuMedianPercent: 1, cpuP95Percent: 3 }
+  : requestedProfile === "interactive-4h"
+    ? { completionRatio: 0.99, memorySlopeMiBPerMinute: 4, peakPrivateMiB: 1536, cpuMedianPercent: 15, cpuP95Percent: 30 }
+    : { completionRatio: 0.8, memorySlopeMiBPerMinute: 100, peakPrivateMiB: 1536, cpuMedianPercent: 1, cpuP95Percent: 3 };
 const runId = new Date().toISOString().replace(/[:.]/g, "-");
 const runDir = path.join(root, "artifacts", "qa", `soak-${runId}`);
 const userDataDir = path.join(runDir, "user-data");
@@ -59,6 +69,13 @@ function stopQaRun() {
   spawnSync("powershell.exe", ["-NoProfile", "-Command", script], { windowsHide: true, stdio: "ignore" });
 }
 
+function countQaProcesses() {
+  const escaped = qaToken.replace(/'/g, "''");
+  const script = `@((Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*${escaped}*' -and $_.Name -match '^(electron|Project D)\\.exe$' })).Count`;
+  const result = spawnSync("powershell.exe", ["-NoProfile", "-Command", script], { encoding: "utf8", windowsHide: true });
+  return result.status === 0 ? Number(result.stdout.trim()) : -1;
+}
+
 function toCsv(samples) {
   const header = "sampledAt,source,processId,cpuPercent,workingSetBytes,paused,profile";
   return [header, ...samples.map((sample) => [
@@ -100,6 +117,7 @@ function aggregateSamples(samples) {
   child.stderr.on("data", (chunk) => { stderr += chunk.toString(); });
 
   const startedAt = new Date().toISOString();
+  const startedAtMs = Date.now();
   let failure = null;
   try {
     await waitForReady(child);
@@ -121,8 +139,11 @@ function aggregateSamples(samples) {
   const runtimeMetrics = JSON.parse(readText(runtimeMetricsPath) || "{\"samples\":[]}");
   const samples = Array.isArray(runtimeMetrics.samples) ? runtimeMetrics.samples : [];
   const aggregate = aggregateSamples(samples);
-  const first = aggregate[0] ?? null;
-  const last = aggregate.at(-1) ?? null;
+  const warmupSeconds = requestedProfile === "idle-24h" ? 300 : requestedProfile === "interactive-4h" ? 120 : 10;
+  const stableAggregate = aggregate.filter((sample) => Date.parse(sample.sampledAt) >= startedAtMs + warmupSeconds * 1_000);
+  const trendSamples = stableAggregate.length >= 2 ? stableAggregate : aggregate;
+  const first = trendSamples[0] ?? null;
+  const last = trendSamples.at(-1) ?? null;
   const elapsedSeconds = first && last ? Math.max(1, (Date.parse(last.sampledAt) - Date.parse(first.sampledAt)) / 1_000) : 1;
   const memorySlopeMiBPerMinute = first && last
     ? ((last.workingSetBytes - first.workingSetBytes) / 1024 / 1024) / (elapsedSeconds / 60)
@@ -133,37 +154,57 @@ function aggregateSamples(samples) {
   const cpuMedianPercent = runtimeMetrics.cpuMedianPercent ?? null;
   const cpuP95Percent = runtimeMetrics.cpuP95Percent ?? null;
   const peakPrivateMiB = runtimeMetrics.peakWorkingSetBytes ? runtimeMetrics.peakWorkingSetBytes / 1024 / 1024 : null;
-  const memoryTrendEvidenceSufficient = aggregate.length >= 10;
+  const finishedAtMs = Date.now();
+  const actualDurationSeconds = Math.max(0, (finishedAtMs - startedAtMs) / 1_000);
+  const completionRatio = actualDurationSeconds / durationSeconds;
+  const isLongProfile = requestedProfile !== "preflight";
+  const memoryTrendEvidenceSufficient = isLongProfile
+    ? completionRatio >= thresholds.completionRatio && trendSamples.length >= 100
+    : trendSamples.length >= 10;
   const errorEntries = errorLog.split(/\r?\n/).filter((line) => line.includes('"level":"ERROR"')).length;
+  await delay(500);
+  const residualProcessCount = countQaProcesses();
   const checks = {
     processExitedCleanly: failure === null,
     coreReadyLogged: appLog.includes("core services ready"),
     shutdownCompleted: bootstrapLog.includes("shutdown completed"),
     noErrorLogEntries: errorEntries === 0,
-    memorySlopeWithinPreflightLimit: !memoryTrendEvidenceSufficient || memorySlopeMiBPerMinute === null || memorySlopeMiBPerMinute < 100,
-    peakPrivateMemoryWithinPreflightLimit: peakPrivateMiB === null || peakPrivateMiB < 1536,
+    requestedDurationCompleted: completionRatio >= thresholds.completionRatio,
+    memoryTrendEvidenceAvailable: !isLongProfile || memoryTrendEvidenceSufficient,
+    memorySlopeWithinLimit: !memoryTrendEvidenceSufficient || memorySlopeMiBPerMinute === null || memorySlopeMiBPerMinute <= thresholds.memorySlopeMiBPerMinute,
+    peakPrivateMemoryWithinLimit: peakPrivateMiB === null || peakPrivateMiB <= thresholds.peakPrivateMiB,
     noSafeRendererRelaunch: !bootstrapLog.includes("--projectd-safe-renderer"),
-    idleCpuMedianWithinCommercialTarget: mode !== "idle" || cpuMedianPercent === null || cpuMedianPercent <= 1,
-    idleCpuP95WithinCommercialTarget: mode !== "idle" || cpuP95Percent === null || cpuP95Percent <= 3
+    cpuMedianWithinProfileLimit: cpuMedianPercent === null || cpuMedianPercent <= thresholds.cpuMedianPercent,
+    cpuP95WithinProfileLimit: cpuP95Percent === null || cpuP95Percent <= thresholds.cpuP95Percent,
+    noResidualQaProcesses: residualProcessCount === 0
   };
   const passed = Object.values(checks).every(Boolean);
+  const claimEligible = passed && isLongProfile && memoryTrendEvidenceSufficient;
   const report = {
     schemaVersion: 1,
-    kind: "accelerated-soak-preflight",
+    kind: "projectd-soak-evidence",
     mode,
+    profile: requestedProfile,
     startedAt,
     finishedAt: new Date().toISOString(),
     requestedDurationSeconds: durationSeconds,
+    actualDurationSeconds,
+    completionRatio,
     sampleCount: samples.length,
     passed,
-    limitation: "This accelerated run is a preflight and does not replace the required 24-hour soak.",
+    claimEligible,
+    limitation: claimEligible
+      ? null
+      : "Short or incomplete runs are preflight evidence only and do not establish 4-hour/24-hour stability.",
+    thresholds,
     machine: {
       platform: os.platform(), release: os.release(), architecture: os.arch(),
       cpuModel: os.cpus()[0]?.model ?? "unknown", logicalCpuCount: os.cpus().length,
       totalMemoryBytes: os.totalmem()
     },
-    metrics: { cpuAveragePercent, cpuMedianPercent, cpuP95Percent, memorySlopeMiBPerMinute, peakPrivateMiB, memoryTrendEvidenceSufficient },
+    metrics: { cpuAveragePercent, cpuMedianPercent, cpuP95Percent, memorySlopeMiBPerMinute, peakPrivateMiB, memoryTrendEvidenceSufficient, warmupSeconds },
     checks,
+    residualProcessCount,
     errorEntries,
     failure,
     samples,

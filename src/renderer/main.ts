@@ -27,7 +27,7 @@ if (!window.projectD) {
   const updateListeners = new Set<(status: UpdateStatus) => void>();
   let mockDisplayWallpaperId: string | null = null;
   let mockUpdateStatus: UpdateStatus = {
-    phase: "disabled",
+    phase: "manual",
     channel: "stable",
     currentVersion: APP_VERSION,
     availableVersion: null,
@@ -35,9 +35,9 @@ if (!window.projectD) {
     transferredBytes: null,
     totalBytes: null,
     lastCheckedAt: null,
-    feedConfigured: false,
-    stagedRolloutSupported: true,
-    message: "浏览器预览未连接更新服务器"
+    feedConfigured: true,
+    stagedRolloutSupported: false,
+    message: "手动更新模式：在 GitHub Releases 查看新版本"
   };
   const now = () => new Date().toISOString();
   const mockSettings: SettingsSnapshot = {
@@ -476,8 +476,6 @@ if (!window.projectD) {
       return { ...mockUpdateStatus };
     },
     checkForUpdates: async () => ({ ...mockUpdateStatus }),
-    downloadUpdate: async () => ({ ...mockUpdateStatus }),
-    installDownloadedUpdate: async () => undefined,
     getRuntimeState: async () => ({
       paused: false,
       reasons: [],

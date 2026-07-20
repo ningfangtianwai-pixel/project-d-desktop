@@ -540,8 +540,6 @@ export interface ProjectDApi {
   getUpdateStatus: () => Promise<import("./update.js").UpdateStatus>;
   setUpdateChannel: (channel: import("./update.js").UpdateChannel) => Promise<import("./update.js").UpdateStatus>;
   checkForUpdates: () => Promise<import("./update.js").UpdateStatus>;
-  downloadUpdate: () => Promise<import("./update.js").UpdateStatus>;
-  installDownloadedUpdate: () => Promise<void>;
   getRuntimeState: () => Promise<RuntimePauseSnapshot>;
   setRuntimeManualPaused: (paused: boolean) => Promise<RuntimePauseSnapshot>;
   getRuntimeMetrics: () => Promise<RuntimeMetricsReport>;
