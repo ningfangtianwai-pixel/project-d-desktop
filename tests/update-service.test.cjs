@@ -197,3 +197,24 @@ test("a failed pending install is counted once across repeated launches", () => 
   const repeatedLaunch = createService({ values });
   assert.equal(repeatedLaunch.service.getStatus().recovery.failureCount, 1);
 });
+
+test("dispose removes every updater listener and is idempotent", () => {
+  const { service, updater } = createService();
+  const events = [
+    "checking-for-update",
+    "update-available",
+    "update-not-available",
+    "download-progress",
+    "update-downloaded",
+    "error"
+  ];
+
+  for (const event of events) assert.equal(updater.listenerCount(event), 1);
+
+  service.dispose();
+  service.dispose();
+
+  for (const event of events) assert.equal(updater.listenerCount(event), 0);
+  updater.emit("update-available", { version: "9.9.9" });
+  assert.equal(service.getStatus().phase, "idle");
+});

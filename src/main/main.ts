@@ -42,12 +42,13 @@ import { OperationsControlService } from "./operations/operations-control.js";
 import { OperationsTelemetryService } from "./operations/operations-telemetry.js";
 import { ShortcutManager } from "./shortcut-manager.js";
 import { ProjectTrayManager } from "./tray-manager.js";
+import { SystemEventManager } from "./system-event-manager.js";
 import { IPC_CHANNELS, MENU_COMMANDS, type MenuCommand } from "../shared/ipc.js";
 import { registerAllIpcHandlers, type ServiceDeps } from "./ipc/register-all.js";
 import { WALLPAPER_LIBRARY } from "../shared/wallpaper-library.js";
 import type { ActionExecution, DesktopStatus, FilePreviewData, InterruptedActionRecovery, PetWindowBounds, PrivacyNetworkState, RecoveryHealthCode, RecoverySystemStatus, SettingsPatch, SettingsSnapshot, SuggestionDeliveryControls, SuggestionPolicy, SuggestionRecord, SupportDiagnosticsReport, WallpaperDisplayInfo, WorkspaceSearchResult } from "../shared/types.js";
 import type { UpdateStatus } from "../shared/update.js";
-import type { PerformanceMode, RuntimePauseSnapshot, ThermalState } from "../shared/runtime.js";
+import type { PerformanceMode, RuntimePauseSnapshot } from "../shared/runtime.js";
 
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
 const SAFE_RENDERER_ARG = "--projectd-safe-renderer";
@@ -90,6 +91,7 @@ let suggestionEngine: SuggestionEngine | null = null;
 let runtimeRecovery: DesktopRuntimeRecovery | null = null;
 let explorerMonitor: ExplorerProcessMonitor | null = null;
 let updateService: UpdateService | null = null;
+let systemEventManager: SystemEventManager | null = null;
 let operationsControl: OperationsControlService | null = null;
 let operationsTelemetry: OperationsTelemetryService | null = null;
 let runtimePresenceTimer: NodeJS.Timeout | null = null;
@@ -1047,49 +1049,18 @@ function reconcileDesktopRuntimeBounds(reason: string): void {
 }
 
 function registerWallpaperRepairTriggers(): void {
-  const requestRendererProbe = (reason: string, delayMs: number) => {
-    setTimeout(() => {
-      void rendererResilience.probeAll(reason);
-    }, delayMs).unref?.();
-  };
-  screen.on("display-added", () => {
-    if (database?.getSettings().wallpaper.isDynamic) createWallpaperWindow();
-    runtimeRecovery?.request("display-added");
-    requestRendererProbe("display-added", 650);
+  systemEventManager ??= new SystemEventManager({
+    screen,
+    powerMonitor,
+    isDynamicWallpaperEnabled: () => database?.getSettings().wallpaper.isDynamic ?? false,
+    ensureWallpaperWindows: () => { createWallpaperWindow(); },
+    requestRecovery: (reason) => { runtimeRecovery?.request(reason); },
+    suspendRecovery: (reason) => { runtimeRecovery?.suspend(reason); },
+    resumeRecovery: (reason) => { runtimeRecovery?.resume(reason); },
+    updatePauseState: (patch) => { pauseArbiter.update(patch); },
+    probeRenderers: (reason) => rendererResilience.probeAll(reason)
   });
-  screen.on("display-removed", () => {
-    if (database?.getSettings().wallpaper.isDynamic) createWallpaperWindow();
-    runtimeRecovery?.request("display-removed");
-    requestRendererProbe("display-removed", 650);
-  });
-  screen.on("display-metrics-changed", () => {
-    if (database?.getSettings().wallpaper.isDynamic) createWallpaperWindow();
-    runtimeRecovery?.request("display-metrics-changed");
-    requestRendererProbe("display-metrics-changed", 650);
-  });
-  powerMonitor.on("suspend", () => {
-    pauseArbiter.update({ suspended: true });
-    runtimeRecovery?.suspend("system-suspend");
-  });
-  powerMonitor.on("resume", () => {
-    pauseArbiter.update({ suspended: false });
-    setTimeout(() => runtimeRecovery?.resume("system-resume"), 800).unref?.();
-    requestRendererProbe("system-resume", 1_800);
-  });
-  powerMonitor.on("lock-screen", () => {
-    pauseArbiter.update({ screenLocked: true });
-    runtimeRecovery?.suspend("screen-locked");
-  });
-  powerMonitor.on("unlock-screen", () => {
-    pauseArbiter.update({ screenLocked: false });
-    setTimeout(() => runtimeRecovery?.resume("screen-unlocked"), 350).unref?.();
-    requestRendererProbe("screen-unlocked", 900);
-  });
-  powerMonitor.on("on-battery", () => pauseArbiter.update({ onBattery: true }));
-  powerMonitor.on("on-ac", () => pauseArbiter.update({ onBattery: false }));
-  powerMonitor.on("thermal-state-change", (details) => {
-    pauseArbiter.update({ thermalState: details.state as ThermalState });
-  });
+  systemEventManager.start();
 }
 
 function syncWindowsFromSettings(settings: SettingsSnapshot): void {
@@ -2066,6 +2037,8 @@ async function resetAllUserData(): Promise<void> {
   try {
     portalWatcher?.stop();
     suggestionEngine?.disable();
+    systemEventManager?.dispose();
+    systemEventManager = null;
     wallpaperSupervisor?.stop();
     stopWallpaperRepairTimer();
     await desktopController?.deactivate();
@@ -2335,6 +2308,8 @@ async function shutdownSafely(): Promise<void> {
         fs.writeFileSync(qaMetricsPath, JSON.stringify(runtimeMetricsService.report(), null, 2), "utf8");
       }
       runtimeMetricsService = null;
+      systemEventManager?.dispose();
+      systemEventManager = null;
       runtimeRecovery?.stop();
       runtimeRecovery = null;
       explorerMonitor?.stop();

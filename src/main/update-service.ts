@@ -1,4 +1,4 @@
-import type { AppUpdater } from "electron-updater";
+import type { AppUpdater, UpdaterEvents } from "electron-updater";
 import type {
   UpdateChannel,
   UpdateOperation,
@@ -16,6 +16,8 @@ interface ProgressInfoLike {
   transferred: number;
   total: number;
 }
+
+type UpdaterEventListener = (...args: any[]) => void;
 
 interface UpdateStateStore {
   get: (key: string) => string | null;
@@ -78,6 +80,7 @@ export class UpdateService {
   private channel: UpdateChannel;
   private recovery: UpdateRecoveryState;
   private status: UpdateStatus;
+  private readonly updaterListenerDisposers: Array<() => void> = [];
 
   constructor(options: UpdateServiceOptions) {
     this.updater = options.updater;
@@ -211,6 +214,7 @@ export class UpdateService {
   dispose(): void {
     if (this.autoCheckTimer) clearTimeout(this.autoCheckTimer);
     this.autoCheckTimer = null;
+    for (const disposeListener of this.updaterListenerDisposers.splice(0)) disposeListener();
   }
 
   private configureUpdater(): void {
@@ -228,32 +232,37 @@ export class UpdateService {
   }
 
   private registerUpdaterEvents(): void {
-    this.updater.on("checking-for-update", () => {
+    this.registerUpdaterListener("checking-for-update", () => {
       this.updateStatus("checking", "正在检查更新", { lastCheckedAt: new Date().toISOString() });
     });
-    this.updater.on("update-available", (info: UpdateInfoLike) => {
+    this.registerUpdaterListener("update-available", (info: UpdateInfoLike) => {
       this.completeOperation();
       this.updateStatus("available", `发现新版本 ${info.version}`, { availableVersion: info.version });
     });
-    this.updater.on("update-not-available", () => {
+    this.registerUpdaterListener("update-not-available", () => {
       this.completeOperation(this.currentVersion);
       this.updateStatus("not-available", "当前已是最新版本", { availableVersion: null, progressPercent: null });
     });
-    this.updater.on("download-progress", (progress: ProgressInfoLike) => {
+    this.registerUpdaterListener("download-progress", (progress: ProgressInfoLike) => {
       this.updateStatus("downloading", `正在下载 ${Math.round(progress.percent)}%`, {
         progressPercent: Math.max(0, Math.min(100, progress.percent)),
         transferredBytes: progress.transferred,
         totalBytes: progress.total
       });
     });
-    this.updater.on("update-downloaded", (info: UpdateInfoLike) => {
+    this.registerUpdaterListener("update-downloaded", (info: UpdateInfoLike) => {
       this.completeOperation();
       this.updateStatus("downloaded", `版本 ${info.version} 已下载，等待安装`, {
         availableVersion: info.version,
         progressPercent: 100
       });
     });
-    this.updater.on("error", (error: Error) => this.handleError(error, this.activeOperation ?? "check"));
+    this.registerUpdaterListener("error", (error: Error) => this.handleError(error, this.activeOperation ?? "check"));
+  }
+
+  private registerUpdaterListener(event: UpdaterEvents, listener: UpdaterEventListener): void {
+    this.updater.on(event, listener);
+    this.updaterListenerDisposers.push(() => this.updater.off(event, listener));
   }
 
   private handleError(error: unknown, operation: UpdateOperation): void {
