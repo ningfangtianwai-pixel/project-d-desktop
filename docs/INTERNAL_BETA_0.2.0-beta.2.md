@@ -6,8 +6,8 @@
 - 分支：`codex/v4-free-release`
 - 平台：Windows x64，Electron 43.1.1
 - 安装包：`release/ProjectD-0.2.0-beta.2-Setup.exe`
-- 安装包大小：140,019,106 bytes（133.53 MiB）
-- SHA-256：`80E4A18C55AC5607EB6096F1AC214F3C262AED95646926CBDB10E6A3DB347E37`
+- 安装包大小与 SHA-256：以同次构建生成的 `release/BUILD_SUMMARY.json` 和 `release/SHA256SUMS.txt` 为准
+- 源码提交：以同次构建生成的 `release/COMMIT_SHA.txt` 为准
 - Authenticode：`NotSigned`
 
 ## 相比 0.2.0-beta.1

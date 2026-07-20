@@ -969,6 +969,6 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Complete `dist/main` + `dist/shared` inventory coverage passes at 73.27% lines, 75.17% branches, and 70.88% functions; all 11 high-risk module thresholds pass.
 - `pnpm quality:v4` passes: 184/184 Node tests, 2/2 component tests, 8/8 Electron E2E, type checks, production build, 480-component CycloneDX SBOM, zero dependency findings, and release lifecycle fixture QA.
 - Clean checkout acceptance passes from a detached tracked worktree with a fresh pnpm store, no local `.env`, no absolute workspace dependency, all tests, Electron E2E, and NSIS packaging.
-- Final installer is `release\ProjectD-0.2.0-beta.2-Setup.exe`, 140,019,106 bytes (133.53 MiB), SHA-256 `80E4A18C55AC5607EB6096F1AC214F3C262AED95646926CBDB10E6A3DB347E37`; `app.asar` is 53.27 MiB and 38/38 packaged modules load.
-- Generated `release\SHA256SUMS.txt`, `release\ProjectD-SBOM.cdx.json`, `release\COMMIT_SHA.txt`, and `release\BUILD_SUMMARY.json`; packaged smoke exits cleanly with no error-log entry.
+- Final installer is `release\ProjectD-0.2.0-beta.2-Setup.exe`; `app.asar` is 53.27 MiB and 38/38 packaged modules load.
+- Generated `release\SHA256SUMS.txt`, `release\ProjectD-SBOM.cdx.json`, `release\COMMIT_SHA.txt`, and `release\BUILD_SUMMARY.json`. These generated files are the authority for the final byte size, digest, and source commit; packaged smoke exits cleanly with no error-log entry.
 - MIT source license and free-release documentation skeletons are present. Public distribution remains blocked by draft legal text, 33 pending asset-evidence records, missing Authenticode signature, physical hardware/install matrix, and real 4-hour/24-hour soak evidence.

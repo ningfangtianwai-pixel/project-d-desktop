@@ -8,7 +8,7 @@ const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "projectd-clean-checkout-
 const checkout = path.join(tempRoot, "source");
 const store = path.join(tempRoot, "pnpm-store");
 const full = process.argv.includes("--full");
-const report = { schemaVersion: 1, generatedAt: new Date().toISOString(), full, checks: {}, passed: false };
+const report = { schemaVersion: 2, generatedAt: new Date().toISOString(), full, checks: {}, passed: false };
 
 function run(command, args, cwd = root) {
   const pnpmCli = command === "pnpm" ? process.env.npm_execpath : null;
@@ -40,7 +40,9 @@ try {
     run("pnpm", ["test:e2e:built"], checkout);
     run("pnpm", ["dist"], checkout);
   }
-  report.checks.noAbsoluteWorkspaceDependency = !scanFiles(checkout, ["package.json", "pnpm-lock.yaml", "electron-builder.yml"], root);
+  const trackedRuntimeFiles = listTrackedRuntimeFiles(checkout);
+  report.absoluteWorkspacePathFiles = scanFiles(checkout, trackedRuntimeFiles, [root, root.replaceAll("\\", "/")]);
+  report.checks.noAbsoluteWorkspaceDependency = report.absoluteWorkspacePathFiles.length === 0;
   report.checks.noLocalEnvDependency = !fs.existsSync(path.join(checkout, ".env"));
   report.passed = Object.values(report.checks).every(Boolean);
 } catch (error) {
@@ -57,9 +59,22 @@ fs.writeFileSync(output, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 console.log(JSON.stringify({ ...report, reportPath: output }, null, 2));
 process.exitCode = report.passed ? 0 : 1;
 
-function scanFiles(directory, files, forbidden) {
-  return files.some((file) => {
+function listTrackedRuntimeFiles(directory) {
+  const output = run("git", ["ls-files", "-z"], directory);
+  const runtimeExtensions = new Set([
+    ".cjs", ".css", ".html", ".js", ".json", ".mjs", ".ps1", ".scss",
+    ".sh", ".ts", ".tsx", ".vue", ".yaml", ".yml"
+  ]);
+  return output.split("\0").filter((file) => runtimeExtensions.has(path.extname(file).toLowerCase()));
+}
+
+function scanFiles(directory, files, forbiddenValues) {
+  return files.filter((file) => {
     const target = path.join(directory, file);
-    return fs.existsSync(target) && fs.readFileSync(target, "utf8").includes(forbidden);
+    if (!fs.existsSync(target)) return false;
+    const content = fs.readFileSync(target);
+    if (content.includes(0)) return false;
+    const text = content.toString("utf8");
+    return forbiddenValues.some((forbidden) => text.includes(forbidden));
   });
 }

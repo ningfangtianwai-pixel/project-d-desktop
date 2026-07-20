@@ -1396,6 +1396,6 @@
 - `pnpm quality:v4`: passed 184 Node tests, 2 component tests, 8 Electron E2E, type checks, build, SBOM, audit, and lifecycle QA.
 - `pnpm verify:clean-checkout -- --full`: passed from a detached checkout with a fresh pnpm store, then a shell-free quick replay also passed.
 - `pnpm dist`, package budget, 38/38 runtime import verification, packaged smoke, and release evidence generation passed.
-- Final package: 140,019,106 bytes; SHA-256 `80E4A18C55AC5607EB6096F1AC214F3C262AED95646926CBDB10E6A3DB347E37`; Authenticode remains `NotSigned`.
+- Final package metadata is generated after the source commit into `release/SHA256SUMS.txt`, `release/COMMIT_SHA.txt`, and `release/BUILD_SUMMARY.json`, avoiding a stale commit or digest in tracked documentation; Authenticode remains `NotSigned`.
 - `pnpm verify:release-ready` correctly passes the MIT/manual-update/document/package checks and blocks draft legal text, 33 pending asset records, and missing Authenticode signing.
 - Final machine state: no Project D process and Explorer `HideIcons=0`.
