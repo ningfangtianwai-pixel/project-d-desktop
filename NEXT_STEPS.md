@@ -188,3 +188,11 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 3. Replace each of the four new single-pose cutouts with licensed transparent idle, happy, thinking, sleeping, and action frames when final artwork is available.
 4. Run the 100/125/150/200 percent DPI, display hot-plug, Windows 10/11, sleep/wake, four-hour, and 24-hour acceptance matrices.
 5. Approve or replace all 37 `pending-evidence` asset records before public distribution, then sign the installer with Authenticode.
+
+## After Stage 49
+
+1. Export approved transparent idle/walk/happy/thinking/sleeping and outfit frames for the four non-Luna character sheets. The runtime/action system is ready; true garment replacement remains an artwork task.
+2. Repeat clean-desktop taskbar/icon restoration on Windows 10 and a second Windows 11 machine, including forced termination, Explorer restart, sleep/wake, and a non-default exit shortcut.
+3. Run physical dual-display tests with a negative-origin monitor, mixed DPI, portrait orientation, hot-plug, and cross-display pet dragging.
+4. Evaluate organizer density with a real desktop containing 100+ mixed items at 100/125/150/200 percent scaling and tune only from captured evidence.
+5. Complete the 4-hour/24-hour soak and asset-license/signing gates before public distribution.

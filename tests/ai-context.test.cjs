@@ -43,15 +43,16 @@ test("AI provider receives the latest conversation before the current message", 
     global.fetch = originalFetch;
   }
 
-  assert.deepEqual(
-    requestBody.messages.map(({ role, content }) => ({ role, content })),
-    [
-      { role: "system", content: "你是 Project D 桌宠助手。回答要简短、具体、偏桌面整理和陪伴。语气温柔、耐心，先接住用户情绪再给建议。当前天气粒子: clear。" },
-      { role: "user", content: "我叫小满" },
-      { role: "assistant", content: "记住了，你叫小满。" },
-      { role: "user", content: "我叫什么？" }
-    ]
-  );
+  assert.deepEqual(requestBody.messages.slice(1), [
+    { role: "user", content: "我叫小满" },
+    { role: "assistant", content: "记住了，你叫小满。" },
+    { role: "user", content: "我叫什么？" }
+  ]);
+  assert.equal(requestBody.messages[0].role, "system");
+  assert.match(requestBody.messages[0].content, /始终保持这一人格/);
+  assert.match(requestBody.messages[0].content, /最多三步/);
+  assert.match(requestBody.messages[0].content, /不要声称已经替用户执行/);
+  assert.match(requestBody.messages[0].content, /当前天气粒子: clear/);
 });
 
 test("AI connection test reaches the configured provider without writing chat history", async () => {

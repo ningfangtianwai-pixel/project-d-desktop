@@ -17,6 +17,8 @@ test("pet action interval and AI voice honor the selected settings", () => {
   assert.equal(petActionIntervalMs(5000), 3_600_000);
   assert.match(petPersonalityInstruction("cold"), /冷静简洁/);
   assert.match(petPersonalityInstruction("gentle"), /温柔/);
+  assert.match(petPersonalityInstruction("humorous"), /最多三步/);
+  assert.match(petPersonalityInstruction("humorous"), /不要声称已经替用户执行/);
 });
 
 test("pet personalities produce visibly different voices", () => {

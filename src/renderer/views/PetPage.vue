@@ -23,6 +23,11 @@ type PetAction =
   | "sitting"
   | "sleepy"
   | "sleeping"
+  | "walking"
+  | "dancing"
+  | "stretching"
+  | "looking"
+  | "surprised"
   | "rain"
   | "winter"
   | "summer";
@@ -73,6 +78,31 @@ const petStates: Record<PetAction, PetState> = {
     label: "Luna 睡觉",
     bubble: "晚安，桌面交给我守着。"
   },
+  walking: {
+    image: petAsset("idle.png"),
+    label: "Luna 散步",
+    bubble: "我去桌面另一边看看。"
+  },
+  dancing: {
+    image: petAsset("waving.png"),
+    label: "Luna 跳舞",
+    bubble: "这一小步值得庆祝。"
+  },
+  stretching: {
+    image: petAsset("sitting.png"),
+    label: "Luna 伸懒腰",
+    bubble: "坐久了，和我一起活动一下。"
+  },
+  looking: {
+    image: petAsset("idle.png"),
+    label: "Luna 张望",
+    bubble: "我在看看桌面有没有新变化。"
+  },
+  surprised: {
+    image: petAsset("waving.png"),
+    label: "Luna 惊喜",
+    bubble: "咦，有新发现。"
+  },
   rain: {
     image: petAsset("raincoat.png"),
     label: "Luna 雨天",
@@ -106,13 +136,24 @@ let removeSuggestionListener: (() => void) | null = null;
 let acceptingSuggestions = false;
 const announcedSuggestionIds = new Set<string>();
 
-const actions: PetAction[] = ["idle", "happy", "cheerful", "thinking", "sitting", "sleepy"];
+const actions: PetAction[] = [
+  "idle", "happy", "cheerful", "thinking", "sitting", "walking",
+  "dancing", "stretching", "looking", "surprised", "sleepy"
+];
 const currentState = computed(() => petStates[action.value]);
 const currentCharacter = computed(() => getPetCharacter(characterId.value));
 const currentCharacterImage = computed(() => currentCharacter.value.renderMode === "sprite-pack"
   ? currentState.value.image
   : `${import.meta.env.BASE_URL}${currentCharacter.value.asset}`);
 const currentCharacterLabel = computed(() => `${currentCharacter.value.name} · ${currentState.value.label}`);
+const visibleOutfit = computed(() => {
+  if (!autoOutfit.value) return currentOutfit.value;
+  if (action.value === "rain") return "raincoat";
+  if (action.value === "winter") return "winter";
+  if (action.value === "summer") return "summer";
+  if (action.value === "sleepy" || action.value === "sleeping") return "pajamas";
+  return "default";
+});
 const characterSheetStyle = computed(() => ({
   "--pet-focus-x": `${currentCharacter.value.focusX}%`,
   "--pet-focus-y": `${currentCharacter.value.focusY}%`
@@ -370,7 +411,7 @@ async function startRoam(): Promise<void> {
   const steps = Math.floor(Math.random() * 12) + 16;
   const stepX = direction * (Math.floor(Math.random() * 4) + 3);
   let currentStep = 0;
-  action.value = Math.random() > 0.35 ? "cheerful" : "happy";
+  action.value = "walking";
 
   roamStepTimer = window.setInterval(() => {
     currentStep += 1;
@@ -469,6 +510,8 @@ function stopDrag(): void {
       class="pet-shell"
       :class="{ dragging }"
       :data-action="action"
+      :data-outfit="visibleOutfit"
+      :data-render-mode="currentCharacter.renderMode"
       type="button"
       title="Project D · 双击打开主界面"
       @pointerdown="startDrag"
@@ -484,6 +527,7 @@ function stopDrag(): void {
       <span class="pet-stage" :style="petStageStyle">
         <span class="pet-shadow"></span>
         <span class="pet-emote" aria-hidden="true"></span>
+        <span class="pet-outfit-accessory" aria-hidden="true"></span>
         <img
           v-if="!spriteFailed"
           class="pet-sprite"

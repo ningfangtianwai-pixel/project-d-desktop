@@ -1007,3 +1007,14 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - The supplied key is stored only through Electron `safeStorage` in the local user database and is absent from source, documentation, logs, and Git.
 - Real verification succeeded against `deepseek-v4-flash`. The reusable verifier now reads the encrypted key in Electron and does not require it on the command line.
 - Verification passes: lint, all TypeScript targets, 191/191 Node tests, production build, UI QA, 38 packaged modules, and packaged clean startup/shutdown.
+
+## Stage 49 - Desktop, Pet, And Clean Mode Refinement (Complete)
+
+- Organizer containers now use the live primary-display work area, responsive column counts, smaller minimum widths, and substantially clearer wallpaper transmission.
+- Folder entries render as recognizable folders; double-click opens the real filesystem path and reports Windows shell failures in the organizer instead of failing silently.
+- Pet behavior now includes walking, dancing, stretching, looking, and surprised actions for every selectable character. All five supplied characters load; Luna Q retains its full action/outfit pack, while the four single-cutout characters receive lightweight universal accessories and motion.
+- AI personality prompts now preserve the selected persona, provide at most three actionable troubleshooting steps, ask only one essential clarification, and prohibit claims about actions the app did not execute.
+- Pet dragging and roaming are clamped to the union of all connected display bounds, so negative-origin and external displays are reachable.
+- Clean desktop now hides and verifies the Windows taskbar, keeps the display awake with Electron `powerSaveBlocker`, supports Escape/F12/Ctrl+Shift+Q as a saved exit shortcut, and restores taskbar/icons through normal exit, shutdown, and watchdog recovery.
+- Verification passes: lint; 198/198 Node tests; 2/2 component tests; 10/10 Electron E2E; all TypeScript targets; production build; UI regression QA. Final machine state has the taskbar visible, 63 desktop icon objects visible, and zero Project D processes.
+- Remaining artwork boundary: the four non-Luna source sheets still need approved transparent multi-outfit/action exports for true clothing replacement. CSS accessories are intentionally not recorded as final character artwork.

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, globalShortcut, Menu, powerMonitor, screen, shell } from "electron";
+import { app, BrowserWindow, dialog, globalShortcut, Menu, powerMonitor, powerSaveBlocker, screen, shell } from "electron";
 import type { IpcMainInvokeEvent, OpenDialogOptions } from "electron";
 import fs from "node:fs";
 import path from "node:path";
@@ -43,6 +43,7 @@ import { OperationsTelemetryService } from "./operations/operations-telemetry.js
 import { ShortcutManager } from "./shortcut-manager.js";
 import { ProjectTrayManager } from "./tray-manager.js";
 import { SystemEventManager } from "./system-event-manager.js";
+import { setWindowsTaskbarVisible } from "./windows-taskbar.js";
 import { IPC_CHANNELS, MENU_COMMANDS, type MenuCommand } from "../shared/ipc.js";
 import { registerAllIpcHandlers, type ServiceDeps } from "./ipc/register-all.js";
 import { WALLPAPER_LIBRARY } from "../shared/wallpaper-library.js";
@@ -106,6 +107,7 @@ let shutdownInProgress = false;
 let rendererRestartScheduled = false;
 let onboardingActive = false;
 let cleanDesktopExitPromise: Promise<DesktopStatus> | null = null;
+let cleanDesktopPowerBlockerId: number | null = null;
 const fileIconCache = new Map<string, string | null>();
 const diagnosticsService = new DiagnosticsService();
 const systemPresenceMonitor = new SystemPresenceMonitor(undefined, 1_800);
@@ -775,12 +777,19 @@ async function verifyVisibleWallpaperFrame(window: BrowserWindow, timeoutMs = 2_
 
 function defaultPetBounds(): PetWindowBounds {
   const display = screen.getPrimaryDisplay();
-  return defaultPetWindowForWorkArea(display.workArea);
+  return defaultPetWindowForWorkArea(display.bounds);
 }
 
 function normalizePetBounds(bounds: PetWindowBounds): PetWindowBounds {
-  const display = screen.getDisplayMatching(bounds);
-  return fitPetWindowToWorkArea(bounds, display.workArea);
+  const displays = screen.getAllDisplays();
+  const firstDisplay = displays[0] ?? screen.getPrimaryDisplay();
+  const virtualBounds = displays.reduce((area, display) => ({
+    x: Math.min(area.x, display.bounds.x),
+    y: Math.min(area.y, display.bounds.y),
+    width: Math.max(area.x + area.width, display.bounds.x + display.bounds.width) - Math.min(area.x, display.bounds.x),
+    height: Math.max(area.y + area.height, display.bounds.y + display.bounds.height) - Math.min(area.y, display.bounds.y)
+  }), { ...firstDisplay.bounds });
+  return fitPetWindowToWorkArea(bounds, virtualBounds);
 }
 
 function readPetBounds(): PetWindowBounds {
@@ -1034,11 +1043,8 @@ function reconcileDesktopRuntimeBounds(reason: string): void {
   }
   if (petWindow && !petWindow.isDestroyed()) {
     const current = petWindow.getBounds();
-    const display = screen.getDisplayMatching(current);
-    const x = Math.min(Math.max(current.x, display.workArea.x), display.workArea.x + display.workArea.width - current.width);
-    const y = Math.min(Math.max(current.y, display.workArea.y), display.workArea.y + display.workArea.height - current.height);
-    if (x !== current.x || y !== current.y) {
-      const next = { ...current, x, y };
+    const next = normalizePetBounds(current);
+    if (next.x !== current.x || next.y !== current.y || next.width !== current.width || next.height !== current.height) {
       petWindow.setBounds(next, false);
       savePetBounds(next);
     }
@@ -1173,6 +1179,8 @@ async function emergencyRestoreDesktop(reason: string): Promise<void> {
   closeOverlayWindow();
   closeWallpaperWindow();
   database?.setAppState("clean_desktop_mode", "false");
+  stopCleanDesktopPowerBlocker();
+  await restoreTaskbar(`emergency:${reason}`);
   try {
     desktopStatus = (await desktopController?.deactivate()) ?? updateDesktopStatus("idle");
   } catch (error) {
@@ -1183,6 +1191,43 @@ async function emergencyRestoreDesktop(reason: string): Promise<void> {
   }
   showMainWindow();
   sendMenuCommand(MENU_COMMANDS.DEACTIVATE_DESKTOP);
+}
+
+function cleanDesktopExitShortcut(): string {
+  const saved = database?.getAppState("clean_desktop_exit_shortcut") ?? "Escape";
+  return ["Escape", "F12", "Control+Shift+Q"].includes(saved) ? saved : "Escape";
+}
+
+function startCleanDesktopPowerBlocker(): void {
+  if (cleanDesktopPowerBlockerId !== null && powerSaveBlocker.isStarted(cleanDesktopPowerBlockerId)) return;
+  cleanDesktopPowerBlockerId = powerSaveBlocker.start("prevent-display-sleep");
+  logger?.info("desktop-state", "clean desktop display sleep blocker started", {
+    blockerId: cleanDesktopPowerBlockerId
+  });
+}
+
+function stopCleanDesktopPowerBlocker(): void {
+  if (cleanDesktopPowerBlockerId === null) return;
+  if (powerSaveBlocker.isStarted(cleanDesktopPowerBlockerId)) {
+    powerSaveBlocker.stop(cleanDesktopPowerBlockerId);
+  }
+  logger?.info("desktop-state", "clean desktop display sleep blocker stopped", {
+    blockerId: cleanDesktopPowerBlockerId
+  });
+  cleanDesktopPowerBlockerId = null;
+}
+
+async function restoreTaskbar(reason: string): Promise<void> {
+  if (process.platform !== "win32") return;
+  try {
+    const state = await setWindowsTaskbarVisible(true);
+    logger?.info("desktop-state", "Windows taskbar restored", { reason, ...state });
+  } catch (error) {
+    logger?.error("desktop-state", "Windows taskbar restore failed", {
+      reason,
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }
 }
 
 async function enterCleanDesktop(): Promise<DesktopStatus> {
@@ -1200,17 +1245,34 @@ async function enterCleanDesktop(): Promise<DesktopStatus> {
     };
   }
   createWallpaperWindow();
+  try {
+    const taskbarState = await setWindowsTaskbarVisible(false);
+    logger?.info("desktop-state", "Windows taskbar hidden for clean desktop", taskbarState);
+  } catch (error) {
+    desktopStatus = (await desktopController?.deactivate()) ?? updateDesktopStatus("idle");
+    closeWallpaperWindow();
+    mainWindow?.show();
+    logger?.error("desktop-state", "clean desktop rejected because taskbar could not be hidden", {
+      message: error instanceof Error ? error.message : String(error)
+    });
+    return {
+      ...desktopStatus,
+      message: "未进入纯净桌面：任务栏隐藏失败，系统桌面已恢复。"
+    };
+  }
+  startCleanDesktopPowerBlocker();
   closeOverlayWindow();
   mainWindow?.hide();
   database?.setAppState("clean_desktop_mode", "true");
-  const escapeReady = cleanDesktopEscapeGuard.arm();
+  const exitShortcut = cleanDesktopExitShortcut();
+  const escapeReady = cleanDesktopEscapeGuard.arm(exitShortcut);
   desktopStatus = {
     ...desktopStatus,
     message: escapeReady
-      ? "纯净桌面已开启：按 Esc 随时恢复桌面图标。"
-      : "纯净桌面已开启：Esc 注册冲突，请从托盘选择“恢复桌面”。"
+      ? `纯净桌面已开启：按 ${exitShortcut} 恢复桌面。`
+      : `纯净桌面已开启：${exitShortcut} 注册冲突，请从托盘选择“恢复桌面”。`
   };
-  logger?.[escapeReady ? "info" : "warn"]("desktop-state", "clean desktop mode entered", { escapeReady });
+  logger?.[escapeReady ? "info" : "warn"]("desktop-state", "clean desktop mode entered", { escapeReady, exitShortcut });
   sendMenuCommand(MENU_COMMANDS.ACTIVATE_DESKTOP);
   return desktopStatus;
 }
@@ -1219,13 +1281,18 @@ function exitCleanDesktop(reason = "user-action"): Promise<DesktopStatus> {
   if (cleanDesktopExitPromise) return cleanDesktopExitPromise;
   cleanDesktopEscapeGuard.disarm();
   const operation = (async () => {
-    desktopStatus = (await desktopController?.deactivate()) ?? updateDesktopStatus("idle");
-    database?.setAppState("clean_desktop_mode", "false");
-    mainWindow?.show();
-    showMainWindow();
-    logger?.info("desktop-state", "clean desktop mode exited", { reason });
-    sendMenuCommand(MENU_COMMANDS.DEACTIVATE_DESKTOP);
-    return desktopStatus;
+    try {
+      await restoreTaskbar(`exit:${reason}`);
+      desktopStatus = (await desktopController?.deactivate()) ?? updateDesktopStatus("idle");
+      database?.setAppState("clean_desktop_mode", "false");
+      mainWindow?.show();
+      showMainWindow();
+      logger?.info("desktop-state", "clean desktop mode exited", { reason });
+      sendMenuCommand(MENU_COMMANDS.DEACTIVATE_DESKTOP);
+      return desktopStatus;
+    } finally {
+      stopCleanDesktopPowerBlocker();
+    }
   })();
   const tracked = operation.finally(() => {
     if (cleanDesktopExitPromise === tracked) cleanDesktopExitPromise = null;
@@ -1838,6 +1905,7 @@ function buildIpcDeps(): ServiceDeps {
       getDesktopController: () => desktopController,
       getFileScanner: () => fileScanner,
       getDatabase: () => database,
+      getDesktopWorkArea: () => screen.getPrimaryDisplay().workArea,
       getContainersWithIcons: containersWithNativeIcons,
       readFilePreview: readFilePreviewImpl,
       updateDesktopStatus,
@@ -2056,6 +2124,8 @@ async function resetAllUserData(): Promise<void> {
   const marker = path.join(app.getPath("userData"), "reset-requested.json");
   let resetCommitted = false;
   try {
+    stopCleanDesktopPowerBlocker();
+    await restoreTaskbar("data-reset");
     await desktopController?.deactivate();
     fs.writeFileSync(marker, JSON.stringify({ requestedAt: new Date().toISOString(), version: 1 }), "utf8");
     resetCommitted = true;
@@ -2197,6 +2267,7 @@ async function initializeCoreServices(): Promise<void> {
   desktopController = new DesktopController(database, logger);
   desktopController.initialize();
   desktopStatus = await desktopController.bootRecoveryCheck();
+  await restoreTaskbar("application-boot");
   fileScanner = new FileScanner(database, logger);
   actionEngine = new ActionEngine(database, logger, app.getPath("desktop"));
   sceneService = new SceneService(database, { getDisplays: runtimeDisplays });
@@ -2313,6 +2384,8 @@ async function shutdownSafely(): Promise<void> {
   try {
     const result = await runWithDeadline(async () => {
       cleanDesktopEscapeGuard.disarm();
+      stopCleanDesktopPowerBlocker();
+      await restoreTaskbar("application-shutdown");
       try {
         const currentMode = desktopController?.getStatus().mode ?? desktopStatus.mode;
         if (desktopController) {

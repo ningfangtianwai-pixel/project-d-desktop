@@ -10,7 +10,8 @@ test("settings validator accepts the bounded settings-page payload", () => {
       auto_activate_on_start: "true",
       launch_at_login: "true",
       cover_all_displays: "true",
-      performance_mode: "balanced"
+      performance_mode: "balanced",
+      clean_desktop_exit_shortcut: "F12"
     }
   };
   assert.deepEqual(validateSettingsPatch(patch), patch);
@@ -19,6 +20,7 @@ test("settings validator accepts the bounded settings-page payload", () => {
 test("settings validator rejects unknown and restricted state fields", () => {
   assert.throws(() => validateSettingsPatch({ internal: { arbitrary: true } }), /Unknown settings section/);
   assert.throws(() => validateSettingsPatch({ appState: { desktop_state: "active" } }), /Restricted appState key/);
+  assert.throws(() => validateSettingsPatch({ appState: { clean_desktop_exit_shortcut: "Alt+F4" } }), /Invalid clean desktop exit shortcut/);
 });
 
 test("settings validator rejects unsafe endpoints and out-of-range values", () => {

@@ -138,7 +138,19 @@ function scheduleStatusMessage(): void {
 }
 async function scan(): Promise<void> { scanResult.value = await window.projectD.scanDesktop(); await refresh(); }
 async function deactivate(): Promise<void> { status.value = await window.projectD.deactivateDesktop(); }
-async function openFile(fileId: number): Promise<void> { contextMenu.value = null; await window.projectD.openFile(fileId); }
+async function openFile(fileId: number): Promise<void> {
+  contextMenu.value = null;
+  try {
+    await window.projectD.openFile(fileId);
+  } catch (error) {
+    status.value = {
+      mode: status.value?.mode ?? "active",
+      lastChangedAt: new Date().toISOString(),
+      message: error instanceof Error ? error.message : String(error)
+    };
+    scheduleStatusMessage();
+  }
+}
 async function openFileLocation(fileId: number): Promise<void> { contextMenu.value = null; await window.projectD.openFileLocation(fileId); }
 async function moveFileToContainer(fileId: number, containerId: number): Promise<void> {
   await window.projectD.moveFileToContainer(fileId, containerId);
@@ -209,8 +221,11 @@ function resourceKindLabel(resource: PortalResource): string {
   return extension || resource.category;
 }
 function zoneStyle(container: ContainerWithFiles, index: number): Record<string, string> {
-  const fallbackLeft = 32 + (index % 4) * 324;
-  const fallbackTop = 96 + Math.floor(index / 4) * 330;
+  const fallbackColumns = window.innerWidth >= 1680 ? 4 : window.innerWidth >= 1180 ? 3 : 2;
+  const fallbackGap = 16;
+  const fallbackWidth = Math.floor((window.innerWidth - 48 - fallbackGap * (fallbackColumns - 1)) / fallbackColumns);
+  const fallbackLeft = 24 + (index % fallbackColumns) * (fallbackWidth + fallbackGap);
+  const fallbackTop = 96 + Math.floor(index / fallbackColumns) * 316;
   const hasStoredPosition = container.positionX > 0 || container.positionY > 0;
   const left = Math.max(12, hasStoredPosition ? container.positionX : fallbackLeft);
   const top = Math.max(76, hasStoredPosition ? container.positionY : fallbackTop);
@@ -708,7 +723,8 @@ onUnmounted(() => {
             @dragstart="startFileDrag($event, file)" @dragend="endFileDrag"
             @contextmenu.stop="showFileMenu($event, file)">
             <span class="desktop-icon-art" :data-kind="file.category">
-              <img v-if="file.iconDataUrl" class="desktop-native-icon" :src="file.iconDataUrl" :alt="fileKindLabel(file)" />
+              <Folder v-if="file.category === 'folder'" class="desktop-folder-icon" :size="38" :stroke-width="1.45" />
+              <img v-else-if="file.iconDataUrl" class="desktop-native-icon" :src="file.iconDataUrl" :alt="fileKindLabel(file)" />
               <component v-else :is="fileIcon(file)" :size="36" :stroke-width="1.75" />
             </span>
             <span class="desktop-icon-name">{{ file.displayName || file.filename }}</span>

@@ -93,19 +93,33 @@ async function run() {
     await personalityButtons.nth(6).click();
     const personalityPreview = await page.locator(".personality-preview strong").textContent();
     await page.locator(".settings-commandbar .primary-command").click();
+    await page.waitForFunction(() => Array.from(globalThis.document.querySelectorAll(".pet-character-grid img"))
+      .every((image) => image.complete && image.naturalWidth > 0), undefined, { timeout: 15_000 });
     const unloadedCharacterImages = await page.locator(".pet-character-grid img").evaluateAll((images) =>
       images.filter((image) => !image.complete || image.naturalWidth === 0).length
     );
     await page.screenshot({ path: path.join(output, "settings-pets-personality.png"), fullPage: true });
 
+    await page.evaluate(async () => {
+      await globalThis.window.projectD.updateSettings({
+        pet: { autoOutfit: false, currentOutfit: "winter" }
+      });
+    });
     await page.setViewportSize({ width: 300, height: 310 });
     await page.evaluate(() => { globalThis.location.hash = "#/pet"; });
     const petSprite = page.locator(".pet-sprite");
     await petSprite.waitFor();
+    const petShell = page.locator(".pet-shell");
+    await petShell.waitFor();
     const petCutoutLoaded = await petSprite.evaluate((image) =>
       image.classList.contains("pet-character-cutout")
       && image.complete
       && image.naturalWidth > 0
+    );
+    const petOutfit = await petShell.getAttribute("data-outfit");
+    const outfitAccessoryVisible = await page.locator(".pet-outfit-accessory").evaluate((element) =>
+      globalThis.getComputedStyle(element).display !== "none"
+      && globalThis.getComputedStyle(element).visibility !== "hidden"
     );
     await page.screenshot({ path: path.join(output, "pet-cutout.png"), fullPage: true });
 
@@ -117,7 +131,9 @@ async function run() {
       characterCount,
       unloadedCharacterImages,
       personalityPreview,
-      petCutoutLoaded
+      petCutoutLoaded,
+      petOutfit,
+      outfitAccessoryVisible
     };
     const passed = mainWallpaperVisible
       && chatMessageCount === 14
@@ -127,7 +143,9 @@ async function run() {
       && characterCount === 5
       && unloadedCharacterImages === 0
       && Boolean(personalityPreview?.trim())
-      && petCutoutLoaded;
+      && petCutoutLoaded
+      && petOutfit === "winter"
+      && outfitAccessoryVisible;
     const report = { generatedAt: new Date().toISOString(), passed, checks };
     fs.writeFileSync(path.join(output, "report.json"), `${JSON.stringify(report, null, 2)}\n`, "utf8");
     console.log(JSON.stringify({ ...report, reportPath: path.join(output, "report.json") }, null, 2));

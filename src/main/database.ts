@@ -809,20 +809,20 @@ export class DatabaseService {
     }
 
     const requestedColumns = Math.max(1, Math.min(8, Number(layout.columns)));
-    const gap = requestedColumns >= 6 ? 14 : 18;
+    const gap = requestedColumns >= 6 ? 12 : 16;
     const left = 24;
-    const top = 88;
+    const top = 96;
     const bottom = 24;
-    const maxColumns = Math.max(1, Math.floor((workAreaWidth - left * 2 + gap) / (180 + gap)));
+    const maxColumns = Math.max(1, Math.floor((workAreaWidth - left * 2 + gap) / (220 + gap)));
     const columns = Math.min(requestedColumns, maxColumns);
     const containerWidth = Math.max(
-      180,
-      Math.min(420, Math.floor((workAreaWidth - left * 2 - gap * (columns - 1)) / columns))
+      220,
+      Math.min(540, Math.floor((workAreaWidth - left * 2 - gap * (columns - 1)) / columns))
     );
     const containers = this.selectRows("SELECT id FROM containers WHERE is_visible = 1 ORDER BY sort_order ASC");
     const rows = Math.max(1, Math.ceil(containers.length / columns));
     const availableHeight = workAreaHeight - top - bottom - gap * (rows - 1);
-    const containerHeight = Math.max(180, Math.min(420, Math.floor(availableHeight / rows)));
+    const containerHeight = Math.max(190, Math.min(460, Math.floor(availableHeight / rows)));
 
     db.run("BEGIN TRANSACTION");
     try {
@@ -1213,6 +1213,7 @@ export class DatabaseService {
       this.seedState("desktop_state", "idle");
       this.seedState("is_active", "false");
       this.seedState("current_layout_id", "1");
+      this.seedState("clean_desktop_exit_shortcut", "Escape");
       this.seedState("install_date", new Date().toISOString());
 
       db.run("COMMIT");

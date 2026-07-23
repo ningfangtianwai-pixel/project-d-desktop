@@ -1435,3 +1435,21 @@
 - Reworked `pnpm verify:ai` to decrypt the stored credential only in the Electron main process, removing the need to repeat a key in the verifier environment.
 - `pnpm lint`, `pnpm typecheck`, `pnpm test` (191/191), `pnpm build`, and UI QA passed.
 - Rebuilt `release/win-unpacked`, loaded 38/38 packaged modules, and passed packaged smoke with clean shutdown and no error-log entries.
+
+## 2026-07-23 Stage 49 Desktop, Pet, And Clean Mode Refinement
+
+- Reworked layout application to use the current primary-display work area and responsive organizer geometry.
+- Increased wallpaper transmission through the organizer glass, added real folder glyphs, and surfaced `shell.openPath` failures to the user.
+- Added five ambient pet actions, universal cutout accessories, manual outfit selection, stronger persona constraints, and virtual-desktop bounds for pet movement.
+- Replaced the requested periodic fake keypress with Electron `powerSaveBlocker("prevent-display-sleep")`; no synthetic keyboard input is generated.
+- Added verified Windows taskbar hide/restore, configurable clean-desktop exit shortcuts, shutdown recovery, and watchdog recovery alongside the existing Explorer icon restoration.
+- The first full E2E run exposed a test-only race where Playwright selected the wallpaper host as the main window. The shared launcher now identifies `.app-shell`; the real clean-desktop test then passed.
+- The first full Node run had one obsolete exact prompt assertion. It now verifies conversation order plus the new persona/troubleshooting constraints.
+- Commands and results:
+  - `pnpm lint`: passed.
+  - `pnpm test`: 198/198 passed.
+  - `pnpm test:component`: 2/2 passed.
+  - `pnpm build`: passed, including all three TypeScript targets.
+  - `pnpm test:e2e:built`: 10/10 passed.
+  - `pnpm qa:user-reported-ui`: passed; all five character images loaded, wallpaper backdrop rendered, chat remained usable, and a non-Luna winter accessory rendered.
+  - Real shell probe after E2E: taskbar visible, desktop list visible with 63 icons, zero Project D processes.

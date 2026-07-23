@@ -170,6 +170,7 @@ const autoActivate = ref(false);
 const launchAtLogin = ref(false);
 const coverAllDisplays = ref(false);
 const performanceMode = ref("auto");
+const cleanDesktopExitShortcut = ref("Escape");
 const runtimeState = ref<RuntimePauseSnapshot | null>(null);
 const runtimeMetrics = ref<RuntimeMetricsReport | null>(null);
 const runtimePauseDetail = computed(() => {
@@ -195,6 +196,7 @@ const petPersonalityPreview = ref("");
 const petTalkFrequency = ref("normal");
 const petScale = ref(100);
 const petAutoOutfit = ref(true);
+const petCurrentOutfit = ref("default");
 const petActionInterval = ref(120);
 const wallpaperDynamic = ref(true);
 const wallpaperStyle = ref("anime");
@@ -309,7 +311,7 @@ function formatSuppressionTime(value: string): string {
 }
 
 async function loadSettings(): Promise<void> {
-  const [nextLibrary, nextDisplays, nextSettings, nextLayouts, nextContainers, nextAutoRules, nextAppInfo, nextHost, nextLocationSource, nextRecoveryPath, nextPerformance, nextAutoActivate, nextLaunchAtLogin, nextCoverAllDisplays, nextRuntimeState, nextPortals, nextScenes, nextActionHistory, nextInterruptedRecoveries, nextSuggestionDelivery, nextSuppressionHistory, nextPrivacyNetwork, nextRecoverySystemStatus, nextUpdateStatus] = await Promise.all([
+  const [nextLibrary, nextDisplays, nextSettings, nextLayouts, nextContainers, nextAutoRules, nextAppInfo, nextHost, nextLocationSource, nextRecoveryPath, nextPerformance, nextAutoActivate, nextLaunchAtLogin, nextCoverAllDisplays, nextCleanDesktopExitShortcut, nextRuntimeState, nextPortals, nextScenes, nextActionHistory, nextInterruptedRecoveries, nextSuggestionDelivery, nextSuppressionHistory, nextPrivacyNetwork, nextRecoverySystemStatus, nextUpdateStatus] = await Promise.all([
     window.projectD.getWallpaperLibrary(),
     window.projectD.getWallpaperDisplays(),
     window.projectD.getSettings(),
@@ -324,6 +326,7 @@ async function loadSettings(): Promise<void> {
     window.projectD.getState("auto_activate_on_start").catch(() => null),
     window.projectD.getState("launch_at_login").catch(() => null),
     window.projectD.getState("cover_all_displays").catch(() => null),
+    window.projectD.getState("clean_desktop_exit_shortcut").catch(() => null),
     window.projectD.getRuntimeState(),
     window.projectD.getFolderPortals(),
     window.projectD.getWorkspaceScenes(),
@@ -354,6 +357,7 @@ async function loadSettings(): Promise<void> {
   autoActivate.value = nextAutoActivate === "true";
   launchAtLogin.value = nextLaunchAtLogin === "true";
   coverAllDisplays.value = nextCoverAllDisplays === "true";
+  cleanDesktopExitShortcut.value = nextCleanDesktopExitShortcut ?? "Escape";
   runtimeState.value = nextRuntimeState;
   portals.value = nextPortals;
   scenes.value = nextScenes;
@@ -370,6 +374,7 @@ async function loadSettings(): Promise<void> {
   petTalkFrequency.value = nextSettings.pet.talkFrequency;
   petScale.value = Math.round(nextSettings.pet.scale * 100);
   petAutoOutfit.value = nextSettings.pet.autoOutfit;
+  petCurrentOutfit.value = nextSettings.pet.currentOutfit;
   petActionInterval.value = nextSettings.pet.actionInterval;
   wallpaperDynamic.value = nextSettings.wallpaper.isDynamic;
   wallpaperStyle.value = nextSettings.wallpaper.currentStyle;
@@ -816,6 +821,7 @@ async function saveSettings(): Promise<void> {
       talkFrequency: petTalkFrequency.value,
       scale: petScale.value / 100,
       autoOutfit: petAutoOutfit.value,
+      currentOutfit: petCurrentOutfit.value,
       actionInterval: petActionInterval.value
     },
     ai: {
@@ -831,7 +837,8 @@ async function saveSettings(): Promise<void> {
       auto_activate_on_start: autoActivate.value ? "true" : "false",
       launch_at_login: launchAtLogin.value ? "true" : "false",
       cover_all_displays: coverAllDisplays.value ? "true" : "false",
-      performance_mode: performanceMode.value
+      performance_mode: performanceMode.value,
+      clean_desktop_exit_shortcut: cleanDesktopExitShortcut.value
     }
   });
 
@@ -901,6 +908,14 @@ async function saveSettings(): Promise<void> {
                 <option value="quality">高质量</option>
                 <option value="balanced">平衡</option>
                 <option value="batterySaver">省电</option>
+              </select>
+            </label>
+            <label class="setting-row">
+              <span><strong>退出纯净桌面</strong><small>仅在纯净桌面期间注册</small></span>
+              <select v-model="cleanDesktopExitShortcut">
+                <option value="Escape">Esc</option>
+                <option value="F12">F12</option>
+                <option value="Control+Shift+Q">Ctrl + Shift + Q</option>
               </select>
             </label>
             <label class="setting-row">
@@ -1206,6 +1221,7 @@ async function saveSettings(): Promise<void> {
           <div class="settings-group">
             <label class="setting-row"><span><strong>显示桌宠</strong><small>{{ petCharacters.find((item) => item.id === petCharacterId)?.name ?? 'Luna Q' }}</small></span><input v-model="petEnabled" class="switch-input" type="checkbox" /></label>
             <label class="setting-row"><span><strong>自动换装</strong><small>weather outfit</small></span><input v-model="petAutoOutfit" class="switch-input" type="checkbox" /></label>
+            <label v-if="!petAutoOutfit" class="setting-row"><span><strong>当前装扮</strong><small>所有角色均显示对应配饰</small></span><select v-model="petCurrentOutfit"><option value="default">日常装</option><option value="raincoat">雨天装</option><option value="winter">冬日装</option><option value="summer">夏日装</option><option value="pajamas">睡衣</option></select></label>
             <label class="setting-row"><span><strong>话频率</strong><small>bubble frequency</small></span><select v-model="petTalkFrequency"><option value="silent">安静</option><option value="rare">偶尔</option><option value="normal">正常</option><option value="chatty">话痨</option></select></label>
             <label class="setting-row"><span><strong>动作间隔</strong><small>ambient actions</small></span><select v-model="petActionInterval"><option :value="30">30 秒</option><option :value="60">1 分钟</option><option :value="120">2 分钟</option><option :value="300">5 分钟</option></select></label>
             <label class="range-setting"><span><strong>缩放</strong><b>{{ petScale }}%</b></span><input v-model="petScale" min="50" max="160" type="range" /></label>

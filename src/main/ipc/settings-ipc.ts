@@ -12,6 +12,7 @@ const READABLE_STATE_KEYS = new Set([
   "auto_activate_on_start",
   "launch_at_login",
   "cover_all_displays",
+  "clean_desktop_exit_shortcut",
   "shortcut_peek",
   "shortcut_peek_status",
   "boot_recovery_notice"

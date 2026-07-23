@@ -777,3 +777,20 @@
 - [x] Connection errors distinguish credentials, balance, throttling, and provider availability.
 - [x] A real encrypted-key `deepseek-v4-flash` connection test succeeds.
 - [x] The packaged shortcut target contains the updated settings and provider logic.
+
+## Stage 49 Desktop, Pet, And Clean Mode Refinement
+
+- [x] Organizer layout uses the live display work area and responsive column counts.
+- [x] Organizer glass clearly transmits the selected wallpaper without a black fallback.
+- [x] Folder entries use recognizable folder visuals and open their real filesystem paths.
+- [x] Windows shell open failures are visible to the user.
+- [x] Every selectable pet can animate through walking, dancing, stretching, looking, and surprised states.
+- [x] Pet movement is bounded by the complete connected-display union.
+- [x] AI prompts preserve personality and provide bounded, actionable troubleshooting.
+- [x] Clean desktop hides and verifies the taskbar and desktop icons.
+- [x] Clean desktop keeps the display awake without synthetic keypresses.
+- [x] Escape/F12/Ctrl+Shift+Q can be selected as the clean-desktop exit shortcut.
+- [x] Clean desktop restores taskbar/icons on normal exit and guarded shutdown.
+- [x] Real shell-state E2E and all other Electron scenarios pass 10/10.
+- [ ] Four non-Luna characters have approved transparent multi-action and multi-outfit artwork.
+- [ ] Physical mixed-DPI multi-display and Windows 10 clean-desktop evidence is complete.

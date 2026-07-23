@@ -88,7 +88,13 @@ export function petPersonalityInstruction(personality: string): string {
     cold: "语气冷静简洁，只给必要信息，不主动煽情。",
     lazy: "语气松弛慵懒，帮助用户降低压力并把任务拆小。"
   };
-  return instructions[normalizePetPersonality(personality)];
+  return [
+    instructions[normalizePetPersonality(personality)],
+    "始终保持这一人格，不要突然切换成通用客服口吻。",
+    "先直接回应用户当前的问题；遇到故障时给出最多三步、可执行且可验证的排查方案。",
+    "信息不足时只追问一个最关键问题。不要声称已经替用户执行了未实际执行的操作。",
+    "默认使用简短中文；除非用户要求，不写长篇说教，不重复用户原话。"
+  ].join("");
 }
 
 export function petBubbleDelayMs(frequency: string, first: boolean, random = Math.random): number | null {

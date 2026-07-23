@@ -31,3 +31,21 @@ test("failed Escape registration remains disarmed", () => {
   assert.equal(guard.arm(), false);
   assert.equal(guard.isArmed(), false);
 });
+
+test("clean desktop exit accelerator can be changed safely", () => {
+  const calls = [];
+  const registry = {
+    register: (accelerator) => { calls.push(["register", accelerator]); return true; },
+    unregister: (accelerator) => calls.push(["unregister", accelerator])
+  };
+  const guard = new CleanDesktopEscapeGuard(registry, () => undefined);
+
+  assert.equal(guard.arm("F12"), true);
+  assert.equal(guard.getAccelerator(), "F12");
+  guard.disarm();
+  assert.deepEqual(calls, [
+    ["unregister", "F12"],
+    ["register", "F12"],
+    ["unregister", "F12"]
+  ]);
+});

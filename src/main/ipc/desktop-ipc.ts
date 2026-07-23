@@ -10,7 +10,8 @@ export interface DesktopIpcDependencies {
   assertTrustedSender: TrustedSenderGuard;
   getDesktopController: () => { getStatus(): DesktopStatus; activate(): Promise<DesktopStatus>; deactivate(): Promise<DesktopStatus> } | null;
   getFileScanner: () => { scanDesktop(): Promise<ScanResult> } | null;
-  getDatabase: () => { getStatus(): DatabaseStatus; getDesktopFileById(id: number): DesktopFileRecord | null; getContainers(): unknown[]; getLayouts(): LayoutRecord[]; moveFileToContainer(fileId: number, containerId: number): void; renameFileAlias(fileId: number, displayName: string): void; hideFile(fileId: number): void; updateContainerPosition(id: number, x: number, y: number, width: number, height: number, isCollapsed?: boolean): void; updateContainerAccent(id: number, accent: ContainerAccent): void; applyLayout(layoutId: number): void } | null;
+  getDatabase: () => { getStatus(): DatabaseStatus; getDesktopFileById(id: number): DesktopFileRecord | null; getContainers(): unknown[]; getLayouts(): LayoutRecord[]; moveFileToContainer(fileId: number, containerId: number): void; renameFileAlias(fileId: number, displayName: string): void; hideFile(fileId: number): void; updateContainerPosition(id: number, x: number, y: number, width: number, height: number, isCollapsed?: boolean): void; updateContainerAccent(id: number, accent: ContainerAccent): void; applyLayout(layoutId: number, workAreaWidth?: number, workAreaHeight?: number): void } | null;
+  getDesktopWorkArea: () => { width: number; height: number };
   getContainersWithIcons: () => Promise<ContainerWithFiles[]>;
   readFilePreview: (fileId: number) => Promise<FilePreviewData>;
   updateDesktopStatus: (mode: DesktopStatus["mode"]) => DesktopStatus;
@@ -75,7 +76,10 @@ export function registerDesktopIpcHandlers(deps: DesktopIpcDependencies): void {
     const file = getDatabase()?.getDesktopFileById(fileId);
     if (!file) throw new Error("File record was not found");
     const { shell } = await import("electron");
-    await shell.openPath(file.fullPath);
+    const error = await shell.openPath(file.fullPath);
+    if (error) {
+      throw new Error(`无法打开“${file.displayName || file.filename}”：${error}`);
+    }
   });
 
   ipc.handle(IPC_CHANNELS.DESKTOP_OPEN_FILE_LOCATION, (event, fileId: unknown) => {
@@ -145,7 +149,8 @@ export function registerDesktopIpcHandlers(deps: DesktopIpcDependencies): void {
   ipc.handle(IPC_CHANNELS.LAYOUTS_APPLY, (event, layoutId: unknown) => {
     assertTrustedSender(event, ["", "#/settings", "#/overlay"]);
     if (typeof layoutId !== "number" || !Number.isInteger(layoutId) || layoutId <= 0) throw new Error("Invalid layout id");
-    getDatabase()?.applyLayout(layoutId);
+    const workArea = deps.getDesktopWorkArea();
+    getDatabase()?.applyLayout(layoutId, workArea.width, workArea.height);
   });
 
   ipc.handle(IPC_CHANNELS.PREVIEW_FILE, async (event, fileId: unknown): Promise<FilePreviewData> => {

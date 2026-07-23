@@ -1,5 +1,6 @@
 import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
+import { buildWindowsTaskbarSyncScript } from "./windows-taskbar.js";
 
 const execFileAsync = promisify(execFile);
 const POWERSHELL_TIMEOUT_MS = 12_000;
@@ -48,7 +49,8 @@ export async function startDesktopIconRecoveryWatchdog(parentProcessId = process
     "$ErrorActionPreference = 'SilentlyContinue'",
     `Wait-Process -Id ${Math.max(0, Math.floor(parentProcessId))} -ErrorAction SilentlyContinue`,
     "Start-Sleep -Milliseconds 500",
-    buildDesktopIconSyncScript(true)
+    buildDesktopIconSyncScript(true),
+    buildWindowsTaskbarSyncScript(true)
   ].join("\n");
   const child = spawn("powershell.exe", powershellArguments(watchdogScript), {
     windowsHide: true,
@@ -64,7 +66,10 @@ export async function startDesktopIconRecoveryWatchdog(parentProcessId = process
 }
 
 export function createDesktopIconRecoveryBatch(): string {
-  const encoded = encodePowerShell(buildDesktopIconSyncScript(true));
+  const encoded = encodePowerShell([
+    buildDesktopIconSyncScript(true),
+    buildWindowsTaskbarSyncScript(true)
+  ].join("\n"));
   return [
     "@echo off",
     `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand ${encoded}`,

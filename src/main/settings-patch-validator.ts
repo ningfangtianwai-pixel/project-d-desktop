@@ -57,7 +57,8 @@ const writableStateKeys = new Set([
   "auto_activate_on_start",
   "launch_at_login",
   "cover_all_displays",
-  "performance_mode"
+  "performance_mode",
+  "clean_desktop_exit_shortcut"
 ]);
 
 export function validateSettingsPatch(input: unknown): SettingsPatch {
@@ -82,6 +83,9 @@ export function validateSettingsPatch(input: unknown): SettingsPatch {
     for (const [key, value] of Object.entries(input.appState)) {
       if (!writableStateKeys.has(key) || typeof value !== "string" || value.length > 80) {
         throw new Error(`Restricted appState key: ${key}`);
+      }
+      if (key === "clean_desktop_exit_shortcut" && !["Escape", "F12", "Control+Shift+Q"].includes(value)) {
+        throw new Error("Invalid clean desktop exit shortcut");
       }
     }
   }

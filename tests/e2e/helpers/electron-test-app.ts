@@ -66,9 +66,23 @@ export async function launchProjectD(label: string, options: LaunchOptions = {})
   const entry = options.entry ?? root;
   const args = entry === root ? [root, qaToken] : [entry, root, qaToken];
   const app = await electron.launch({ args, cwd: root, env });
-  const window = await app.firstWindow();
+  await app.firstWindow();
+  const window = await findMainWindow(app);
   if (options.waitForHealthy !== false) await waitForHealthyMainWindow(window);
   return { app, env, root, userDataDir, window };
+}
+
+async function findMainWindow(app: ElectronApplication, timeoutMs = 15_000): Promise<Page> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    for (const candidate of app.windows()) {
+      if (candidate.isClosed()) continue;
+      const isMainWindow = await candidate.locator(".app-shell").count().catch(() => 0);
+      if (isMainWindow > 0) return candidate;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 120));
+  }
+  throw new Error("Project D main window was not created before the E2E timeout");
 }
 
 export async function waitForHealthyMainWindow(window: Page): Promise<void> {
