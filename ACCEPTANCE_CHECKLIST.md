@@ -759,3 +759,11 @@
 - [ ] Physical one/two-display wallpaper switching and clean-desktop restoration are recorded.
 - [ ] A live request with the user's configured external AI provider succeeds.
 - [ ] Four non-Luna characters have final licensed transparent multi-action sprite packs.
+
+## Stage 47 Stale Hidden Desktop Recovery
+
+- [x] A stale `HideIcons=1` state is restored without moving or deleting desktop files.
+- [x] Startup checks the real Explorer list-view visibility even when persisted desktop state is `idle`.
+- [x] Guarded shutdown restores desktop visibility regardless of cached mode.
+- [x] Shutdown recovery preserves unrelated boot diagnostics.
+- [x] Corrupted-config, force-kill, and tray-exit Electron E2E scenarios pass.

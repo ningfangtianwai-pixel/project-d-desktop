@@ -1,4 +1,6 @@
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 const test = require("node:test");
 
 const {
@@ -30,4 +32,20 @@ test("manual recovery uses Explorer's icon command without killing Explorer", ()
   assert.match(batch, /EncodedCommand/);
   assert.doesNotMatch(batch, /taskkill/i);
   assert.doesNotMatch(batch, /start explorer/i);
+});
+
+test("startup and shutdown do not trust only the cached desktop mode", () => {
+  const controllerSource = fs.readFileSync(
+    path.join(__dirname, "..", "src", "main", "desktop-controller.ts"),
+    "utf8"
+  );
+  const mainSource = fs.readFileSync(path.join(__dirname, "..", "src", "main", "main.ts"), "utf8");
+
+  assert.match(controllerSource, /probeWindowsDesktopIcons\(\)/);
+  assert.match(controllerSource, /if \(!iconState\.visible\)/);
+  assert.match(mainSource, /if \(desktopController\) \{\s*desktopStatus = await desktopController\.recoverBeforeShutdown\(\)/);
+  assert.doesNotMatch(
+    controllerSource.match(/async recoverBeforeShutdown\(\)[\s\S]*?\n\s{2}}\n/)?.[0] ?? "",
+    /boot_recovery_notice/
+  );
 });

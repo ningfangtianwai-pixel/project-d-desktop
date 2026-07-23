@@ -1415,3 +1415,13 @@
 - `pnpm lint`, `pnpm typecheck`, `pnpm build`, `pnpm test` (190/190), `pnpm test:component` (2/2), and `pnpm test:e2e:built` (9/9) passed.
 - `pnpm qa:user-reported-ui` and `node scripts/qa-feature-closeout-ui.cjs` passed. Reports and screenshots are under `artifacts/qa/user-reported-ui` and `artifacts/qa/stage45-ui`.
 - `pnpm verify:assets:sync` registered the four new cutouts; `pnpm verify:assets` passes for 37/37 files. All remain `pending-evidence`.
+
+## 2026-07-23 Stage 47 Stale Desktop Icon Recovery
+
+- User report confirmed Project D was not running while Windows still had `HideIcons=1`; 54 desktop filesystem entries and 63 Explorer icon objects remained intact.
+- A registry-only refresh proved insufficient: the real Explorer list view was still hidden. The guarded Explorer command restored it to `visible=true` without restarting Explorer or touching files.
+- Added an actual Explorer visibility probe during every boot and unconditional idempotent visibility recovery during guarded shutdown.
+- Separated shutdown recovery from user-facing recovery-notice cleanup after the first E2E run caught the coupling.
+- `pnpm typecheck`, `pnpm lint`, `pnpm build`, and 191/191 Node tests passed.
+- Corrupted-config recovery, force-kill recovery, and tray-exit E2E passed after the final correction.
+- Final machine state: Explorer list visible, `HideIcons=0`, no Project D/Electron process.

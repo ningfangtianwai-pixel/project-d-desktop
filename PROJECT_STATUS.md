@@ -990,3 +990,11 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Asset tracking now covers all 37 distributed assets without changing their pending authorization conclusions.
 - Verification passes: 190/190 Node tests, 2/2 component tests, 9/9 Electron E2E, lint, all TypeScript targets, production build, both browser UI workflows, and the asset ledger gate.
 - Physical Windows wallpaper-host behavior, multi-display mapping, real external-provider credentials, and multi-action sprite packs remain manual/external acceptance items.
+
+## Stage 47 - Stale Hidden Desktop Recovery (Complete)
+
+- Recovered the current machine from a stale Explorer state: 63 desktop icon objects remained intact, `HideIcons` returned to `0`, and the real Explorer list view is visible.
+- Startup now probes the real Explorer desktop list instead of trusting only the persisted Project D mode.
+- Every guarded application exit performs an idempotent desktop-visibility recovery even when cached state says the desktop is idle.
+- Shutdown recovery no longer clears unrelated boot diagnostics.
+- Verification passes: 191/191 Node tests plus corrupted-configuration, force-kill, and tray-exit Electron E2E scenarios.

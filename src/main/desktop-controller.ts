@@ -6,6 +6,7 @@ import type { AppLogger } from "./logger.js";
 import type { DesktopStatus } from "../shared/types.js";
 import {
   createDesktopIconRecoveryBatch,
+  probeWindowsDesktopIcons,
   setWindowsDesktopIconsVisible,
   startDesktopIconRecoveryWatchdog
 } from "./windows-desktop-icons.js";
@@ -37,15 +38,47 @@ export class DesktopController {
 
   async bootRecoveryCheck(): Promise<DesktopStatus> {
     const savedState = this.database.getAppState("desktop_state");
+    let recoveredHiddenIcons = false;
+
+    if (process.platform === "win32") {
+      try {
+        const iconState = await probeWindowsDesktopIcons();
+        if (!iconState.visible) {
+          this.logger.warn("desktop-state", "hidden desktop icons detected during boot", {
+            savedState: savedState ?? "missing",
+            iconCount: iconState.iconCount
+          });
+          await this.showDesktopIcons();
+          recoveredHiddenIcons = true;
+        }
+      } catch (error) {
+        this.logger.warn("desktop-state", "boot desktop icon probe failed", {
+          message: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
 
     if (!savedState || savedState === "idle") {
-      this.setStatus("idle", "桌面处于正常状态");
+      if (recoveredHiddenIcons) {
+        this.database.setAppState("is_active", "false");
+        this.database.setAppState(
+          "boot_recovery_notice",
+          JSON.stringify({
+            savedState: savedState ?? "missing",
+            recoveredAt: new Date().toISOString(),
+            message: "检测到 Windows 桌面图标仍处于隐藏状态，Project D 已自动恢复。"
+          })
+        );
+      }
+      this.setStatus("idle", recoveredHiddenIcons ? "已自动恢复被隐藏的桌面图标" : "桌面处于正常状态");
       return this.status;
     }
 
     if (["active", "activating", "deactivating", "error", "safe-mode"].includes(savedState)) {
       this.logger.warn("desktop-state", "boot recovery started", { savedState });
-      await this.showDesktopIcons();
+      if (!recoveredHiddenIcons) {
+        await this.showDesktopIcons();
+      }
       this.database.setAppState("desktop_state", "idle");
       this.database.setAppState("is_active", "false");
       this.database.setAppState(
@@ -98,6 +131,25 @@ export class DesktopController {
       this.database.setAppState("desktop_state", "error");
       this.setStatus("error", "恢复桌面失败，请运行恢复脚本");
       this.logger.error("desktop-state", "deactivate failed", {
+        message: error instanceof Error ? error.message : String(error)
+      });
+      return this.status;
+    }
+  }
+
+  async recoverBeforeShutdown(): Promise<DesktopStatus> {
+    this.setStatus("deactivating", "正在退出前恢复桌面");
+
+    try {
+      await this.showDesktopIcons();
+      this.database.setAppState("desktop_state", "idle");
+      this.database.setAppState("is_active", "false");
+      this.setStatus("idle", "退出前桌面恢复完成");
+      return this.status;
+    } catch (error) {
+      this.database.setAppState("desktop_state", "error");
+      this.setStatus("error", "退出前桌面恢复失败，将由恢复守护进程继续处理");
+      this.logger.error("desktop-state", "shutdown desktop recovery failed", {
         message: error instanceof Error ? error.message : String(error)
       });
       return this.status;

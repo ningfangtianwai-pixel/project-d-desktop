@@ -2315,9 +2315,11 @@ async function shutdownSafely(): Promise<void> {
       cleanDesktopEscapeGuard.disarm();
       try {
         const currentMode = desktopController?.getStatus().mode ?? desktopStatus.mode;
-        if (["active", "activating", "deactivating", "error", "safe-mode"].includes(currentMode)) {
-          desktopStatus = (await desktopController?.deactivate()) ?? updateDesktopStatus("idle");
-          logger?.info("desktop-state", "desktop restored before application quit", { previousMode: currentMode });
+        if (desktopController) {
+          desktopStatus = await desktopController.recoverBeforeShutdown();
+          logger?.info("desktop-state", "desktop visibility verified before application quit", {
+            previousMode: currentMode
+          });
         }
       } catch (error) {
         logger?.error("desktop-state", "desktop restore failed during application quit", {
