@@ -11,14 +11,21 @@ const messages = ref<ChatMessage[]>([]);
 const weather = ref<CurrentWeather | null>(null);
 const input = ref("");
 const inputElement = ref<HTMLInputElement | null>(null);
+const historyElement = ref<HTMLElement | null>(null);
 const sending = ref(false);
 const error = ref("");
 const sendStatus = ref("");
 const intentPreview = ref<LunaIntentPreview | null>(null);
 
+function scrollToLatest(): void {
+  if (historyElement.value) historyElement.value.scrollTop = historyElement.value.scrollHeight;
+}
+
 onMounted(async () => {
   messages.value = await window.projectD.getChatHistory();
   weather.value = await window.projectD.getCurrentWeather();
+  await nextTick();
+  scrollToLatest();
 });
 
 async function send(): Promise<void> {
@@ -37,12 +44,13 @@ async function send(): Promise<void> {
     messages.value = await window.projectD.getChatHistory();
     weather.value = await window.projectD.getCurrentWeather();
     input.value = "";
-    sendStatus.value = "已发送，可以继续输入";
+    sendStatus.value = response.fallback ? "已发送 · 当前使用本地降级" : `已发送 · ${response.provider}`;
   } catch (caught) {
     error.value = caught instanceof Error ? caught.message : String(caught);
   } finally {
     sending.value = false;
     await nextTick();
+    scrollToLatest();
     inputElement.value?.focus();
   }
 }
@@ -63,9 +71,9 @@ function requestInboxPlan(): void {
       <span>{{ weather?.condition ?? "clear" }}</span>
     </header>
 
-    <div class="chat-history">
+    <div ref="historyElement" class="chat-history">
       <p v-if="messages.length === 0" class="chat-empty">还没有对话</p>
-      <article v-for="message in messages.slice(-6)" :key="message.id" :data-role="message.role">
+      <article v-for="message in messages" :key="message.id" :data-role="message.role">
         {{ message.content }}
       </article>
     </div>

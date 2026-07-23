@@ -1,6 +1,6 @@
 import type { IpcMain, IpcMainInvokeEvent } from "electron";
 import { IPC_CHANNELS } from "../../shared/ipc.js";
-import type { ChatResponse, CurrentWeather, SettingsPatch, SettingsSnapshot, WallpaperLibraryItem } from "../../shared/types.js";
+import type { AiConnectionTestResult, ChatResponse, CurrentWeather, SettingsPatch, SettingsSnapshot, WallpaperLibraryItem } from "../../shared/types.js";
 
 type TrustedSenderGuard = (event: IpcMainInvokeEvent, routes?: string[]) => void;
 
@@ -29,6 +29,7 @@ export interface SettingsIpcDependencies {
   syncWindows: (settings: SettingsSnapshot) => void;
   validateSettingsPatch: (patch: unknown) => SettingsPatch;
   sendChatMessage: (content: string) => Promise<ChatResponse>;
+  testAiConnection: () => Promise<AiConnectionTestResult>;
 }
 
 export function registerSettingsIpcHandlers(deps: SettingsIpcDependencies): void {
@@ -84,6 +85,11 @@ export function registerSettingsIpcHandlers(deps: SettingsIpcDependencies): void
       throw new Error("Invalid chat message");
     }
     return deps.sendChatMessage(content.trim());
+  });
+
+  ipc.handle(IPC_CHANNELS.AI_TEST_CONNECTION, async (event): Promise<AiConnectionTestResult> => {
+    assertTrustedSender(event, ["#/settings"]);
+    return deps.testAiConnection();
   });
 
   ipc.handle(IPC_CHANNELS.AI_CHAT_HISTORY, (event) => {

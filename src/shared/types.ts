@@ -209,6 +209,12 @@ export interface ChatResponse {
   intentPreview?: LunaIntentPreview;
 }
 
+export interface AiConnectionTestResult {
+  provider: string;
+  mode: "local" | "remote";
+  message: string;
+}
+
 export interface PetWindowBounds {
   x: number;
   y: number;
@@ -323,6 +329,12 @@ export interface WorkspaceScene {
   pinnedResources?: DesktopResourceRef[];
   displayAssignments?: DisplayWorkAreaSnapshot[];
   todoSummary?: { total: number; active: number };
+}
+
+export interface SuggestionSuppressionHistoryEntry {
+  reason: string;
+  explanation: string;
+  suppressedAt: string;
 }
 
 export interface PortalConfig {
@@ -482,6 +494,7 @@ export interface ProjectDApi {
   getLatestSuggestion: () => Promise<SuggestionRecord | null>;
   dismissSuggestion: (suggestionId: string) => Promise<void>;
   getSuggestionDeliveryControls: () => Promise<SuggestionDeliveryControls>;
+  getSuggestionSuppressionHistory: () => Promise<SuggestionSuppressionHistoryEntry[]>;
   snoozeSuggestions: (minutes: number) => Promise<void>;
   setSuggestionsEnabled: (enabled: boolean) => Promise<void>;
   updateSuggestionPolicy: (policy: SuggestionPolicy) => Promise<SuggestionDeliveryControls>;
@@ -518,6 +531,7 @@ export interface ProjectDApi {
   assignWallpaperToDisplay: (displayId: string, wallpaperId: string | null) => Promise<WallpaperDisplayInfo[]>;
   getCurrentWeather: () => Promise<CurrentWeather>;
   sendChatMessage: (content: string) => Promise<ChatResponse>;
+  testAiConnection: () => Promise<AiConnectionTestResult>;
   getChatHistory: () => Promise<ChatMessage[]>;
   clearChatHistory: () => Promise<void>;
   exportAllData: () => Promise<{ cancelled: boolean; filename: string | null }>;

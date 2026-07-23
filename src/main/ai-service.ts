@@ -1,6 +1,6 @@
 import { findWallpaperByInput, nextWallpaperId, WALLPAPER_LIBRARY } from "../shared/wallpaper-library.js";
 import { petPersonalityInstruction } from "../shared/pet-behavior.js";
-import type { ChatMessage, ChatResponse, SettingsSnapshot } from "../shared/types.js";
+import type { AiConnectionTestResult, ChatMessage, ChatResponse, SettingsSnapshot } from "../shared/types.js";
 import { parseLunaIntent } from "./luna/intent-parser.js";
 import type { DatabaseService } from "./database.js";
 import type { AppLogger } from "./logger.js";
@@ -84,6 +84,42 @@ export class AiService {
       message,
       provider: settings.ai.provider,
       fallback: !providerReply
+    };
+  }
+
+  async testConnection(): Promise<AiConnectionTestResult> {
+    const settings = this.database.getSettings();
+    if (settings.ai.provider === "local-fallback") {
+      return {
+        provider: settings.ai.provider,
+        mode: "local",
+        message: "本地降级通道可用"
+      };
+    }
+    if (!settings.ai.enabled) {
+      throw new Error("请先启用 AI 对话");
+    }
+    if (!this.networkAllowed()) {
+      throw new Error("AI 网络功能已被本机运维策略暂停");
+    }
+    if (getPrivacyNetworkState(this.database).paused) {
+      throw new Error("隐私中心已暂停外部网络访问");
+    }
+
+    const reply = settings.ai.provider === "ollama"
+      ? await this.callOllama("Reply only with OK.", "clear", [], settings.pet.personality)
+      : await this.callOpenAiCompatible("Reply only with OK.", "clear", [], settings.pet.personality);
+    if (!reply) {
+      throw new Error(settings.ai.provider === "ollama"
+        ? "Ollama 没有返回有效内容，请检查 Endpoint 和模型"
+        : "没有可用的 API Key、Endpoint 或模型响应");
+    }
+
+    this.logger.info("ai", "provider connection test completed", { provider: settings.ai.provider });
+    return {
+      provider: settings.ai.provider,
+      mode: "remote",
+      message: `${settings.ai.provider} 连接正常`
     };
   }
 

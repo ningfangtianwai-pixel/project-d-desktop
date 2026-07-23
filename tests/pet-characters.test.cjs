@@ -6,7 +6,8 @@ const { PET_CHARACTERS, getPetCharacter, normalizePetCharacterId } = require("..
 test("every supplied Project D character is selectable", () => {
   assert.equal(PET_CHARACTERS.length, 5);
   assert.equal(new Set(PET_CHARACTERS.map((character) => character.id)).size, 5);
-  assert.ok(PET_CHARACTERS.every((character) => character.asset.startsWith("pet/characters/")));
+  assert.ok(PET_CHARACTERS.every((character) => character.asset.startsWith("pet/")));
+  assert.equal(PET_CHARACTERS.filter((character) => character.renderMode === "cutout").length, 4);
 });
 
 test("legacy and invalid pet ids recover to Luna Q", () => {

@@ -1,4 +1,4 @@
-export type PetCharacterRenderMode = "sprite-pack" | "portrait-sheet";
+export type PetCharacterRenderMode = "sprite-pack" | "portrait-sheet" | "cutout";
 
 export interface PetCharacterDefinition {
   id: string;
@@ -11,10 +11,10 @@ export interface PetCharacterDefinition {
 
 export const PET_CHARACTERS: readonly PetCharacterDefinition[] = [
   { id: "luna-q", name: "Luna Q", asset: "pet/characters/luna-q.png", renderMode: "sprite-pack", focusX: 50, focusY: 34 },
-  { id: "luna-spring", name: "Luna 春日", asset: "pet/characters/luna-spring.png", renderMode: "portrait-sheet", focusX: 50, focusY: 34 },
-  { id: "starlight", name: "星澜", asset: "pet/characters/starlight.png", renderMode: "portrait-sheet", focusX: 50, focusY: 35 },
-  { id: "floral-star", name: "花曜", asset: "pet/characters/floral-star.png", renderMode: "portrait-sheet", focusX: 50, focusY: 34 },
-  { id: "lin-yuxi", name: "林予曦", asset: "pet/characters/lin-yuxi.png", renderMode: "portrait-sheet", focusX: 50, focusY: 34 }
+  { id: "luna-spring", name: "Luna 春日", asset: "pet/sprites/luna-spring.png", renderMode: "cutout", focusX: 50, focusY: 50 },
+  { id: "starlight", name: "星澜", asset: "pet/sprites/starlight.png", renderMode: "cutout", focusX: 50, focusY: 50 },
+  { id: "floral-star", name: "花曜", asset: "pet/sprites/floral-star.png", renderMode: "cutout", focusX: 50, focusY: 50 },
+  { id: "lin-yuxi", name: "林予曦", asset: "pet/sprites/lin-yuxi.png", renderMode: "cutout", focusX: 50, focusY: 50 }
 ] as const;
 
 export function normalizePetCharacterId(value: string | null | undefined): string {

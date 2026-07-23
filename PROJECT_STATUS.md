@@ -973,3 +973,20 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Final installer is `release\ProjectD-0.2.0-beta.2-Setup.exe`; `app.asar` is 53.27 MiB and 38/38 packaged modules load.
 - Generated `release\SHA256SUMS.txt`, `release\ProjectD-SBOM.cdx.json`, `release\COMMIT_SHA.txt`, and `release\BUILD_SUMMARY.json`. These generated files are the authority for the final byte size, digest, and source commit; packaged smoke exits cleanly with no error-log entry.
 - MIT source license and free-release documentation skeletons are present. Public distribution remains blocked by draft legal text, 33 pending asset-evidence records, missing Authenticode signature, physical hardware/install matrix, and real 4-hour/24-hour soak evidence.
+
+## Stage 45 - Suggestion And Scene UI Closure
+
+- Added a bounded recent-suppression history for suggestions and exposed it through a read-only Settings IPC route.
+- Added an explicit scene picker to search results instead of silently pinning a result to the first scene.
+- Scene rows now show their pinned-resource counts.
+- Focused tests and the Stage 45 browser-preview workflow pass; scene selection, suppression history, pinned counts, and 1440-pixel layout width are verified.
+
+## Stage 46 - Desktop Experience Regression Closure
+
+- Fixed the organizer toolbar stacking bug that left visible controls unable to receive pointer input.
+- Added a selected-wallpaper backdrop and non-black fallback to the organizer, increased glass transmission, and synchronized global wallpaper changes to managed display assignments.
+- AI chat renders the complete loaded history and keeps the input visible. Settings now uses a dedicated provider connection test that does not write test prompts into chat history.
+- Replaced four character-sheet crops with transparent full-body cutouts. Personality selection applies immediately, shows a persona-specific preview, and updates the live pet bubble.
+- Asset tracking now covers all 37 distributed assets without changing their pending authorization conclusions.
+- Verification passes: 190/190 Node tests, 2/2 component tests, 9/9 Electron E2E, lint, all TypeScript targets, production build, both browser UI workflows, and the asset ledger gate.
+- Physical Windows wallpaper-host behavior, multi-display mapping, real external-provider credentials, and multi-action sprite packs remain manual/external acceptance items.

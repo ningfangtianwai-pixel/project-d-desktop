@@ -250,6 +250,11 @@ if (!window.projectD) {
       disabled: false,
       policy: { timeZoneOffsetMinutes: -new Date().getTimezoneOffset(), quietHours: { enabled: true, start: "22:00", end: "08:00" }, dailyBudget: 3, perKind: { "desktop-inbox": { cooldownMs: 21600000, dailyBudget: 2 } } }
     }),
+    getSuggestionSuppressionHistory: async () => [{
+      reason: "scheduled-quiet-hours",
+      explanation: "当前处于用户配置的免打扰时段。",
+      suppressedAt: new Date(Date.now() - 18 * 60_000).toISOString()
+    }],
     snoozeSuggestions: async () => undefined,
     setSuggestionsEnabled: async () => undefined,
     updateSuggestionPolicy: async (policy) => ({ snoozedUntil: null, mutedUntil: null, disabled: false, policy }),
@@ -371,6 +376,7 @@ if (!window.projectD) {
         isDynamic: true,
         currentIndex: mockSettings.wallpaper.currentIndex + 1
       };
+      mockDisplayWallpaperId = wallpaper.id;
       notifySettingsUpdated();
       return cloneSettings();
     },
@@ -432,6 +438,11 @@ if (!window.projectD) {
       chatHistory.push(userMessage, assistantMessage);
       return { message: assistantMessage, provider: "browser-preview", fallback: true };
     },
+    testAiConnection: async () => ({
+      provider: mockSettings.ai.provider,
+      mode: mockSettings.ai.provider === "local-fallback" ? "local" : "remote",
+      message: mockSettings.ai.provider === "local-fallback" ? "本地降级通道可用" : `${mockSettings.ai.provider} 连接正常`
+    }),
     getChatHistory: async () => chatHistory,
     clearChatHistory: async () => {
       chatHistory.splice(0, chatHistory.length);
@@ -504,7 +515,19 @@ if (!window.projectD) {
       cpuP95Percent: 0, peakWorkingSetBytes: 0, memoryGrowthPercent: 0,
       pausedSampleCount: 0, samples: []
     }),
-    pinSearchResultToScene: async () => undefined,
+    pinSearchResultToScene: async (resultId, sceneId) => {
+      const scene = workspaceScenes.find((item) => item.id === sceneId);
+      if (!scene) throw new Error("浏览器预览中没有找到场景");
+      const pinnedResources = scene.pinnedResources ?? [];
+      if (!pinnedResources.some((item) => item.path === resultId)) {
+        scene.pinnedResources = [...pinnedResources, {
+          origin: "external",
+          path: resultId,
+          label: resultId.replace(/^[^:]+:/, "")
+        }];
+      }
+      scene.updatedAt = now();
+    },
     addSearchResultToPortal: async () => null,
     resolveSearchResultPath: async (resultId: string) => resultId,
     onMenuCommand: () => () => undefined,

@@ -54,6 +54,60 @@ test("AI provider receives the latest conversation before the current message", 
   );
 });
 
+test("AI connection test reaches the configured provider without writing chat history", async () => {
+  const settings = {
+    wallpaper: { dynamicId: null },
+    weather: {},
+    pet: { personality: "gentle" },
+    ai: {
+      provider: "deepseek",
+      apiEndpoint: "https://api.deepseek.com/chat/completions",
+      model: "deepseek-chat",
+      temperature: 0.7,
+      maxTokens: 80,
+      enabled: true
+    }
+  };
+  let writes = 0;
+  const database = {
+    getAppState: () => null,
+    getSettings: () => settings,
+    getAiRuntimeConfig: () => ({
+      apiKey: "test-key",
+      endpoint: settings.ai.apiEndpoint,
+      model: settings.ai.model,
+      provider: settings.ai.provider
+    }),
+    addChatMessage: () => {
+      writes += 1;
+    }
+  };
+  const weather = { getCurrentWeather: async () => ({ condition: "clear" }) };
+  const logger = { info() {}, warn() {}, error() {} };
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({ choices: [{ message: { content: "OK" } }] })
+  });
+
+  try {
+    const result = await new AiService(database, weather, logger).testConnection();
+    assert.deepEqual(result, { provider: "deepseek", mode: "remote", message: "deepseek 连接正常" });
+    assert.equal(writes, 0);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test("AI connection test reports the local fallback without network access", async () => {
+  const database = {
+    getSettings: () => ({ ai: { provider: "local-fallback" }, pet: { personality: "gentle" } })
+  };
+  const service = new AiService(database, {}, { info() {}, warn() {}, error() {} }, () => false);
+  const result = await service.testConnection();
+  assert.deepEqual(result, { provider: "local-fallback", mode: "local", message: "本地降级通道可用" });
+});
+
 test("AI context keeps ten recent turns while bounding oversized history", async () => {
   const oversized = "长".repeat(8_000);
   const history = Array.from({ length: 12 }, (_, index) => ({

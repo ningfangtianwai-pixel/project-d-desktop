@@ -12,7 +12,7 @@ import { CONTAINER_ACCENT_OPTIONS, containerAccentOption, type ContainerAccent }
 import type {
   ActionExecution, ActionPlan, ContainerWithFiles, DesktopFileRecord, DesktopStatus,
   FilePreviewData, LayoutRecord, PortalConfig, PortalResource, ScanResult,
-  SuggestionRecord, WallpaperLibraryItem, WorkspaceScene, WorkspaceSearchResult
+  SuggestionRecord, WallpaperDisplayInfo, WallpaperLibraryItem, WorkspaceScene, WorkspaceSearchResult
 } from "@shared/types";
 
 const containers = ref<ContainerWithFiles[]>([]);
@@ -37,10 +37,20 @@ const layoutOperation = ref<{
   initialHeight: number;
 } | null>(null);
 const wallpaperLibrary = ref<WallpaperLibraryItem[]>([]);
+const wallpaperDisplays = ref<WallpaperDisplayInfo[]>([]);
 const currentWallpaperId = ref<string | null>(null);
+const currentWallpaper = computed(() => wallpaperLibrary.value.find((item) => item.id === currentWallpaperId.value) ?? null);
 const currentWallpaperLabel = computed(() =>
-  wallpaperDisplayLabel(wallpaperLibrary.value.find((item) => item.id === currentWallpaperId.value))
+  wallpaperDisplayLabel(currentWallpaper.value ?? undefined)
 );
+const overlayWallpaperStyle = computed(() => {
+  const wallpaper = currentWallpaper.value;
+  if (!wallpaper) return {};
+  const file = wallpaper.type === "video" ? wallpaper.posterFile : wallpaper.file;
+  return file
+    ? { backgroundImage: `url("${import.meta.env.BASE_URL}wallpapers/${file}")` }
+    : {};
+});
 const showLayoutPicker = ref(false);
 const showScenePicker = ref(false);
 const scenes = ref<WorkspaceScene[]>([]);
@@ -52,6 +62,7 @@ const workspaceSearchStatus = ref("");
 const workspaceSearchInput = ref<HTMLInputElement | null>(null);
 const selectedSearchIndex = ref(0);
 const showSearchPanel = ref(false);
+const searchScenePickerResultId = ref<string | null>(null);
 const showActionPanel = ref(false);
 const inboxPlan = ref<ActionPlan | null>(null);
 const actionHistory = ref<ActionExecution[]>([]);
@@ -76,18 +87,20 @@ const movableInboxItems = computed(() => inboxPlan.value?.items.filter((item) =>
 const latestUndoableExecution = computed(() => actionHistory.value.find((item) => item.undoable) ?? null);
 
 async function refresh(): Promise<void> {
-  const [nextContainers, nextStatus, nextLayouts, settings, nextWallpaperLibrary] = await Promise.all([
+  const [nextContainers, nextStatus, nextLayouts, settings, nextWallpaperLibrary, nextDisplays] = await Promise.all([
     window.projectD.getDesktopFiles(),
     window.projectD.getDesktopStatus(),
     window.projectD.getLayouts(),
     window.projectD.getSettings(),
-    window.projectD.getWallpaperLibrary()
+    window.projectD.getWallpaperLibrary(),
+    window.projectD.getWallpaperDisplays()
   ]);
   containers.value = nextContainers;
   status.value = nextStatus;
   layouts.value = nextLayouts;
   wallpaperLibrary.value = nextWallpaperLibrary;
-  currentWallpaperId.value = settings.wallpaper.dynamicId;
+  wallpaperDisplays.value = nextDisplays;
+  currentWallpaperId.value = nextDisplays.find((display) => display.isPrimary)?.wallpaperId ?? settings.wallpaper.dynamicId;
 }
 
 async function refreshWorkspaceFeatures(): Promise<void> {
@@ -438,14 +451,21 @@ function formatBytes(sizeBytes: number): string {
 
 async function focusSearch(): Promise<void> {
   showActionPanel.value = false;
+  searchScenePickerResultId.value = null;
   clearPreview();
   showSearchPanel.value = true;
   await nextTick();
   workspaceSearchInput.value?.focus();
 }
 
+function closeSearchPanel(): void {
+  showSearchPanel.value = false;
+  searchScenePickerResultId.value = null;
+}
+
 async function searchWorkspace(): Promise<void> {
   const query = workspaceSearchQuery.value.trim();
+  searchScenePickerResultId.value = null;
   if (!query) {
     workspaceSearchResults.value = [];
     workspaceSearchStatus.value = "输入文件名、扩展名，或使用 in:desktop / in:portal";
@@ -494,16 +514,30 @@ async function copySearchResultPath(result: WorkspaceSearchResult): Promise<void
   }
 }
 
-async function pinSearchResultToScene(result: WorkspaceSearchResult): Promise<void> {
-  const scenes = await window.projectD.getWorkspaceScenes();
-  if (scenes.length === 0) {
+async function toggleSearchScenePicker(result: WorkspaceSearchResult): Promise<void> {
+  if (searchScenePickerResultId.value === result.id) {
+    searchScenePickerResultId.value = null;
+    return;
+  }
+  try {
+    scenes.value = await window.projectD.getWorkspaceScenes();
+  } catch {
+    workspaceSearchStatus.value = "场景列表暂时不可用，请稍后重试";
+    return;
+  }
+  if (scenes.value.length === 0) {
     workspaceSearchStatus.value = "没有可用场景，请先创建一个场景";
     return;
   }
-  const sceneId = scenes[0].id;
+  searchScenePickerResultId.value = result.id;
+}
+
+async function pinSearchResultToScene(result: WorkspaceSearchResult, scene: WorkspaceScene): Promise<void> {
   try {
-    await window.projectD.pinSearchResultToScene(result.id, sceneId);
-    workspaceSearchStatus.value = `已钉到场景：${result.title}`;
+    await window.projectD.pinSearchResultToScene(result.id, scene.id);
+    scenes.value = await window.projectD.getWorkspaceScenes();
+    searchScenePickerResultId.value = null;
+    workspaceSearchStatus.value = `已将“${result.title}”钉到场景“${scene.name}”`;
   } catch {
     workspaceSearchStatus.value = `无法钉到场景：${result.title}，结果可能已失效`;
   }
@@ -593,6 +627,7 @@ onUnmounted(() => {
 
 <template>
   <main class="overlay-page" @click="closeContextMenus">
+    <div class="overlay-wallpaper-backdrop" :style="overlayWallpaperStyle" aria-hidden="true"></div>
     <header class="overlay-toolbar">
       <div class="toolbar-left">
         <p>Project D Desktop</p>
@@ -735,7 +770,7 @@ onUnmounted(() => {
     </section>
 
     <aside v-if="showSearchPanel" class="desktop-work-panel search-work-panel">
-      <header><div><small>本地优先</small><strong>搜索桌面与门户</strong></div><button type="button" title="关闭搜索" @click="showSearchPanel = false"><X :size="18" /></button></header>
+      <header><div><small>本地优先</small><strong>搜索桌面与门户</strong></div><button type="button" title="关闭搜索" @click="closeSearchPanel"><X :size="18" /></button></header>
       <form class="desktop-search-form" @submit.prevent="searchWorkspace">
         <Search :size="17" />
         <input ref="workspaceSearchInput" v-model="workspaceSearchQuery" type="search" placeholder="文件名、.pdf、in:portal" @keydown="handleSearchKeydown" />
@@ -751,8 +786,16 @@ onUnmounted(() => {
             <button type="button" title="打开" @click="openSearchResult(result)"><ExternalLink :size="15" /></button>
             <button type="button" title="在资源管理器中定位" @click="revealSearchResult(result)"><LocateFixed :size="15" /></button>
             <button type="button" title="复制完整路径" @click="copySearchResultPath(result)"><Copy :size="15" /></button>
-            <button type="button" title="钉到场景" @click="pinSearchResultToScene(result)"><MapPin :size="15" /></button>
+            <button type="button" title="钉到场景" aria-haspopup="menu" :aria-expanded="searchScenePickerResultId === result.id" @click="toggleSearchScenePicker(result)"><MapPin :size="15" /></button>
             <button v-if="result.origin !== 'portal'" type="button" title="将所在文件夹授权为只读门户" @click="addSearchResultToPortal(result)"><FolderPlus :size="15" /></button>
+          </div>
+          <div v-if="searchScenePickerResultId === result.id" class="search-scene-picker" role="menu" :aria-label="`选择“${result.title}”要钉入的场景`">
+            <span>选择场景</span>
+            <button v-for="scene in scenes" :key="scene.id" type="button" role="menuitem" @click="pinSearchResultToScene(result, scene)">
+              <MapPin :size="14" />
+              <strong>{{ scene.name }}</strong>
+              <small>{{ scene.pinnedResources?.length ?? 0 }} 项钉选</small>
+            </button>
           </div>
         </article>
       </div>

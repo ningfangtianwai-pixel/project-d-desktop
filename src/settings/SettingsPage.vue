@@ -28,11 +28,11 @@ import {
   WifiOff
 } from "lucide-vue-next";
 import { resetOnboarding } from "@shared/onboarding";
-import type { ActionExecution, AppInfo, ContainerRecord, CurrentWeather, InterruptedActionRecovery, LayoutRecord, PortalConfig, PortalResource, PrivacyNetworkState, RecoverySystemStatus, SettingsSnapshot, SuggestionDeliveryControls, SupportDiagnosticsReport, WallpaperDisplayInfo, WallpaperLibraryItem, WorkspaceScene } from "@shared/types";
+import type { ActionExecution, AppInfo, ContainerRecord, CurrentWeather, InterruptedActionRecovery, LayoutRecord, PortalConfig, PortalResource, PrivacyNetworkState, RecoverySystemStatus, SettingsSnapshot, SuggestionDeliveryControls, SuggestionSuppressionHistoryEntry, SupportDiagnosticsReport, WallpaperDisplayInfo, WallpaperLibraryItem, WorkspaceScene } from "@shared/types";
 import type { RuntimeMetricsReport, RuntimePauseSnapshot } from "@shared/runtime";
 import type { UpdateChannel, UpdateStatus } from "@shared/update";
 import type { AutoRule, AutoRuleAction, AutoRuleCondition, AutoRuleExecution } from "@shared/auto-rules";
-import { PET_PERSONALITIES } from "@shared/pet-behavior";
+import { PET_PERSONALITIES, petSentence } from "@shared/pet-behavior";
 
 const appVersionFallback = __PROJECTD_VERSION__;
 import { PET_CHARACTERS } from "@shared/pet-characters";
@@ -79,6 +79,7 @@ const selectedPortalId = ref<string | null>(null);
 const scenes = ref<WorkspaceScene[]>([]);
 const actionHistory = ref<ActionExecution[]>([]);
 const interruptedRecoveries = ref<InterruptedActionRecovery[]>([]);
+const suggestionSuppressionHistory = ref<SuggestionSuppressionHistoryEntry[]>([]);
 const diagnosticsReport = ref<SupportDiagnosticsReport | null>(null);
 const diagnosticsBusy = ref(false);
 const diagnosticsConsent = ref(false);
@@ -190,6 +191,7 @@ const particleIntensity = ref(55);
 const petEnabled = ref(true);
 const petCharacterId = ref("luna-q");
 const petPersonality = ref("gentle");
+const petPersonalityPreview = ref("");
 const petTalkFrequency = ref("normal");
 const petScale = ref(100);
 const petAutoOutfit = ref(true);
@@ -269,8 +271,41 @@ const recoverySystemItems = computed(() => {
   ];
 });
 
+const suppressionReasonLabels: Record<string, string> = {
+  "runtime-quiet-hours": "系统静默时段",
+  "runtime-fullscreen": "全屏应用运行中",
+  "runtime-battery-saver": "省电模式",
+  "runtime-low-battery": "电量较低",
+  "delivery-disabled": "建议已关闭",
+  "delivery-snoozed": "建议已暂缓",
+  "delivery-muted": "建议已静音",
+  "scheduled-quiet-hours": "免打扰时段",
+  "insufficient-candidates": "候选文件不足",
+  "duplicate-fingerprint": "相同批次已处理",
+  "global-cooldown": "提醒冷却中",
+  "kind-cooldown": "同类提醒冷却中",
+  "daily-budget-exhausted": "今日提醒额度已用完",
+  "kind-daily-budget-exhausted": "今日整理建议额度已用完",
+  "policy-history-unavailable": "策略历史不可用"
+};
+
+function suppressionReasonLabel(reason: string): string {
+  return suppressionReasonLabels[reason] ?? "建议暂未显示";
+}
+
+function formatSuppressionTime(value: string): string {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "时间未知";
+  return new Intl.DateTimeFormat("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(date);
+}
+
 async function loadSettings(): Promise<void> {
-  const [nextLibrary, nextDisplays, nextSettings, nextLayouts, nextContainers, nextAutoRules, nextAppInfo, nextHost, nextLocationSource, nextRecoveryPath, nextPerformance, nextAutoActivate, nextLaunchAtLogin, nextCoverAllDisplays, nextRuntimeState, nextPortals, nextScenes, nextActionHistory, nextInterruptedRecoveries, nextSuggestionDelivery, nextPrivacyNetwork, nextRecoverySystemStatus, nextUpdateStatus] = await Promise.all([
+  const [nextLibrary, nextDisplays, nextSettings, nextLayouts, nextContainers, nextAutoRules, nextAppInfo, nextHost, nextLocationSource, nextRecoveryPath, nextPerformance, nextAutoActivate, nextLaunchAtLogin, nextCoverAllDisplays, nextRuntimeState, nextPortals, nextScenes, nextActionHistory, nextInterruptedRecoveries, nextSuggestionDelivery, nextSuppressionHistory, nextPrivacyNetwork, nextRecoverySystemStatus, nextUpdateStatus] = await Promise.all([
     window.projectD.getWallpaperLibrary(),
     window.projectD.getWallpaperDisplays(),
     window.projectD.getSettings(),
@@ -291,6 +326,7 @@ async function loadSettings(): Promise<void> {
     window.projectD.getActionHistory(),
     window.projectD.getInterruptedActionRecoveries(),
     window.projectD.getSuggestionDeliveryControls(),
+    window.projectD.getSuggestionSuppressionHistory().catch(() => []),
     window.projectD.getPrivacyNetworkState(),
     window.projectD.getRecoverySystemStatus().catch(() => null),
     window.projectD.getUpdateStatus()
@@ -320,11 +356,13 @@ async function loadSettings(): Promise<void> {
   actionHistory.value = nextActionHistory;
   interruptedRecoveries.value = nextInterruptedRecoveries;
   suggestionDelivery.value = nextSuggestionDelivery;
+  suggestionSuppressionHistory.value = nextSuppressionHistory;
 
   particleIntensity.value = Math.round(nextSettings.weather.particleIntensity * 100);
   petEnabled.value = nextSettings.pet.isVisible;
   petCharacterId.value = nextSettings.pet.characterId === "default" ? "luna-q" : nextSettings.pet.characterId;
   petPersonality.value = nextSettings.pet.personality;
+  petPersonalityPreview.value = petSentence(nextSettings.pet.personality, () => 0);
   petTalkFrequency.value = nextSettings.pet.talkFrequency;
   petScale.value = Math.round(nextSettings.pet.scale * 100);
   petAutoOutfit.value = nextSettings.pet.autoOutfit;
@@ -484,10 +522,22 @@ async function testWeather(): Promise<void> {
 }
 
 async function testAi(): Promise<void> {
-  aiTestStatus.value = "测试中";
+  aiTestStatus.value = "正在保存配置并测试";
   try {
-    const response = await window.projectD.sendChatMessage("你好，这是一个连通性测试。");
-    aiTestStatus.value = response.fallback ? "本地降级通道可用" : `${response.provider} 响应正常`;
+    settings.value = await window.projectD.updateSettings({
+      ai: {
+        enabled: aiEnabled.value,
+        provider: provider.value,
+        apiKey: aiApiKey.value,
+        apiEndpoint: aiEndpoint.value,
+        model: aiModel.value,
+        temperature: aiTemperature.value / 100,
+        maxTokens: aiMaxTokens.value
+      }
+    });
+    aiApiKey.value = "";
+    const result = await window.projectD.testAiConnection();
+    aiTestStatus.value = result.message;
   } catch (error) {
     aiTestStatus.value = `失败：${error instanceof Error ? error.message : String(error)}`;
   }
@@ -501,6 +551,17 @@ async function clearChatHistory(): Promise<void> {
 async function resetPetPosition(): Promise<void> {
   await window.projectD.resetPetWindow();
   saveStatus.value = "桌宠位置已复位";
+}
+
+async function previewPetPersonality(personalityId: string): Promise<void> {
+  petPersonality.value = personalityId;
+  petPersonalityPreview.value = petSentence(personalityId, () => 0);
+  try {
+    settings.value = await window.projectD.updateSettings({ pet: { personality: personalityId } });
+    saveStatus.value = `已应用人格：${PET_PERSONALITIES.find(([id]) => id === personalityId)?.[1] ?? personalityId}`;
+  } catch (error) {
+    saveStatus.value = `人格应用失败：${error instanceof Error ? error.message : String(error)}`;
+  }
 }
 
 async function addPortal(): Promise<void> {
@@ -691,6 +752,7 @@ async function applySelectedWallpaper(): Promise<void> {
     return;
   }
   settings.value = await window.projectD.applyWallpaper(selectedWallpaperId.value);
+  wallpaperDisplays.value = await window.projectD.getWallpaperDisplays();
   wallpaperDynamic.value = settings.value.wallpaper.isDynamic;
   wallpaperStyle.value = settings.value.wallpaper.currentStyle;
   saveStatus.value = "壁纸已应用";
@@ -869,6 +931,20 @@ async function saveSettings(): Promise<void> {
             </label>
           </div>
           <div class="settings-group">
+            <div class="group-heading">
+              <div><h2>最近抑制</h2><p class="runtime-line">说明 Project D 为什么没有打扰你，仅保留最近 20 条。</p></div>
+              <span class="privacy-count">{{ suggestionSuppressionHistory.length }}</span>
+            </div>
+            <div class="suggestion-suppression-list">
+              <article v-for="(entry, index) in suggestionSuppressionHistory" :key="`${entry.suppressedAt}:${entry.reason}:${index}`">
+                <History :size="16" />
+                <span><strong>{{ suppressionReasonLabel(entry.reason) }}</strong><small>{{ entry.explanation }}</small></span>
+                <time :datetime="entry.suppressedAt">{{ formatSuppressionTime(entry.suppressedAt) }}</time>
+              </article>
+              <p v-if="suggestionSuppressionHistory.length === 0" class="runtime-line">暂无抑制记录。建议正常投递时不会出现在这里。</p>
+            </div>
+          </div>
+          <div class="settings-group">
             <h2>恢复</h2>
             <div class="setting-row">
               <span><strong>系统桌面</strong><small>{{ recoveryScriptPath || "恢复脚本已生成" }}</small></span>
@@ -981,7 +1057,7 @@ async function saveSettings(): Promise<void> {
           </div>
           <div class="settings-group">
             <div class="group-heading"><div><h2>工作场景</h2><p class="runtime-line">保存布局、壁纸、性能策略和桌宠显示状态。</p></div><button class="secondary-command" type="button" @click="saveScene"><Layers3 :size="16" /><span>保存当前场景</span></button></div>
-            <div class="scene-list"><button v-for="scene in scenes" :key="scene.id" type="button" @click="applyScene(scene)"><span><strong>{{ scene.name }}</strong><small>{{ new Date(scene.createdAt).toLocaleDateString() }} · {{ scene.containerLayout.length }}个容器</small></span><RotateCcw :size="16" /></button><p v-if="scenes.length === 0" class="runtime-line">还没有保存场景。</p></div>
+            <div class="scene-list"><button v-for="scene in scenes" :key="scene.id" type="button" @click="applyScene(scene)"><span><strong>{{ scene.name }}</strong><small>{{ new Date(scene.createdAt).toLocaleDateString() }} · {{ scene.containerLayout.length }}个容器 · {{ scene.pinnedResources?.length ?? 0 }}项钉选</small></span><RotateCcw :size="16" /></button><p v-if="scenes.length === 0" class="runtime-line">还没有保存场景。</p></div>
           </div>
         </section>
 
@@ -1099,7 +1175,7 @@ async function saveSettings(): Promise<void> {
                 v-for="character in petCharacters"
                 :key="character.id"
                 type="button"
-                :class="{ selected: petCharacterId === character.id }"
+                :class="{ selected: petCharacterId === character.id, cutout: character.renderMode === 'cutout' }"
                 @click="petCharacterId = character.id"
               >
                 <img :src="`${baseUrl}${character.asset}`" :alt="character.name" />
@@ -1117,8 +1193,9 @@ async function saveSettings(): Promise<void> {
           <div class="settings-group">
             <h2>人格</h2>
             <div class="persona-grid">
-              <button v-for="persona in personalities" :key="persona[0]" type="button" :class="{ selected: petPersonality === persona[0] }" @click="petPersonality = persona[0]">{{ persona[1] }}</button>
+              <button v-for="persona in personalities" :key="persona[0]" type="button" :class="{ selected: petPersonality === persona[0] }" @click="previewPetPersonality(persona[0])">{{ persona[1] }}</button>
             </div>
+            <div class="personality-preview" aria-live="polite"><small>人格试听</small><strong>{{ petPersonalityPreview }}</strong></div>
             <button class="secondary-command reset-pet" type="button" @click="resetPetPosition"><RotateCcw :size="16" /><span>复位桌宠位置</span></button>
           </div>
         </section>
@@ -1334,8 +1411,12 @@ select:focus, input:focus { border-color: rgba(159,215,237,.58); }
 .pet-character-grid button { position: relative; aspect-ratio: 3 / 4; overflow: hidden; border: 1px solid rgba(255,255,255,.1); border-radius: 8px; padding: 0; color: #f4f1ea; background: #171a1f; cursor: pointer; }
 .pet-character-grid button.selected { border-color: #9fd7ed; box-shadow: inset 0 0 0 1px rgba(159,215,237,.35); }
 .pet-character-grid img { width: 100%; height: 100%; object-fit: cover; object-position: center 27%; opacity: .86; transition: transform .18s ease, opacity .18s ease; }
+.pet-character-grid button.cutout img { padding: 6px 5px 18px; object-fit: contain; object-position: center bottom; }
 .pet-character-grid button:hover img, .pet-character-grid button.selected img { opacity: 1; transform: scale(1.025); }
 .pet-character-grid span { position: absolute; right: 4px; bottom: 4px; left: 4px; overflow: hidden; padding: 4px 5px; border-radius: 5px; background: rgba(9,11,14,.76); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.personality-preview { display: grid; gap: 4px; min-height: 58px; margin-top: 10px; border-left: 2px solid rgba(159,215,237,.58); padding: 8px 10px; background: rgba(159,215,237,.055); }
+.personality-preview small { color: rgba(159,215,237,.68); font-size: 10px; }
+.personality-preview strong { color: rgba(244,241,234,.88); font-size: 12px; font-weight: 500; line-height: 1.55; }
 .portal-list, .portal-resource-list, .scene-list, .recovery-list { display: grid; gap: 8px; }
 .portal-list article, .recovery-list article { display: flex; align-items: center; gap: 10px; min-height: 54px; border: 1px solid rgba(255,255,255,.09); border-radius: 8px; padding: 7px 8px; background: rgba(255,255,255,.025); }
 .portal-list article.selected { border-color: rgba(159,215,237,.46); background: rgba(159,215,237,.07); }
@@ -1348,6 +1429,15 @@ select:focus, input:focus { border-color: rgba(159,215,237,.58); }
 .portal-resource-list button { border-bottom: 1px solid rgba(255,255,255,.06); border-radius: 0; }
 .portal-resource-list button:disabled { cursor: default; opacity: .58; }
 .scene-list button { justify-content: space-between; border: 1px solid rgba(255,255,255,.08); }
+.suggestion-suppression-list { display: grid; max-height: 240px; overflow: auto; border: 1px solid rgba(255,255,255,.07); border-radius: 7px; background: rgba(255,255,255,.025); }
+.suggestion-suppression-list article { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 10px; min-height: 58px; border-bottom: 1px solid rgba(255,255,255,.06); padding: 8px 10px; }
+.suggestion-suppression-list article:last-of-type { border-bottom: 0; }
+.suggestion-suppression-list article > svg { color: rgba(159,215,237,.7); }
+.suggestion-suppression-list article > span { display: grid; min-width: 0; gap: 3px; }
+.suggestion-suppression-list strong { font-size: 12px; }
+.suggestion-suppression-list small { overflow: hidden; color: rgba(244,241,234,.48); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.suggestion-suppression-list time { color: rgba(244,241,234,.4); font-size: 10px; white-space: nowrap; }
+.suggestion-suppression-list > .runtime-line { margin: 0; padding: 14px 10px; }
 .recovery-list article { justify-content: space-between; }
 .recovery-list article > span { flex: 1; }
 .recovery-system-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; margin-bottom: 10px; }

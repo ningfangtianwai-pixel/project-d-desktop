@@ -180,3 +180,11 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 5. Replace the disabled update endpoint with signed production infrastructure and replay real N-2/N-1 upgrade and rollback scenarios.
 6. Close all 35 commercial asset-license records before public or paid distribution.
 7. Keep real payment channels disabled until the server, merchant account, legal review, reconciliation, fraud controls, and disaster recovery are production-ready.
+
+## After Stage 46
+
+1. Verify wallpaper switching on the physical Windows desktop host with one and two displays, then confirm clean-desktop entry/exit restores both Explorer icons and the previous wallpaper.
+2. Test the dedicated AI connection button with the user's currently configured DeepSeek credentials. Automated local-fallback and remote-provider fixture coverage passed, but no paid live request was made during Stage 46.
+3. Replace each of the four new single-pose cutouts with licensed transparent idle, happy, thinking, sleeping, and action frames when final artwork is available.
+4. Run the 100/125/150/200 percent DPI, display hot-plug, Windows 10/11, sleep/wake, four-hour, and 24-hour acceptance matrices.
+5. Approve or replace all 37 `pending-evidence` asset records before public distribution, then sign the installer with Authenticode.

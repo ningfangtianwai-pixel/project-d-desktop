@@ -1,6 +1,6 @@
 import type { IpcMain, IpcMainInvokeEvent } from "electron";
 import { IPC_CHANNELS } from "../../shared/ipc.js";
-import type { DiagnosticsExportResult, DiagnosticsExportSelection, SuggestionDeliveryControls, SuggestionPolicy, SuggestionRecord, SupportDiagnosticsReport } from "../../shared/types.js";
+import type { DiagnosticsExportResult, DiagnosticsExportSelection, SuggestionDeliveryControls, SuggestionPolicy, SuggestionRecord, SuggestionSuppressionHistoryEntry, SupportDiagnosticsReport } from "../../shared/types.js";
 
 type TrustedSenderGuard = (event: IpcMainInvokeEvent, routes?: string[]) => void;
 
@@ -9,6 +9,7 @@ export interface SuggestionIpcDependencies {
   assertTrustedSender: TrustedSenderGuard;
   getLatestSuggestion: () => SuggestionRecord | null;
   getSuggestionControls: () => SuggestionDeliveryControls;
+  getSuggestionSuppressionHistory: () => SuggestionSuppressionHistoryEntry[];
   serializeOp: <T>(op: () => Promise<T>) => Promise<T>;
   dismissSuggestion: (suggestionId: string) => Promise<void>;
   snoozeSuggestions: (minutes: number) => Promise<void>;
@@ -35,6 +36,11 @@ export function registerSuggestionIpcHandlers(deps: SuggestionIpcDependencies): 
   ipc.handle(IPC_CHANNELS.SUGGESTIONS_GET_CONTROLS, (event): SuggestionDeliveryControls => {
     assertTrustedSender(event, ["", "#/settings", "#/overlay"]);
     return deps.getSuggestionControls();
+  });
+
+  ipc.handle(IPC_CHANNELS.SUGGESTIONS_GET_SUPPRESSION_HISTORY, (event): SuggestionSuppressionHistoryEntry[] => {
+    assertTrustedSender(event, ["#/settings"]);
+    return deps.getSuggestionSuppressionHistory();
   });
 
   ipc.handle(IPC_CHANNELS.SUGGESTIONS_SNOOZE, async (event, minutes: unknown): Promise<void> => {

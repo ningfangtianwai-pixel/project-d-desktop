@@ -1401,3 +1401,17 @@
 - Final package metadata is generated after the source commit into `release/SHA256SUMS.txt`, `release/COMMIT_SHA.txt`, and `release/BUILD_SUMMARY.json`, avoiding a stale commit or digest in tracked documentation; Authenticode remains `NotSigned`.
 - `pnpm verify:release-ready` correctly passes the MIT/manual-update/document/package checks and blocks draft legal text, 33 pending asset records, and missing Authenticode signing.
 - Final machine state: no Project D process and Explorer `HideIcons=0`.
+
+## 2026-07-23 Stages 45-46 UI And Desktop Experience Closure
+
+- Added suggestion suppression history, explicit search-result scene selection, and pinned-resource counts in Settings.
+- Diagnosed the organizer toolbar failure as a CSS stacking-rule specificity defect; removed the overlay-wide child override and verified normal, non-forced clicks.
+- Added a wallpaper backdrop with a static-poster/image fallback, stronger glass transmission, and display-assignment synchronization when a global or AI-requested wallpaper changes.
+- Reworked chat history layout to render all 40 loaded entries, scroll to the latest entry, preserve wrapping, and keep the composer visible.
+- Replaced the Settings connection test's forbidden chat IPC call with `ai:test-connection`; local fallback and remote-provider fixture paths do not read or write chat history.
+- Generated and visually reviewed four transparent full-body pet cutouts from the supplied character sheets. The original sheets remain tracked; final multi-action packs are still external artwork work.
+- Made personality changes immediate, added persona-specific previews, and updated the running pet bubble after a settings change.
+- First Stage 45 UI run failed because the test matched the same filename in two regions. Scoped the locator to `.search-result-main`; the complete workflow then passed.
+- `pnpm lint`, `pnpm typecheck`, `pnpm build`, `pnpm test` (190/190), `pnpm test:component` (2/2), and `pnpm test:e2e:built` (9/9) passed.
+- `pnpm qa:user-reported-ui` and `node scripts/qa-feature-closeout-ui.cjs` passed. Reports and screenshots are under `artifacts/qa/user-reported-ui` and `artifacts/qa/stage45-ui`.
+- `pnpm verify:assets:sync` registered the four new cutouts; `pnpm verify:assets` passes for 37/37 files. All remain `pending-evidence`.

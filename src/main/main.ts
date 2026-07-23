@@ -22,6 +22,7 @@ import { SearchResultRegistry } from "./search/search-result-registry.js";
 import { isEverythingAvailable, searchEverything } from "./search/everything-provider.js";
 import { searchWindowsSearch } from "./search/windows-search-provider.js";
 import { SuggestionEngine } from "./suggestions/suggestion-engine.js";
+import { appendSuggestionSuppressionHistory, parseSuggestionSuppressionHistory } from "./suggestions/suggestion-history.js";
 import { DiagnosticsService } from "./diagnostics/diagnostics-service.js";
 import { readRecentLogMetadata } from "./diagnostics/diagnostics-source.js";
 import { SystemPresenceMonitor } from "./system-presence.js";
@@ -45,7 +46,7 @@ import { SystemEventManager } from "./system-event-manager.js";
 import { IPC_CHANNELS, MENU_COMMANDS, type MenuCommand } from "../shared/ipc.js";
 import { registerAllIpcHandlers, type ServiceDeps } from "./ipc/register-all.js";
 import { WALLPAPER_LIBRARY } from "../shared/wallpaper-library.js";
-import type { ActionExecution, DesktopStatus, FilePreviewData, InterruptedActionRecovery, PetWindowBounds, PrivacyNetworkState, RecoveryHealthCode, RecoverySystemStatus, SettingsPatch, SettingsSnapshot, SuggestionDeliveryControls, SuggestionPolicy, SuggestionRecord, SupportDiagnosticsReport, WallpaperDisplayInfo, WorkspaceSearchResult } from "../shared/types.js";
+import type { ActionExecution, DesktopStatus, FilePreviewData, InterruptedActionRecovery, PetWindowBounds, PrivacyNetworkState, RecoveryHealthCode, RecoverySystemStatus, SettingsPatch, SettingsSnapshot, SuggestionDeliveryControls, SuggestionPolicy, SuggestionRecord, SuggestionSuppressionHistoryEntry, SupportDiagnosticsReport, WallpaperDisplayInfo, WorkspaceSearchResult } from "../shared/types.js";
 import type { UpdateStatus } from "../shared/update.js";
 import type { PerformanceMode, RuntimePauseSnapshot } from "../shared/runtime.js";
 
@@ -56,6 +57,7 @@ const qaRunEnabled = process.argv.some((argument) => argument.startsWith("--proj
 const safeRendererMode = process.argv.includes(SAFE_RENDERER_ARG);
 const startHidden = process.argv.includes(START_HIDDEN_ARG);
 const GITHUB_RELEASES_URL = "https://github.com/ningfangtianwai-pixel/project-d-desktop/releases";
+const SUGGESTION_SUPPRESSION_HISTORY_KEY = "suggestion:suppression-history";
 if (safeRendererMode) app.disableHardwareAcceleration();
 
 let mainWindow: BrowserWindow | null = null;
@@ -1265,6 +1267,16 @@ function operationsFeatureEnabled(key: string): boolean {
   return operationsControl?.feature({ key, risk: "low", defaultEnabled: true }).enabled ?? true;
 }
 
+function assignWallpaperToManagedDisplays(wallpaperId: string): void {
+  if (!database) return;
+  const displays = database.getAppState("cover_all_displays") === "true"
+    ? screen.getAllDisplays()
+    : [screen.getPrimaryDisplay()];
+  for (const display of displays) {
+    database.setDisplayWallpaperAssignment(String(display.id), wallpaperId);
+  }
+}
+
 function applyWallpaperById(wallpaperId: string): SettingsSnapshot {
   if (!database) {
     throw new Error("Database is not initialized");
@@ -1288,6 +1300,7 @@ function applyWallpaperById(wallpaperId: string): SettingsSnapshot {
     }
   });
 
+  assignWallpaperToManagedDisplays(wallpaper.id);
   syncWindowsFromSettings(settings);
   broadcastSettingsUpdated();
   logger?.info("app", "wallpaper applied from library", { wallpaperId, label: wallpaper.label });
@@ -1427,6 +1440,18 @@ function getLatestSuggestion(): SuggestionRecord | null {
   return suggestion?.status === "ready" ? suggestion : null;
 }
 
+function getSuggestionSuppressionHistory(): SuggestionSuppressionHistoryEntry[] {
+  const history = parseSuggestionSuppressionHistory(database?.getAppState(SUGGESTION_SUPPRESSION_HISTORY_KEY));
+  return history.reverse();
+}
+
+function recordSuggestionSuppression(entry: SuggestionSuppressionHistoryEntry): void {
+  if (!database) return;
+  const history = parseSuggestionSuppressionHistory(database.getAppState(SUGGESTION_SUPPRESSION_HISTORY_KEY));
+  const next = appendSuggestionSuppressionHistory(history, entry);
+  database.setAppState(SUGGESTION_SUPPRESSION_HISTORY_KEY, JSON.stringify(next));
+}
+
 async function performDesktopSuggestionEvaluation(): Promise<void> {
   if (!suggestionEngine || !database) return;
   const presence = await systemPresenceMonitor.getState();
@@ -1454,6 +1479,13 @@ async function performDesktopSuggestionEvaluation(): Promise<void> {
     reason: decision.reason,
     explanation: decision.explanation
   }));
+  if (decision.status === "suppressed") {
+    recordSuggestionSuppression({
+      reason: decision.reason,
+      explanation: decision.explanation,
+      suppressedAt: new Date().toISOString()
+    });
+  }
   const created = decision.suggestion;
   if (created) {
     const visibleSuggestion: SuggestionRecord = {
@@ -1825,7 +1857,8 @@ function buildIpcDeps(): ServiceDeps {
       broadcastSettings: broadcastSettingsUpdated,
       syncWindows: syncWindowsFromSettings,
       validateSettingsPatch,
-      sendChatMessage: (content) => aiService?.sendMessage(content) ?? Promise.reject(new Error("AI service is unavailable"))
+      sendChatMessage: (content) => aiService?.sendMessage(content) ?? Promise.reject(new Error("AI service is unavailable")),
+      testAiConnection: () => aiService?.testConnection() ?? Promise.reject(new Error("AI service is unavailable"))
     },
     window: {
       getAppInfo: () => ({ name: app.getName(), version: app.getVersion(), platform: process.platform, isPackaged: app.isPackaged }),
@@ -1863,6 +1896,7 @@ function buildIpcDeps(): ServiceDeps {
     suggestions: {
       getLatestSuggestion,
       getSuggestionControls: getSuggestionDeliveryControls,
+      getSuggestionSuppressionHistory,
       serializeOp: serializeSuggestionOperation,
       dismissSuggestion: async (suggestionId) => {
         const suggestion = getLatestSuggestion();
@@ -2156,6 +2190,7 @@ async function initializeCoreServices(): Promise<void> {
   weatherService = new WeatherService(database, logger, () => operationsFeatureEnabled("online.weather"));
   aiService = new AiService(database, weatherService, logger, () => operationsFeatureEnabled("online.ai"));
   aiService.setSettingsChangedHandler((settings) => {
+    if (settings.wallpaper.dynamicId) assignWallpaperToManagedDisplays(settings.wallpaper.dynamicId);
     syncWindowsFromSettings(settings);
     broadcastSettingsUpdated();
   });

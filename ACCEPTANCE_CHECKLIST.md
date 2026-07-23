@@ -737,3 +737,25 @@
 - [ ] All 33 asset records have approved distribution evidence.
 - [ ] Installer has valid Authenticode signature and timestamp.
 - [ ] Real Windows install/upgrade/uninstall, physical hardware matrix, and claim-eligible 4-hour/24-hour reports are complete.
+
+## Stage 45 Suggestion And Scene UI Closure
+
+- [x] Settings displays the bounded recent suggestion-suppression history.
+- [x] Search results require an explicit scene selection before pinning.
+- [x] Scene rows display their pinned-resource counts.
+- [x] Focused tests and browser UI acceptance cover all three interactions without horizontal overflow.
+
+## Stage 46 Desktop Experience Regression Closure
+
+- [x] Organizer top controls receive normal pointer clicks after entering the organizer.
+- [x] Organizer view has a selected-wallpaper backdrop and a non-black fallback when the wallpaper host is unavailable.
+- [x] Glass panels transmit more of the wallpaper while preserving readable text contrast.
+- [x] Global and AI-requested wallpaper changes update managed physical-display assignments.
+- [x] AI chat renders the complete loaded history, wraps long content, scrolls to the latest message, and keeps the composer visible.
+- [x] Settings has a dedicated AI connection-test IPC route that does not pollute chat history.
+- [x] Four non-Luna character sheets have transparent full-body single-pose cutouts and load successfully.
+- [x] Pet personality selection applies immediately and displays a persona-specific test sentence.
+- [x] 190 Node tests, 2 component tests, 9 Electron E2E scenarios, lint, type checks, build, UI QA, and the 37-file asset gate pass.
+- [ ] Physical one/two-display wallpaper switching and clean-desktop restoration are recorded.
+- [ ] A live request with the user's configured external AI provider succeeds.
+- [ ] Four non-Luna characters have final licensed transparent multi-action sprite packs.

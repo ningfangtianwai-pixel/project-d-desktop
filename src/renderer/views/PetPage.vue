@@ -123,7 +123,7 @@ const petStageStyle = computed(() => ({
 }));
 let interactionEnabled = false;
 
-watch(currentState, () => {
+watch([currentState, currentCharacterImage], () => {
   spriteFailed.value = false;
 });
 
@@ -321,12 +321,17 @@ async function refreshContextState(reschedule = false): Promise<void> {
       window.projectD.getSettings(),
       window.projectD.getCurrentWeather()
     ]);
+    const personalityChanged = personality.value !== settings.pet.personality;
     applyPetSettings(settings);
     restartActionTimer(settings.pet.actionInterval);
     const weatherAction = settings.pet.autoOutfit ? actionForWeather(weather) : null;
     if (!activeSuggestion.value) {
       action.value = weatherAction ?? chooseAmbientAction();
-      bubble.value = petStates[action.value].bubble;
+      if (reschedule && personalityChanged) {
+        showBubble(petSentence(personality.value), "cheerful", 8_000);
+      } else {
+        bubble.value = petStates[action.value].bubble;
+      }
     }
     if (reschedule) {
       scheduleNextSentence();
@@ -482,7 +487,10 @@ function stopDrag(): void {
         <img
           v-if="!spriteFailed"
           class="pet-sprite"
-          :class="{ 'pet-character-sheet': currentCharacter.renderMode === 'portrait-sheet' }"
+          :class="{
+            'pet-character-sheet': currentCharacter.renderMode === 'portrait-sheet',
+            'pet-character-cutout': currentCharacter.renderMode === 'cutout'
+          }"
           :style="characterSheetStyle"
           :src="currentCharacterImage"
           :alt="currentCharacterLabel"

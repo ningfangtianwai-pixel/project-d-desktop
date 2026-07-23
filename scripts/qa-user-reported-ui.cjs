@@ -1,0 +1,157 @@
+const fs = require("node:fs");
+const net = require("node:net");
+const path = require("node:path");
+const { spawn } = require("node:child_process");
+const { chromium } = require("@playwright/test");
+
+const root = path.resolve(__dirname, "..");
+const output = path.join(root, "artifacts", "qa", "user-reported-ui");
+const port = 4191;
+const edge = [
+  path.join(process.env["PROGRAMFILES(X86)"] ?? "", "Microsoft", "Edge", "Application", "msedge.exe"),
+  path.join(process.env.PROGRAMFILES ?? "", "Microsoft", "Edge", "Application", "msedge.exe")
+].find((candidate) => fs.existsSync(candidate));
+
+if (!edge) throw new Error("Microsoft Edge is required for the user-reported UI regression check");
+fs.mkdirSync(output, { recursive: true });
+
+const vite = spawn(process.execPath, [
+  path.join(root, "node_modules", "vite", "bin", "vite.js"),
+  "preview",
+  "--host",
+  "127.0.0.1",
+  "--port",
+  String(port)
+], {
+  cwd: root,
+  windowsHide: true,
+  stdio: "ignore"
+});
+
+run().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+}).finally(() => {
+  vite.kill();
+});
+
+async function run() {
+  await waitForPort(port);
+  const browser = await chromium.launch({ headless: true, executablePath: edge });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1536, height: 864 }, deviceScaleFactor: 1 });
+    await page.addInitScript(() => globalThis.localStorage.setItem("projectd:onboarding:v1", JSON.stringify({
+      version: 1,
+      currentStep: 5,
+      status: "completed",
+      updatedAt: new Date().toISOString()
+    })));
+
+    await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "networkidle" });
+    await page.locator(".app-shell").waitFor();
+    const mainWallpaperVisible = await page.locator(".wallpaper-stage").isVisible();
+
+    const chatInput = page.locator(".chat-input input");
+    for (let index = 0; index < 7; index += 1) {
+      await chatInput.fill(`history-${index}`);
+      await chatInput.press("Enter");
+      await page.locator(".chat-history article").nth(index * 2 + 1).waitFor();
+    }
+    const chatMessageCount = await page.locator(".chat-history article").count();
+    await chatInput.scrollIntoViewIfNeeded();
+    const chatInputVisible = await chatInput.isVisible();
+    await page.screenshot({ path: path.join(output, "main-chat-history.png"), fullPage: true });
+
+    await page.evaluate(() => { globalThis.location.hash = "#/overlay"; });
+    await page.locator(".overlay-page").waitFor();
+    await page.locator(".pull-cord-group button").last().click();
+    await page.waitForFunction(() => {
+      const backdrop = globalThis.document.querySelector(".overlay-wallpaper-backdrop");
+      return backdrop && globalThis.getComputedStyle(backdrop).backgroundImage.includes("url(");
+    });
+    const overlayBackdrop = await page.locator(".overlay-wallpaper-backdrop").evaluate((element) => ({
+      backgroundImage: globalThis.getComputedStyle(element).backgroundImage,
+      pointerEvents: globalThis.getComputedStyle(element).pointerEvents
+    }));
+    page.once("dialog", (dialog) => dialog.accept("UI regression scene"));
+    await page.locator(".toolbar-right > button").first().click();
+    await page.screenshot({ path: path.join(output, "overlay-wallpaper-toolbar.png"), fullPage: true });
+
+    await page.evaluate(() => { globalThis.location.hash = "#/settings"; });
+    await page.locator(".settings-app").waitFor();
+    const navButtons = page.locator(".settings-sidebar nav button");
+    await navButtons.nth(8).click();
+    const aiStatus = page.locator(".settings-pane .inline-status span");
+    await page.locator(".settings-pane .inline-status .secondary-command").click();
+    await aiStatus.filter({ hasText: /本地降级通道可用/ }).waitFor();
+
+    await navButtons.nth(7).click();
+    const characterButtons = page.locator(".pet-character-grid button");
+    const characterCount = await characterButtons.count();
+    await characterButtons.nth(1).click();
+    const personalityButtons = page.locator(".persona-grid button");
+    await personalityButtons.nth(6).click();
+    const personalityPreview = await page.locator(".personality-preview strong").textContent();
+    await page.locator(".settings-commandbar .primary-command").click();
+    const unloadedCharacterImages = await page.locator(".pet-character-grid img").evaluateAll((images) =>
+      images.filter((image) => !image.complete || image.naturalWidth === 0).length
+    );
+    await page.screenshot({ path: path.join(output, "settings-pets-personality.png"), fullPage: true });
+
+    await page.setViewportSize({ width: 300, height: 310 });
+    await page.evaluate(() => { globalThis.location.hash = "#/pet"; });
+    const petSprite = page.locator(".pet-sprite");
+    await petSprite.waitFor();
+    const petCutoutLoaded = await petSprite.evaluate((image) =>
+      image.classList.contains("pet-character-cutout")
+      && image.complete
+      && image.naturalWidth > 0
+    );
+    await page.screenshot({ path: path.join(output, "pet-cutout.png"), fullPage: true });
+
+    const checks = {
+      mainWallpaperVisible,
+      chatMessageCount,
+      chatInputVisible,
+      overlayBackdrop,
+      characterCount,
+      unloadedCharacterImages,
+      personalityPreview,
+      petCutoutLoaded
+    };
+    const passed = mainWallpaperVisible
+      && chatMessageCount === 14
+      && chatInputVisible
+      && overlayBackdrop.backgroundImage.includes("url(")
+      && overlayBackdrop.pointerEvents === "none"
+      && characterCount === 5
+      && unloadedCharacterImages === 0
+      && Boolean(personalityPreview?.trim())
+      && petCutoutLoaded;
+    const report = { generatedAt: new Date().toISOString(), passed, checks };
+    fs.writeFileSync(path.join(output, "report.json"), `${JSON.stringify(report, null, 2)}\n`, "utf8");
+    console.log(JSON.stringify({ ...report, reportPath: path.join(output, "report.json") }, null, 2));
+    if (!passed) process.exitCode = 1;
+  } finally {
+    await browser.close();
+  }
+}
+
+function waitForPort(targetPort, timeoutMs = 10_000) {
+  const startedAt = Date.now();
+  return new Promise((resolve, reject) => {
+    const probe = () => {
+      const socket = net.createConnection({ host: "127.0.0.1", port: targetPort });
+      socket.once("connect", () => {
+        socket.destroy();
+        resolve();
+      });
+      socket.once("error", () => {
+        socket.destroy();
+        if (Date.now() - startedAt >= timeoutMs) reject(new Error("Vite preview did not start in time"));
+        else setTimeout(probe, 200);
+      });
+    };
+    probe();
+  });
+}
