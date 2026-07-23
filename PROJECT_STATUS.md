@@ -998,3 +998,12 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Every guarded application exit performs an idempotent desktop-visibility recovery even when cached state says the desktop is idle.
 - Shutdown recovery no longer clears unrelated boot diagnostics.
 - Verification passes: 191/191 Node tests plus corrupted-configuration, force-kill, and tray-exit Electron E2E scenarios.
+
+## Stage 48 - DeepSeek V4 Pet Connection (Complete)
+
+- Migrated DeepSeek's default from the retiring `deepseek-chat` alias to low-latency `deepseek-v4-flash`; V4 Pro remains selectable.
+- Selecting DeepSeek now fills the official endpoint and presents supported V4 models instead of requiring free-form model entry.
+- Provider failures distinguish invalid credentials, insufficient balance, throttling, server failure, and other HTTP errors.
+- The supplied key is stored only through Electron `safeStorage` in the local user database and is absent from source, documentation, logs, and Git.
+- Real verification succeeded against `deepseek-v4-flash`. The reusable verifier now reads the encrypted key in Electron and does not require it on the command line.
+- Verification passes: lint, all TypeScript targets, 191/191 Node tests, production build, UI QA, 38 packaged modules, and packaged clean startup/shutdown.

@@ -1,78 +1,45 @@
-const fs = require("node:fs");
 const path = require("node:path");
-const initSqlJs = require("sql.js");
+const { app } = require("electron");
+
+app.setName("Project D");
+app.setPath("userData", path.join(app.getPath("appData"), "Project D"));
 
 async function main() {
-  const dbPath = process.env.PROJECTD_DB_PATH || path.join(process.env.APPDATA ?? "", "Project D", "database.sqlite");
-  if (!fs.existsSync(dbPath)) {
-    console.error(`Database not found: ${dbPath}`);
-    process.exitCode = 1;
-    return;
+  if (!app.requestSingleInstanceLock()) {
+    throw new Error("Close Project D before testing the configured AI provider");
   }
 
-  const SQL = await initSqlJs({
-    locateFile: (file) => path.join(process.cwd(), "node_modules", "sql.js", "dist", file)
-  });
-  const db = new SQL.Database(fs.readFileSync(dbPath));
-  const row = db.exec("SELECT provider, api_key, api_endpoint, model FROM ai_config ORDER BY id LIMIT 1")[0]?.values[0] ?? [];
-  db.close();
+  await app.whenReady();
+  const { AiService } = require("../dist/main/ai-service.js");
+  const { DatabaseService } = require("../dist/main/database.js");
+  const { AppLogger } = require("../dist/main/logger.js");
+  const dbPath = process.env.PROJECTD_DB_PATH ? path.resolve(process.env.PROJECTD_DB_PATH) : undefined;
+  const logger = new AppLogger();
+  const database = new DatabaseService(logger, dbPath);
 
-  const provider = String(row[0] || "local-fallback");
-  const storedKey = typeof row[1] === "string" && row[1].trim() ? row[1].trim() : "";
-  const apiKey = storedKey.startsWith("safe:v1:") ? process.env.PROJECTD_DEEPSEEK_API_KEY : storedKey || process.env.PROJECTD_DEEPSEEK_API_KEY;
-  const endpoint = String(row[2] || "https://api.deepseek.com/chat/completions");
-  const model = String(row[3] || "deepseek-chat");
-
-  if (provider !== "deepseek") {
-    throw new Error(`Expected deepseek provider, got ${provider}`);
+  try {
+    await database.initialize();
+    const settings = database.getSettings();
+    const result = await new AiService(
+      database,
+      { getCurrentWeather: async () => ({ condition: "clear" }) },
+      logger
+    ).testConnection();
+    process.stdout.write(`${JSON.stringify({
+      ok: result.mode === "remote",
+      provider: result.provider,
+      model: settings.ai.model,
+      apiKeyConfigured: settings.ai.apiKeyConfigured,
+      message: result.message
+    }, null, 2)}\n`);
+  } finally {
+    database.close();
   }
-  if (!apiKey) {
-    throw new Error("DeepSeek API key is not available to this verifier. Provide PROJECTD_DEEPSEEK_API_KEY when the database stores a safeStorage-encrypted key.");
-  }
-
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: "你是 Project D 连通性检查助手，只需要简短回答。" },
-        { role: "user", content: "请用中文回复：Project D DeepSeek 可用。" }
-      ],
-      temperature: 0.2,
-      max_tokens: 40
-    }),
-    signal: AbortSignal.timeout(15000)
-  });
-
-  if (!response.ok) {
-    throw new Error(`DeepSeek returned ${response.status}`);
-  }
-
-  const data = await response.json();
-  const content = data.choices?.[0]?.message?.content?.trim() || "";
-  if (!content) {
-    throw new Error("DeepSeek returned an empty response");
-  }
-
-  console.log(
-    JSON.stringify(
-      {
-        ok: true,
-        provider,
-        model,
-        responsePreview: content.slice(0, 80)
-      },
-      null,
-      2
-    )
-  );
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+main()
+  .then(() => app.quit())
+  .catch((error) => {
+    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    app.exit(1);
+  });

@@ -223,6 +223,10 @@ const updateStatus = ref<UpdateStatus>({
 });
 const weatherTestStatus = ref("");
 const aiTestStatus = ref("");
+const deepSeekModels = [
+  ["deepseek-v4-flash", "V4 Flash（推荐，响应更快）"],
+  ["deepseek-v4-pro", "V4 Pro（能力更强）"]
+] as const;
 const suggestionDelivery = ref<SuggestionDeliveryControls>({
   snoozedUntil: null,
   mutedUntil: null,
@@ -540,6 +544,22 @@ async function testAi(): Promise<void> {
     aiTestStatus.value = result.message;
   } catch (error) {
     aiTestStatus.value = `失败：${error instanceof Error ? error.message : String(error)}`;
+  }
+}
+
+function applyAiProviderPreset(): void {
+  aiTestStatus.value = "";
+  if (provider.value === "deepseek") {
+    aiEnabled.value = true;
+    aiEndpoint.value = "https://api.deepseek.com/chat/completions";
+    if (!deepSeekModels.some(([model]) => model === aiModel.value)) {
+      aiModel.value = "deepseek-v4-flash";
+    }
+    return;
+  }
+  if (provider.value === "local-fallback") {
+    aiEndpoint.value = "";
+    aiModel.value = "";
   }
 }
 
@@ -1205,10 +1225,10 @@ async function saveSettings(): Promise<void> {
             <label class="setting-row"><span><strong>启用 AI 对话</strong><small>provider adapter</small></span><input v-model="aiEnabled" class="switch-input" type="checkbox" /></label>
           </div>
           <div class="settings-group two-column-fields">
-            <label><span>Provider</span><select v-model="provider"><option value="local-fallback">LocalFallback</option><option value="openai-compatible">OpenAI Compatible</option><option value="deepseek">DeepSeek</option><option value="xiaomi-mimo">小米 MiMo</option><option value="ollama">Ollama</option></select></label>
-            <label><span>模型</span><input v-model="aiModel" type="text" placeholder="model" /></label>
-            <label class="field-wide"><span>API Endpoint</span><input v-model="aiEndpoint" type="text" placeholder="https://..." /></label>
-            <label class="field-wide"><span>API Key</span><input v-model="aiApiKey" type="password" :placeholder="settings?.ai.apiKeyConfigured ? '已配置' : 'API Key'" /></label>
+            <label><span>Provider</span><select v-model="provider" @change="applyAiProviderPreset"><option value="local-fallback">LocalFallback</option><option value="openai-compatible">OpenAI Compatible</option><option value="deepseek">DeepSeek</option><option value="xiaomi-mimo">小米 MiMo</option><option value="ollama">Ollama</option></select></label>
+            <label><span>模型</span><select v-if="provider === 'deepseek'" v-model="aiModel"><option v-for="model in deepSeekModels" :key="model[0]" :value="model[0]">{{ model[1] }}</option></select><input v-else v-model="aiModel" type="text" placeholder="model" /></label>
+            <label class="field-wide"><span>API Endpoint</span><input v-model="aiEndpoint" type="text" placeholder="https://..." /><small v-if="provider === 'deepseek'">选择 DeepSeek 时会自动使用官方接口。</small></label>
+            <label class="field-wide"><span>API Key</span><input v-model="aiApiKey" type="password" :placeholder="settings?.ai.apiKeyConfigured ? '已配置，留空则不修改' : 'API Key'" /></label>
             <label class="range-field"><span>温度 <b>{{ aiTemperature / 100 }}</b></span><input v-model="aiTemperature" min="0" max="150" type="range" /></label>
             <label class="range-field"><span>回复长度 <b>{{ aiMaxTokens }}</b></span><input v-model="aiMaxTokens" min="50" max="500" step="10" type="range" /></label>
           </div>

@@ -767,3 +767,13 @@
 - [x] Guarded shutdown restores desktop visibility regardless of cached mode.
 - [x] Shutdown recovery preserves unrelated boot diagnostics.
 - [x] Corrupted-config, force-kill, and tray-exit Electron E2E scenarios pass.
+
+## Stage 48 DeepSeek V4 Pet Connection
+
+- [x] DeepSeek selection fills the official endpoint and defaults to `deepseek-v4-flash`.
+- [x] V4 Flash and V4 Pro are explicit model choices.
+- [x] Legacy DeepSeek aliases migrate to the supported low-latency V4 model.
+- [x] API credentials are encrypted with Electron `safeStorage` and never returned to the renderer.
+- [x] Connection errors distinguish credentials, balance, throttling, and provider availability.
+- [x] A real encrypted-key `deepseek-v4-flash` connection test succeeds.
+- [x] The packaged shortcut target contains the updated settings and provider logic.

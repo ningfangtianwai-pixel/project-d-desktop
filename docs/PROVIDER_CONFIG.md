@@ -20,7 +20,7 @@ The AI chat service currently supports these provider slots:
 
 - `local-fallback`: always available, no key required.
 - `openai-compatible`: uses configured endpoint/model and `PROJECTD_OPENAI_COMPATIBLE_API_KEY` or stored key.
-- `deepseek`: uses `PROJECTD_DEEPSEEK_API_KEY` or stored key; defaults to `https://api.deepseek.com/chat/completions` when the endpoint is still the OpenAI placeholder.
+- `deepseek`: uses `PROJECTD_DEEPSEEK_API_KEY` or a stored key and the official `https://api.deepseek.com/chat/completions` endpoint. Project D recommends `deepseek-v4-flash` for low-latency pet conversation and also exposes `deepseek-v4-pro`.
 - `xiaomi-mimo`: uses `PROJECTD_MIMO_API_KEY` or stored key, and requires `PROJECTD_MIMO_ENDPOINT` or a user-configured endpoint.
 - `ollama`: uses local Ollama-compatible `/api/chat`.
 
@@ -29,4 +29,6 @@ Real provider calls fall back to the local assistant if the key, endpoint, or lo
 Stored AI provider keys use Electron `safeStorage` encryption in `ai_config.api_key`. Renderer snapshots expose only whether a key is configured, never the raw key.
 
 `pnpm configure:providers` can configure DeepSeek from `PROJECTD_DEEPSEEK_API_KEY` through the same Electron `safeStorage` path. Existing legacy plaintext values are removed during migration and must be re-entered after credential encryption is available.
-`pnpm verify:ai` performs a small DeepSeek chat-completion request and reports only a short response preview.
+Selecting DeepSeek in Settings automatically fills the official endpoint and a supported V4 model. The API key field may be left blank after the first successful save; Project D retains the encrypted value.
+
+`pnpm verify:ai` runs through Electron, decrypts the already stored key inside the main process, performs a minimal connection request, and reports only provider/model/status metadata. It does not require the key to be repeated in the command line and does not add a message to chat history.

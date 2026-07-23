@@ -34,7 +34,7 @@
     "verify:assets:report": "node scripts/verify-asset-ledger.cjs report",
     "verify:assets:commercial": "node scripts/verify-asset-ledger.cjs --commercial",
     "verify:supply-chain": "node scripts/generate-supply-chain-evidence.cjs --audit-level high",
-    "verify:ai": "node scripts/verify-ai.cjs",
+    "verify:ai": "pnpm build:main && electron scripts/verify-ai.cjs",
     "qa:soak": "pnpm build && node scripts/qa-soak.cjs --seconds 120",
     "qa:soak:4h": "pnpm build && node scripts/qa-soak.cjs --seconds 14400 --mode stress",
     "qa:soak:24h": "pnpm build && node scripts/qa-soak.cjs --seconds 86400 --mode idle",

@@ -85,14 +85,19 @@ test("AI connection test reaches the configured provider without writing chat hi
   const weather = { getCurrentWeather: async () => ({ condition: "clear" }) };
   const logger = { info() {}, warn() {}, error() {} };
   const originalFetch = global.fetch;
-  global.fetch = async () => ({
-    ok: true,
-    json: async () => ({ choices: [{ message: { content: "OK" } }] })
-  });
+  let requestBody;
+  global.fetch = async (_url, init) => {
+    requestBody = JSON.parse(init.body);
+    return {
+      ok: true,
+      json: async () => ({ choices: [{ message: { content: "OK" } }] })
+    };
+  };
 
   try {
     const result = await new AiService(database, weather, logger).testConnection();
     assert.deepEqual(result, { provider: "deepseek", mode: "remote", message: "deepseek 连接正常" });
+    assert.equal(requestBody.model, "deepseek-v4-flash");
     assert.equal(writes, 0);
   } finally {
     global.fetch = originalFetch;

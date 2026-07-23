@@ -1425,3 +1425,13 @@
 - `pnpm typecheck`, `pnpm lint`, `pnpm build`, and 191/191 Node tests passed.
 - Corrupted-config recovery, force-kill recovery, and tray-exit E2E passed after the final correction.
 - Final machine state: Explorer list visible, `HideIcons=0`, no Project D/Electron process.
+
+## 2026-07-23 Stage 48 DeepSeek V4 Configuration
+
+- Confirmed from current official DeepSeek documentation that V4 uses `deepseek-v4-flash` and `deepseek-v4-pro`; the legacy aliases are scheduled for retirement on 2026-07-24.
+- Stored the supplied credential through Electron `safeStorage` in the real Project D user database; command output exposed only `apiKeyConfigured: true`.
+- Real `deepseek-v4-flash` connection test passed without writing to chat history.
+- Added a DeepSeek Settings preset, V4 model selector, official endpoint autofill, clearer saved-key placeholder, and actionable HTTP failure messages.
+- Reworked `pnpm verify:ai` to decrypt the stored credential only in the Electron main process, removing the need to repeat a key in the verifier environment.
+- `pnpm lint`, `pnpm typecheck`, `pnpm test` (191/191), `pnpm build`, and UI QA passed.
+- Rebuilt `release/win-unpacked`, loaded 38/38 packaged modules, and passed packaged smoke with clean shutdown and no error-log entries.

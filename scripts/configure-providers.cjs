@@ -37,7 +37,7 @@ async function main() {
       ai: {
         provider: "deepseek",
         apiEndpoint: "https://api.deepseek.com/chat/completions",
-        model: "deepseek-chat",
+        model: "deepseek-v4-flash",
         enabled: true,
         ...(deepSeekKey ? { apiKey: deepSeekKey } : {})
       }

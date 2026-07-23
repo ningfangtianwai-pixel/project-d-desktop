@@ -259,7 +259,7 @@ export class AiService {
     });
 
     if (!response.ok) {
-      throw new Error(`${settings.ai.provider} returned ${response.status}`);
+      throw new Error(this.providerHttpError(settings.ai.provider, response.status));
     }
 
     const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
@@ -341,10 +341,29 @@ export class AiService {
   }
 
   private modelForProvider(provider: string, configuredModel: string): string {
-    if (provider === "deepseek" && configuredModel === "gpt-3.5-turbo") {
-      return "deepseek-chat";
+    if (
+      provider === "deepseek"
+      && ["", "gpt-3.5-turbo", "deepseek-chat", "deepseek-reasoner"].includes(configuredModel)
+    ) {
+      return "deepseek-v4-flash";
     }
     return configuredModel;
+  }
+
+  private providerHttpError(provider: string, status: number): string {
+    if (status === 401 || status === 403) {
+      return `${provider} API Key 无效、已过期或没有模型权限`;
+    }
+    if (status === 402) {
+      return `${provider} 账户余额不足`;
+    }
+    if (status === 429) {
+      return `${provider} 请求过于频繁，请稍后重试`;
+    }
+    if (status >= 500) {
+      return `${provider} 服务暂时不可用（${status}）`;
+    }
+    return `${provider} 请求失败（${status}）`;
   }
 
   private createLocalReply(input: string, personality: string, weather: string): string {
