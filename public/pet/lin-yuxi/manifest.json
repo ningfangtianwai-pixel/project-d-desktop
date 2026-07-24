@@ -1,0 +1,13 @@
+{
+  "id": "lin-yuxi",
+  "name": "Lin Yuxi",
+  "source": "/pet/lin-yuxi/",
+  "actions": {
+    "idle": { "image": "../sprites/lin-yuxi.png", "width": 521, "height": 1200 },
+    "walk": { "image": "../sprites/lin-yuxi.png", "width": 521, "height": 1200 },
+    "happy": { "image": "../sprites/lin-yuxi.png", "width": 521, "height": 1200 },
+    "thinking": { "image": "../sprites/lin-yuxi.png", "width": 521, "height": 1200 },
+    "sleep": { "image": "../sprites/lin-yuxi.png", "width": 521, "height": 1200 },
+    "interaction": { "image": "../sprites/lin-yuxi.png", "width": 521, "height": 1200 }
+  }
+}

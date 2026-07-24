@@ -138,6 +138,12 @@ export interface SettingsPatch {
   appState?: Record<string, string>;
 }
 
+export interface PetVisualDraftRequest {
+  characterId: string;
+  imageDataUrl: string;
+  consent: boolean;
+}
+
 export interface WallpaperLibraryItem {
   id: string;
   label: string;
@@ -543,6 +549,8 @@ export interface ProjectDApi {
   testAiConnection: () => Promise<AiConnectionTestResult>;
   getChatHistory: () => Promise<ChatMessage[]>;
   clearChatHistory: () => Promise<void>;
+  draftPetVisualProfile: (request: PetVisualDraftRequest) => Promise<import("./pet-visual-profile").PetVisualProfile>;
+  savePetVisualProfile: (characterId: string, profile: import("./pet-visual-profile").PetVisualProfile) => Promise<void>;
   exportAllData: () => Promise<{ cancelled: boolean; filename: string | null }>;
   clearRuntimeCache: () => Promise<{ cleared: true; at: string }>;
   resetAllData: () => Promise<void>;

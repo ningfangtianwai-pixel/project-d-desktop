@@ -2047,7 +2047,8 @@ function buildIpcDeps(): ServiceDeps {
       syncWindows: syncWindowsFromSettings,
       validateSettingsPatch,
       sendChatMessage: (content) => aiService?.sendMessage(content) ?? Promise.reject(new Error("AI service is unavailable")),
-      testAiConnection: () => aiService?.testConnection() ?? Promise.reject(new Error("AI service is unavailable"))
+      testAiConnection: () => aiService?.testConnection() ?? Promise.reject(new Error("AI service is unavailable")),
+      draftPetVisualProfile: (request) => aiService?.draftPetVisualProfile(request.characterId, request.imageDataUrl, request.consent) ?? Promise.reject(new Error("AI service is unavailable"))
     },
     window: {
       getAppInfo: () => ({ name: app.getName(), version: app.getVersion(), platform: process.platform, isPackaged: app.isPackaged }),

@@ -1,5 +1,7 @@
 import { findWallpaperByInput, nextWallpaperId, WALLPAPER_LIBRARY } from "../shared/wallpaper-library.js";
 import { petPersonalityInstruction } from "../shared/pet-behavior.js";
+import { parsePetVisualProfile, type PetVisualProfile } from "../shared/pet-visual-profile.js";
+import { PET_CHARACTERS } from "../shared/pet-characters.js";
 import type { AiConnectionTestResult, ChatMessage, ChatResponse, SettingsSnapshot } from "../shared/types.js";
 import { parseLunaIntent } from "./luna/intent-parser.js";
 import type { DatabaseService } from "./database.js";
@@ -121,6 +123,59 @@ export class AiService {
       mode: "remote",
       message: `${settings.ai.provider} 连接正常`
     };
+  }
+
+  async draftPetVisualProfile(characterId: string, imageDataUrl: string, consent: boolean): Promise<PetVisualProfile> {
+    if (!consent) throw new Error("请先明确同意将所选图片发送给视觉模型");
+    const settings = this.database.getSettings();
+    if (!settings.ai.enabled) throw new Error("请先启用 AI 对话");
+    if (!this.networkAllowed() || getPrivacyNetworkState(this.database).paused) throw new Error("隐私中心或本机策略已暂停外部网络访问");
+    if (settings.ai.provider === "deepseek") {
+      throw new Error("当前 DeepSeek V4 配置只支持文本对话，不能发送图片。请改用已配置的 OpenAI-compatible 或 MiMo 视觉模型。");
+    }
+    if (settings.ai.provider === "local-fallback" || settings.ai.provider === "ollama") {
+      throw new Error("当前 Provider 没有可用的云端视觉接口。请选择支持图片输入的 OpenAI-compatible 或 MiMo 模型。");
+    }
+    if (!PET_CHARACTERS.some((character) => character.id === characterId)) throw new Error("无效的角色标识");
+    if (!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=\s]+$/i.test(imageDataUrl) || imageDataUrl.length > 10_700_000) {
+      throw new Error("只支持不超过 8 MB 的 PNG、JPEG 或 WebP 图片");
+    }
+
+    const runtime = this.database.getAiRuntimeConfig();
+    const apiKey = runtime.apiKey || this.envKeyForProvider(settings.ai.provider);
+    const endpoint = this.endpointForProvider(settings.ai.provider, runtime.endpoint);
+    if (!apiKey || !endpoint) throw new Error("请先在 AI 对话页配置视觉模型的 API Key、Endpoint 和模型");
+
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: this.modelForProvider(settings.ai.provider, runtime.model),
+        messages: [
+          {
+            role: "system",
+            content: "你是桌宠角色设定分析器。只输出 JSON，不要 Markdown。严格使用字段：type(string), appearance(string[]), personality(string), tone(string), forbiddenWords(string[]), actionSuggestions(string[])。actionSuggestions 只能从 idle, walk, happy, thinking, sleep, interaction 中选择，至少一个。不要识别真人身份、年龄、种族或敏感特征；只描述可见的艺术风格、服饰、配色、姿态和安全的角色气质。"
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "为这张桌宠素材生成可由用户确认的角色配置草案。" },
+              { type: "image_url", image_url: { url: imageDataUrl, detail: "low" } }
+            ]
+          }
+        ],
+        temperature: 0.2,
+        max_tokens: 500,
+        response_format: { type: "json_object" }
+      }),
+      signal: AbortSignal.timeout(20_000)
+    });
+    if (!response.ok) throw new Error(this.providerHttpError(settings.ai.provider, response.status));
+    const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const profile = parsePetVisualProfile(data.choices?.[0]?.message?.content ?? "");
+    if (!profile) throw new Error("视觉模型返回的角色配置不完整，请重试或更换兼容模型");
+    this.logger.info("ai", "pet visual profile draft completed", { provider: settings.ai.provider, characterId });
+    return profile;
   }
 
   private tryWallpaperTool(input: string, weatherCondition: string): string | null {

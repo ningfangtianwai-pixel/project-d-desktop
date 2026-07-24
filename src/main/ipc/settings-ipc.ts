@@ -1,6 +1,7 @@
 import type { IpcMain, IpcMainInvokeEvent } from "electron";
 import { IPC_CHANNELS } from "../../shared/ipc.js";
-import type { AiConnectionTestResult, ChatResponse, CurrentWeather, SettingsPatch, SettingsSnapshot, WallpaperLibraryItem } from "../../shared/types.js";
+import type { AiConnectionTestResult, ChatResponse, CurrentWeather, PetVisualDraftRequest, SettingsPatch, SettingsSnapshot, WallpaperLibraryItem } from "../../shared/types.js";
+import { validatePetVisualProfile } from "../../shared/pet-visual-profile.js";
 
 type TrustedSenderGuard = (event: IpcMainInvokeEvent, routes?: string[]) => void;
 
@@ -36,6 +37,7 @@ export interface SettingsIpcDependencies {
   validateSettingsPatch: (patch: unknown) => SettingsPatch;
   sendChatMessage: (content: string) => Promise<ChatResponse>;
   testAiConnection: () => Promise<AiConnectionTestResult>;
+  draftPetVisualProfile: (request: PetVisualDraftRequest) => Promise<import("../../shared/pet-visual-profile.js").PetVisualProfile>;
 }
 
 export function registerSettingsIpcHandlers(deps: SettingsIpcDependencies): void {
@@ -123,5 +125,25 @@ export function registerSettingsIpcHandlers(deps: SettingsIpcDependencies): void
   ipc.handle(IPC_CHANNELS.AI_CHAT_CLEAR, (event): void => {
     assertTrustedSender(event, ["", "#/settings"]);
     getDatabase()?.clearChatHistory();
+  });
+
+  ipc.handle(IPC_CHANNELS.AI_PET_VISUAL_DRAFT, async (event, request: unknown) => {
+    assertTrustedSender(event, ["#/settings"]);
+    if (!request || typeof request !== "object") throw new Error("Invalid visual draft request");
+    const draft = request as Partial<PetVisualDraftRequest>;
+    if (typeof draft.characterId !== "string" || typeof draft.imageDataUrl !== "string" || draft.consent !== true) {
+      throw new Error("Visual request requires an explicit consent confirmation");
+    }
+    return deps.draftPetVisualProfile({ characterId: draft.characterId, imageDataUrl: draft.imageDataUrl, consent: true });
+  });
+
+  ipc.handle(IPC_CHANNELS.AI_PET_VISUAL_SAVE, (event, characterId: unknown, profile: unknown): void => {
+    assertTrustedSender(event, ["#/settings"]);
+    if (typeof characterId !== "string" || characterId.length > 80) throw new Error("Invalid character id");
+    const validated = validatePetVisualProfile(profile);
+    if (!validated) throw new Error("Invalid visual profile");
+    const database = getDatabase();
+    if (!database) throw new Error("Database is not initialized");
+    database.setAppState(`pet_visual_profile:${characterId}`, JSON.stringify(validated));
   });
 }

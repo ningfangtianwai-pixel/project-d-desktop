@@ -80,3 +80,28 @@ test("wallpaper import and deletion remain settings-only privileged actions", as
   assert.equal(imported, 1);
   assert.equal(deleted, "user-1");
 });
+
+test("visual profile IPC requires consent, remains settings-only, and persists only confirmed profiles", async () => {
+  const handlers = new Map();
+  const routes = [];
+  const saved = [];
+  registerSettingsIpcHandlers({
+    ipc: { handle: (channel, handler) => handlers.set(channel, handler) },
+    assertTrustedSender: (_event, allowed) => routes.push(allowed),
+    getDatabase: () => ({ setAppState: (key, value) => saved.push([key, value]) }),
+    getWeather: async () => ({}),
+    getWallpaperLibrary: () => [],
+    applyWallpaper: () => ({}),
+    broadcastSettings: () => {},
+    syncWindows: () => {},
+    validateSettingsPatch: (patch) => patch,
+    sendChatMessage: async () => ({}),
+    testAiConnection: async () => ({ provider: "local", mode: "local", message: "ok" }),
+    draftPetVisualProfile: async () => ({ type: "anime", appearance: ["blue"], personality: "gentle", tone: "warm", forbiddenWords: [], actionSuggestions: ["idle"] })
+  });
+  await assert.rejects(handlers.get(IPC_CHANNELS.AI_PET_VISUAL_DRAFT)({}, { characterId: "luna-q", imageDataUrl: "data:image/png;base64,AA==", consent: false }), /consent/);
+  const profile = await handlers.get(IPC_CHANNELS.AI_PET_VISUAL_DRAFT)({}, { characterId: "luna-q", imageDataUrl: "data:image/png;base64,AA==", consent: true });
+  handlers.get(IPC_CHANNELS.AI_PET_VISUAL_SAVE)({}, "luna-q", profile);
+  assert.deepEqual(routes.at(-1), ["#/settings"]);
+  assert.equal(saved[0][0], "pet_visual_profile:luna-q");
+});

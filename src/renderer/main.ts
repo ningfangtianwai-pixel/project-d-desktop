@@ -489,6 +489,15 @@ if (!window.projectD) {
       mode: mockSettings.ai.provider === "local-fallback" ? "local" : "remote",
       message: mockSettings.ai.provider === "local-fallback" ? "本地降级通道可用" : `${mockSettings.ai.provider} 连接正常`
     }),
+    draftPetVisualProfile: async () => ({
+      type: "anime desktop companion",
+      appearance: ["柔和配色", "透明背景立绘"],
+      personality: "gentle",
+      tone: "温柔、简短",
+      forbiddenWords: ["攻击性表达"],
+      actionSuggestions: ["idle", "walk", "happy", "thinking", "sleep", "interaction"]
+    }),
+    savePetVisualProfile: async () => {},
     getChatHistory: async () => chatHistory,
     clearChatHistory: async () => {
       chatHistory.splice(0, chatHistory.length);

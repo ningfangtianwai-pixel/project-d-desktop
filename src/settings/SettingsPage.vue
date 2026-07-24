@@ -30,6 +30,7 @@ import {
 } from "lucide-vue-next";
 import { resetOnboarding } from "@shared/onboarding";
 import type { ActionExecution, AppInfo, ContainerRecord, CurrentWeather, InterruptedActionRecovery, LayoutRecord, PortalConfig, PortalResource, PrivacyNetworkState, RecoverySystemStatus, SettingsSnapshot, SuggestionDeliveryControls, SuggestionSuppressionHistoryEntry, SupportDiagnosticsReport, WallpaperDisplayInfo, WallpaperLibraryItem, WorkspaceScene } from "@shared/types";
+import type { PetVisualProfile } from "@shared/pet-visual-profile";
 import type { RuntimeMetricsReport, RuntimePauseSnapshot } from "@shared/runtime";
 import type { UpdateChannel, UpdateStatus } from "@shared/update";
 import type { AutoRule, AutoRuleAction, AutoRuleCondition, AutoRuleExecution } from "@shared/auto-rules";
@@ -204,6 +205,11 @@ const petStudioCanvas = ref<HTMLCanvasElement | null>(null);
 const petStudioSource = ref("");
 const petStudioThreshold = ref(54);
 const petStudioStatus = ref("上传一张背景相对干净的人像或动物图片");
+const petVisualImage = ref<{ name: string; dataUrl: string } | null>(null);
+const petVisualConsent = ref(false);
+const petVisualBusy = ref(false);
+const petVisualStatus = ref("图片不会在选择时上传；仅在你勾选同意并生成草案后发送。");
+const petVisualDraft = ref<PetVisualProfile | null>(null);
 const wallpaperDynamic = ref(true);
 const wallpaperStyle = ref("anime");
 const selectedWallpaperId = ref("");
@@ -1047,6 +1053,57 @@ function exportPetStudioPng(): void {
   }, "image/png");
 }
 
+async function loadPetVisualImage(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  petVisualDraft.value = null;
+  if (!file) return;
+  if (!/^image\/(png|jpeg|webp)$/.test(file.type) || file.size > 8 * 1024 * 1024) {
+    petVisualImage.value = null;
+    petVisualStatus.value = "请选择 8 MB 以内的 PNG、JPEG 或 WebP 图片";
+    return;
+  }
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("图片读取失败"));
+    reader.readAsDataURL(file);
+  });
+  petVisualImage.value = { name: file.name, dataUrl };
+  petVisualStatus.value = `已选择「${file.name}」，尚未上传。`;
+}
+
+async function createPetVisualDraft(): Promise<void> {
+  if (!petVisualImage.value || !petVisualConsent.value) {
+    petVisualStatus.value = "请先选择图片并勾选图片发送同意";
+    return;
+  }
+  petVisualBusy.value = true;
+  petVisualStatus.value = "正在请求结构化角色设定草案";
+  try {
+    petVisualDraft.value = await window.projectD.draftPetVisualProfile({
+      characterId: petCharacterId.value,
+      imageDataUrl: petVisualImage.value.dataUrl,
+      consent: true
+    });
+    petVisualStatus.value = "草案已生成。请检查后再确认写入角色配置。";
+  } catch (error) {
+    petVisualStatus.value = error instanceof Error ? error.message : String(error);
+  } finally {
+    petVisualBusy.value = false;
+  }
+}
+
+async function confirmPetVisualDraft(): Promise<void> {
+  if (!petVisualDraft.value) return;
+  try {
+    await window.projectD.savePetVisualProfile(petCharacterId.value, petVisualDraft.value);
+    petVisualStatus.value = `已确认写入 ${petCharacters.find((character) => character.id === petCharacterId.value)?.name ?? "当前角色"} 的角色配置。`;
+  } catch (error) {
+    petVisualStatus.value = error instanceof Error ? error.message : String(error);
+  }
+}
+
 async function saveSettings(): Promise<void> {
   settings.value = await window.projectD.updateSettings({
     wallpaper: {
@@ -1530,6 +1587,14 @@ async function saveSettings(): Promise<void> {
               <canvas ref="petStudioCanvas" aria-label="透明桌宠预览"></canvas>
             </div>
             <p class="runtime-line">{{ petStudioStatus }}</p>
+          </div>
+          <div class="settings-group">
+            <div class="group-heading"><div><h2>AI 角色设定草案</h2><p class="runtime-line">仅支持已配置的视觉模型。DeepSeek V4 当前仅用于文本对话，不会接收图片。</p></div></div>
+            <label class="pet-studio-upload"><input type="file" accept="image/png,image/jpeg,image/webp" @change="loadPetVisualImage" /><ImageIcon :size="18" /><span>{{ petVisualImage ? `已选择：${petVisualImage.name}` : "选择角色素材" }}</span></label>
+            <label class="setting-row"><span><strong>图片发送同意</strong><small>勾选后，只有点击“生成草案”才会向当前视觉模型发送所选图片。</small></span><input v-model="petVisualConsent" class="switch-input" type="checkbox" /></label>
+            <div class="button-row"><button class="secondary-command" type="button" :disabled="!petVisualImage || !petVisualConsent || petVisualBusy" @click="createPetVisualDraft"><Bot :size="16" /><span>{{ petVisualBusy ? "正在生成" : "生成草案" }}</span></button><button class="secondary-command" type="button" :disabled="!petVisualDraft" @click="confirmPetVisualDraft"><Save :size="16" /><span>确认写入配置</span></button></div>
+            <div v-if="petVisualDraft" class="personality-preview"><small>{{ petVisualDraft.type }} · {{ petVisualDraft.personality }} · {{ petVisualDraft.tone }}</small><strong>{{ petVisualDraft.appearance.join("；") }}</strong><small>禁用词：{{ petVisualDraft.forbiddenWords.join("、") || "无" }} · 建议动作：{{ petVisualDraft.actionSuggestions.join("、") }}</small></div>
+            <p class="runtime-line">{{ petVisualStatus }}</p>
           </div>
         </section>
 

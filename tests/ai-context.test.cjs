@@ -114,6 +114,29 @@ test("AI connection test reports the local fallback without network access", asy
   assert.deepEqual(result, { provider: "local-fallback", mode: "local", message: "本地降级通道可用" });
 });
 
+test("DeepSeek visual drafts fail closed before any image upload", async () => {
+  const settings = {
+    ai: { provider: "deepseek", enabled: true },
+    pet: { personality: "gentle" }
+  };
+  const database = { getSettings: () => settings, getAppState: () => null };
+  const originalFetch = global.fetch;
+  let requests = 0;
+  global.fetch = async () => {
+    requests += 1;
+    return { ok: true, json: async () => ({}) };
+  };
+  try {
+    await assert.rejects(
+      new AiService(database, {}, { info() {}, warn() {}, error() {} }).draftPetVisualProfile("luna-q", "data:image/png;base64,AA==", true),
+      /不能发送图片/
+    );
+    assert.equal(requests, 0);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
 test("AI context keeps ten recent turns while bounding oversized history", async () => {
   const oversized = "长".repeat(8_000);
   const history = Array.from({ length: 12 }, (_, index) => ({

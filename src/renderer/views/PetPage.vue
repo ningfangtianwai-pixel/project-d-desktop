@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { petActionIntervalMs, petBubbleDelayMs, petSentence } from "@shared/pet-behavior";
 import { getPetCharacter, normalizePetCharacterId } from "@shared/pet-characters";
+import { parsePetManifest, petActionSlotFor, type PetActionSlot } from "@shared/pet-manifest";
 import type { CurrentWeather, SettingsSnapshot, SuggestionRecord } from "@shared/types";
 
 const bubble = ref("我在桌面上。");
@@ -15,6 +16,7 @@ const talkFrequency = ref("normal");
 const autoOutfit = ref(true);
 const currentOutfit = ref("default");
 const activeSuggestion = ref<SuggestionRecord | null>(null);
+const actionAssets = ref<Partial<Record<PetActionSlot, string>>>({});
 type PetAction =
   | "idle"
   | "happy"
@@ -134,6 +136,7 @@ let suppressClickUntil = 0;
 let removeSettingsListener: (() => void) | null = null;
 let removeSuggestionListener: (() => void) | null = null;
 let acceptingSuggestions = false;
+let assetLoadRequest = 0;
 const announcedSuggestionIds = new Set<string>();
 
 const actions: PetAction[] = [
@@ -142,9 +145,12 @@ const actions: PetAction[] = [
 ];
 const currentState = computed(() => petStates[action.value]);
 const currentCharacter = computed(() => getPetCharacter(characterId.value));
-const currentCharacterImage = computed(() => currentCharacter.value.renderMode === "sprite-pack"
+const fallbackCharacterImage = computed(() => currentCharacter.value.renderMode === "sprite-pack"
   ? currentState.value.image
   : `${import.meta.env.BASE_URL}${currentCharacter.value.asset}`);
+const currentCharacterImage = computed(() => actionAssets.value[petActionSlotFor(action.value)]
+  ?? actionAssets.value.idle
+  ?? fallbackCharacterImage.value);
 const currentCharacterLabel = computed(() => `${currentCharacter.value.name} · ${currentState.value.label}`);
 const visibleOutfit = computed(() => {
   if (currentCharacter.value.renderMode === "cutout") return "default";
@@ -168,6 +174,45 @@ let interactionEnabled = false;
 watch([currentState, currentCharacterImage], () => {
   spriteFailed.value = false;
 });
+
+function petManifestUrl(id: string): string {
+  return new URL(`pet/${id}/manifest.json`, window.location.href).href;
+}
+
+function verifyImageAsset(url: string, width: number, height: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => resolve(image.naturalWidth === width && image.naturalHeight === height);
+    image.onerror = () => resolve(false);
+    image.src = url;
+  });
+}
+
+async function loadActionAssets(id: string): Promise<void> {
+  const request = ++assetLoadRequest;
+  actionAssets.value = {};
+  try {
+    const manifestUrl = petManifestUrl(id);
+    const response = await fetch(manifestUrl, { cache: "no-store" });
+    if (!response.ok) return;
+    const manifest = parsePetManifest(await response.json(), id);
+    if (!manifest) return;
+
+    const verified: Partial<Record<PetActionSlot, string>> = {};
+    for (const [slot, asset] of Object.entries(manifest.actions) as Array<[PetActionSlot, (typeof manifest.actions)[PetActionSlot]]>) {
+      const assetUrl = new URL(asset.image, manifestUrl).href;
+      if (await verifyImageAsset(assetUrl, asset.width, asset.height)) {
+        verified[slot] = assetUrl;
+      }
+    }
+    if (request === assetLoadRequest) {
+      // Every missing action deliberately falls back to the verified idle asset.
+      actionAssets.value = verified.idle ? verified : {};
+    }
+  } catch {
+    if (request === assetLoadRequest) actionAssets.value = {};
+  }
+}
 
 function setPetInteraction(enabled: boolean): void {
   if (interactionEnabled === enabled) {
@@ -355,6 +400,7 @@ function applyPetSettings(settings: SettingsSnapshot): void {
   talkFrequency.value = settings.pet.talkFrequency;
   autoOutfit.value = settings.pet.autoOutfit;
   currentOutfit.value = settings.pet.currentOutfit;
+  void loadActionAssets(characterId.value);
 }
 
 async function refreshContextState(reschedule = false): Promise<void> {

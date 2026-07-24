@@ -1,0 +1,13 @@
+{
+  "id": "starlight",
+  "name": "Starlight",
+  "source": "/pet/starlight/",
+  "actions": {
+    "idle": { "image": "../sprites/starlight.png", "width": 552, "height": 1200 },
+    "walk": { "image": "../sprites/starlight.png", "width": 552, "height": 1200 },
+    "happy": { "image": "../sprites/starlight.png", "width": 552, "height": 1200 },
+    "thinking": { "image": "../sprites/starlight.png", "width": 552, "height": 1200 },
+    "sleep": { "image": "../sprites/starlight.png", "width": 552, "height": 1200 },
+    "interaction": { "image": "../sprites/starlight.png", "width": 552, "height": 1200 }
+  }
+}

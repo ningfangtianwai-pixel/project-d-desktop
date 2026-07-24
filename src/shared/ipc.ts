@@ -77,6 +77,8 @@ export const IPC_CHANNELS = {
   AI_TEST_CONNECTION: "ai:test-connection",
   AI_CHAT_HISTORY: "ai:chat-history",
   AI_CHAT_CLEAR: "ai:chat-clear",
+  AI_PET_VISUAL_DRAFT: "ai:pet-visual-draft",
+  AI_PET_VISUAL_SAVE: "ai:pet-visual-save",
   STATE_GET: "state:get",
   STATE_SET: "state:set",
   PET_GET_WINDOW_BOUNDS: "pet:get-window-bounds",

@@ -1,0 +1,13 @@
+{
+  "id": "luna-spring",
+  "name": "Luna Spring",
+  "source": "/pet/luna-spring/",
+  "actions": {
+    "idle": { "image": "../sprites/luna-spring.png", "width": 519, "height": 1200 },
+    "walk": { "image": "../sprites/luna-spring.png", "width": 519, "height": 1200 },
+    "happy": { "image": "../sprites/luna-spring.png", "width": 519, "height": 1200 },
+    "thinking": { "image": "../sprites/luna-spring.png", "width": 519, "height": 1200 },
+    "sleep": { "image": "../sprites/luna-spring.png", "width": 519, "height": 1200 },
+    "interaction": { "image": "../sprites/luna-spring.png", "width": 519, "height": 1200 }
+  }
+}

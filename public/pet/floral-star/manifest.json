@@ -1,0 +1,13 @@
+{
+  "id": "floral-star",
+  "name": "Floral Star",
+  "source": "/pet/floral-star/",
+  "actions": {
+    "idle": { "image": "../sprites/floral-star.png", "width": 532, "height": 1200 },
+    "walk": { "image": "../sprites/floral-star.png", "width": 532, "height": 1200 },
+    "happy": { "image": "../sprites/floral-star.png", "width": 532, "height": 1200 },
+    "thinking": { "image": "../sprites/floral-star.png", "width": 532, "height": 1200 },
+    "sleep": { "image": "../sprites/floral-star.png", "width": 532, "height": 1200 },
+    "interaction": { "image": "../sprites/floral-star.png", "width": 532, "height": 1200 }
+  }
+}

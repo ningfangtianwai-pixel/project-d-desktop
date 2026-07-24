@@ -2,6 +2,14 @@
   "id": "luna-q",
   "name": "Luna Q",
   "source": "/pet/luna-q/",
+  "actions": {
+    "idle": { "image": "idle.png", "width": 127, "height": 228 },
+    "walk": { "image": "idle.png", "width": 127, "height": 228 },
+    "happy": { "image": "waving.png", "width": 134, "height": 228 },
+    "thinking": { "image": "sitting.png", "width": 146, "height": 221 },
+    "sleep": { "image": "sleeping.png", "width": 210, "height": 174 },
+    "interaction": { "image": "waving.png", "width": 134, "height": 228 }
+  },
   "states": {
     "idle": {
       "image": "idle.png",
