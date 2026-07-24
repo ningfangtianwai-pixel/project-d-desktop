@@ -81,6 +81,27 @@ async function run() {
     const folderPreviewEntries = await page.locator(".folder-preview-grid article").count();
     await page.screenshot({ path: path.join(output, "overlay-folder-preview.png"), fullPage: true });
 
+    page.once("dialog", (dialog) => dialog.accept("UI Pin Scene"));
+    await page.locator('button[title="保存当前场景"]').click();
+    await page.locator('button[title="搜索桌面与门户"]').click();
+    const workspaceSearch = page.locator(".desktop-search-form input");
+    await workspaceSearch.fill("ProjectD");
+    await workspaceSearch.press("Enter");
+    const firstSearchResult = page.locator(".desktop-search-results article").first();
+    await firstSearchResult.waitFor();
+    await firstSearchResult.locator('button[title="打开"]').click();
+    await firstSearchResult.locator('button[title="在资源管理器中定位"]').click();
+    await firstSearchResult.locator('button[title="复制完整路径"]').click();
+    await firstSearchResult.locator('button[title="钉到场景"]').click();
+    const scenePicker = firstSearchResult.locator(".search-scene-picker");
+    await scenePicker.waitFor();
+    const scenePickerOptions = await scenePicker.locator('button[role="menuitem"]').count();
+    await scenePicker.locator('button[role="menuitem"]').first().click();
+    const pinnedScene = await page.evaluate(async () => (await globalThis.window.projectD.getWorkspaceScenes())
+      .find((scene) => scene.name === "UI Pin Scene"));
+    const searchActionStatus = await page.locator(".desktop-work-status").textContent();
+    await page.screenshot({ path: path.join(output, "overlay-search-scene-pin.png"), fullPage: true });
+
     await page.evaluate(() => { globalThis.location.hash = "#/settings"; });
     await page.locator(".settings-app").waitFor();
     const navButtons = page.locator(".settings-sidebar nav button");
@@ -142,6 +163,9 @@ async function run() {
       chatInputVisible,
       overlayBackdrop,
       folderPreviewEntries,
+      scenePickerOptions,
+      pinnedScene,
+      searchActionStatus,
       wallpaperSearchResults,
       wallpaperApplyButtons,
       unloadedWallpaperImages,
@@ -158,6 +182,10 @@ async function run() {
       && overlayBackdrop.backgroundImage.includes("url(")
       && overlayBackdrop.pointerEvents === "none"
       && folderPreviewEntries === 3
+      && scenePickerOptions >= 1
+      && Array.isArray(pinnedScene?.pinnedResources)
+      && pinnedScene.pinnedResources.length === 1
+      && Boolean(searchActionStatus?.trim())
       && wallpaperSearchResults >= 2
       && wallpaperApplyButtons === wallpaperSearchResults
       && unloadedWallpaperImages === 0

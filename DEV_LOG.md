@@ -18,6 +18,7 @@
 - Focused Electron `organizer-safe-restore.spec.ts`: passed in 47.2 seconds and restored Explorer icons afterward.
 - The first full E2E invocation was terminated by the external 240-second command budget while serial scenarios were still running. It left isolated test Electron processes, which were terminated; Project D's existing icon recovery function restored desktop icons.
 - Replayed `pnpm test:e2e:built` with a sufficient execution budget: passed, 11/11 in 5.1 minutes. This confirms the earlier interruption was a test-runner budget limitation, not a product failure.
+- Extended the browser UI regression path through scene creation, workspace search, open/reveal/copy actions, scene selection, and pin persistence. `pnpm qa:user-reported-ui` passed and recorded the resulting pinned resource.
 
 ### Next
 

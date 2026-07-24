@@ -8,6 +8,7 @@ Current stage: V5 Phase 0 - the Stage 50 desktop and personalization work is fro
 - [x] Preserved the Stage 50 source changes and V5 requirements/implementation documents in one reviewable baseline commit.
 - [x] Verified lint, three TypeScript projects, 203 Node tests, two component tests, and the production renderer/main/preload build.
 - [x] Verified the complete 11-scenario isolated Electron suite, including startup, duplicate launch, settings restart, tray exit, white-screen recovery, forced termination, AI fallback, configuration recovery, clean desktop, and organizer safe return.
+- [x] Verified the browser-visible organizer closure: save scene, search, open, reveal, copy path, choose a scene, and persist a pinned search resource.
 - [ ] Run the clean-checkout build against this committed baseline, then generate a fresh installer before any internal distribution.
 
 ## Stage 50 Native Desktop And Personalization Closure

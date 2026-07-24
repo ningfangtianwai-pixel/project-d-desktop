@@ -4,7 +4,7 @@
 
 1. Run `pnpm verify:clean-checkout` from the committed `0.3.0-dev.0` baseline, then create a new internal installer with matching SHA-256 evidence.
 2. Retain the successful full Electron E2E report and configure CI with an execution budget above five minutes for the serial suite.
-3. Complete desktop-organizer closure: verify scene pinned-resource UI, search result actions, scene save/apply/restart behavior, and recovery after interrupted organizer actions.
+3. Verify scene save/apply/restart behavior and recovery after interrupted organizer actions from the packaged installer; browser-visible pinned-resource and search actions are covered.
 4. Start Wallpaper 2.0 with a persistent user-library data model, bounded thumbnail cache, CRUD paths, and a static-cover fallback contract for Live Photo/video import.
 5. Add weather performance controls only after wallpaper playback establishes reliable pause/resume and fallback behavior.
 
