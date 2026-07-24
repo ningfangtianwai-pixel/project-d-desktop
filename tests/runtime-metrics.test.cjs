@@ -29,11 +29,26 @@ test("runtime report calculates median, p95 and memory growth", () => {
     { sampledAt: "2026-01-01T00:01:00.000Z", source: "main", processId: 1, cpuPercent: 8, workingSetBytes: 115, paused: true, profile: "batterySaver" },
     { sampledAt: "2026-01-01T00:02:00.000Z", source: "main", processId: 1, cpuPercent: 3, workingSetBytes: 110, paused: false, profile: "balanced" }
   ];
-  const report = createRuntimeMetricsReport(samples, new Date("2026-01-01T00:02:00.000Z"));
+  const report = createRuntimeMetricsReport(samples, new Date("2026-01-01T00:02:00.000Z"), [60, 55, 30]);
   assert.equal(report.cpuMedianPercent, 3);
   assert.equal(report.cpuP95Percent, 8);
   assert.equal(report.memoryGrowthPercent, 10);
   assert.equal(report.pausedSampleCount, 1);
+  assert.equal(report.rendererFpsMedian, 55);
+  assert.equal(report.rendererFpsP5, 30);
+  assert.equal(report.rendererFpsSampleCount, 3);
+});
+
+test("renderer frame samples are bounded and reject invalid values", () => {
+  const service = new RuntimeMetricsService({ sampleProcesses: () => [], getRuntimeState: () => state });
+  service.recordRendererFps(60);
+  service.recordRendererFps(-20);
+  service.recordRendererFps(Number.NaN);
+  service.recordRendererFps(999);
+  const report = service.report();
+  assert.equal(report.rendererFpsSampleCount, 3);
+  assert.equal(report.rendererFpsMedian, 60);
+  assert.equal(report.rendererFpsP5, 0);
 });
 
 test("runtime report excludes incomplete startup process groups from memory baseline", () => {

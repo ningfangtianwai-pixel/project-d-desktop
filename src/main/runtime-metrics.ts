@@ -20,6 +20,7 @@ export interface RuntimeMetricsDependencies {
 export class RuntimeMetricsService {
   private readonly samples: RuntimeMetricSample[] = [];
   private readonly pending: RuntimeMetricSample[] = [];
+  private readonly rendererFpsSamples: number[] = [];
   private readonly now: () => Date;
   private readonly intervalMs: number;
   private readonly maxSamples: number;
@@ -66,7 +67,13 @@ export class RuntimeMetricsService {
   }
 
   report(): RuntimeMetricsReport {
-    return createRuntimeMetricsReport(this.samples, this.now());
+    return createRuntimeMetricsReport(this.samples, this.now(), this.rendererFpsSamples);
+  }
+
+  recordRendererFps(fps: number): void {
+    if (!Number.isFinite(fps)) return;
+    this.rendererFpsSamples.push(Math.max(0, Math.min(240, fps)));
+    if (this.rendererFpsSamples.length > 2_000) this.rendererFpsSamples.splice(0, this.rendererFpsSamples.length - 2_000);
   }
 
   private flush(): void {
@@ -76,7 +83,7 @@ export class RuntimeMetricsService {
   }
 }
 
-export function createRuntimeMetricsReport(samples: readonly RuntimeMetricSample[], now = new Date()): RuntimeMetricsReport {
+export function createRuntimeMetricsReport(samples: readonly RuntimeMetricSample[], now = new Date(), rendererFpsSamples: readonly number[] = []): RuntimeMetricsReport {
   const grouped = stableProcessGroups(groupByTimestamp(samples));
   const sortedCpu = grouped.map((sample) => sample.cpuPercent).sort((a, b) => a - b);
   const firstTotal = grouped[0]?.workingSetBytes ?? 0;
@@ -91,6 +98,9 @@ export function createRuntimeMetricsReport(samples: readonly RuntimeMetricSample
     peakWorkingSetBytes: grouped.reduce((peak, sample) => Math.max(peak, sample.workingSetBytes), 0),
     memoryGrowthPercent: firstTotal > 0 ? ((lastTotal - firstTotal) / firstTotal) * 100 : 0,
     pausedSampleCount: samples.filter((sample) => sample.paused).length,
+    rendererFpsMedian: percentile([...rendererFpsSamples].sort((a, b) => a - b), 0.5),
+    rendererFpsP5: percentile([...rendererFpsSamples].sort((a, b) => a - b), 0.05),
+    rendererFpsSampleCount: rendererFpsSamples.length,
     samples: samples.map((sample) => ({ ...sample }))
   };
 }

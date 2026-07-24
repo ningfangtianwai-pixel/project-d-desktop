@@ -543,6 +543,7 @@ if (!window.projectD) {
       effectiveProfile: "balanced",
       changedAt: now()
     }),
+    reportRendererFps: async () => undefined,
     setRuntimeManualPaused: async (paused) => ({
       paused,
       reasons: paused ? ["manual"] : [],
@@ -560,7 +561,8 @@ if (!window.projectD) {
     getRuntimeMetrics: async () => ({
       generatedAt: now(), sampleCount: 0, windowMinutes: 0, cpuMedianPercent: 0,
       cpuP95Percent: 0, peakWorkingSetBytes: 0, memoryGrowthPercent: 0,
-      pausedSampleCount: 0, samples: []
+      pausedSampleCount: 0, rendererFpsMedian: 0, rendererFpsP5: 0,
+      rendererFpsSampleCount: 0, samples: []
     }),
     pinSearchResultToScene: async (resultId, sceneId) => {
       const scene = workspaceScenes.find((item) => item.id === sceneId);

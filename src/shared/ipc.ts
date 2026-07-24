@@ -102,7 +102,8 @@ export const IPC_CHANNELS = {
   RUNTIME_GET_STATE: "runtime:get-state",
   RUNTIME_SET_MANUAL_PAUSED: "runtime:set-manual-paused",
   RUNTIME_STATE_CHANGED: "runtime:state-changed",
-  RUNTIME_GET_METRICS: "runtime:get-metrics"
+  RUNTIME_GET_METRICS: "runtime:get-metrics",
+  RUNTIME_REPORT_FPS: "runtime:report-fps"
 } as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];

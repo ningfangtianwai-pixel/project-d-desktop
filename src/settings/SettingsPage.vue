@@ -1571,6 +1571,8 @@ async function saveSettings(): Promise<void> {
               <article data-status="ready"><span class="recovery-health-dot"></span><span><strong>CPU P95</strong><small>{{ (runtimeMetrics?.cpuP95Percent ?? 0).toFixed(2) }}%</small></span></article>
               <article data-status="ready"><span class="recovery-health-dot"></span><span><strong>工作集峰值</strong><small>{{ ((runtimeMetrics?.peakWorkingSetBytes ?? 0) / 1024 / 1024).toFixed(1) }} MiB</small></span></article>
               <article :data-status="Math.abs(runtimeMetrics?.memoryGrowthPercent ?? 0) <= 15 ? 'ready' : 'degraded'"><span class="recovery-health-dot"></span><span><strong>内存变化</strong><small>{{ (runtimeMetrics?.memoryGrowthPercent ?? 0).toFixed(1) }}% · {{ runtimeMetrics?.sampleCount ?? 0 }} 样本</small></span></article>
+              <article :data-status="(runtimeMetrics?.rendererFpsP5 ?? 0) >= 24 ? 'ready' : 'degraded'"><span class="recovery-health-dot"></span><span><strong>壁纸帧率中位数</strong><small>{{ (runtimeMetrics?.rendererFpsMedian ?? 0).toFixed(1) }} FPS</small></span></article>
+              <article :data-status="(runtimeMetrics?.rendererFpsP5 ?? 0) >= 24 ? 'ready' : 'degraded'"><span class="recovery-health-dot"></span><span><strong>壁纸帧率 P5</strong><small>{{ (runtimeMetrics?.rendererFpsP5 ?? 0).toFixed(1) }} FPS · {{ runtimeMetrics?.rendererFpsSampleCount ?? 0 }} 样本</small></span></article>
             </div>
           </div>
           <div v-if="interruptedRecoveries.length > 0" class="settings-group">

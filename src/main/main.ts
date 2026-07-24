@@ -2206,8 +2206,11 @@ function buildIpcDeps(): ServiceDeps {
       getMetrics: () => runtimeMetricsService?.report() ?? {
         generatedAt: new Date().toISOString(), sampleCount: 0, windowMinutes: 0,
         cpuMedianPercent: 0, cpuP95Percent: 0, peakWorkingSetBytes: 0,
-        memoryGrowthPercent: 0, pausedSampleCount: 0, samples: []
-      }
+        memoryGrowthPercent: 0, pausedSampleCount: 0,
+        rendererFpsMedian: 0, rendererFpsP5: 0, rendererFpsSampleCount: 0,
+        samples: []
+      },
+      recordRendererFps: (fps) => runtimeMetricsService?.recordRendererFps(fps)
     },
     wallpaper: {
       getDisplays: getWallpaperDisplays,

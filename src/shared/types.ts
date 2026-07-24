@@ -567,6 +567,7 @@ export interface ProjectDApi {
   getRuntimeState: () => Promise<RuntimePauseSnapshot>;
   setRuntimeManualPaused: (paused: boolean) => Promise<RuntimePauseSnapshot>;
   getRuntimeMetrics: () => Promise<RuntimeMetricsReport>;
+  reportRendererFps: (fps: number) => Promise<void>;
   onMenuCommand: (handler: (command: MenuCommand) => void) => () => void;
   onDesktopFilesUpdated: (handler: () => void) => () => void;
   onPortalsUpdated: (handler: () => void) => () => void;

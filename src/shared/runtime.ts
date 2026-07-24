@@ -45,5 +45,8 @@ export interface RuntimeMetricsReport {
   peakWorkingSetBytes: number;
   memoryGrowthPercent: number;
   pausedSampleCount: number;
+  rendererFpsMedian: number;
+  rendererFpsP5: number;
+  rendererFpsSampleCount: number;
   samples: RuntimeMetricSample[];
 }

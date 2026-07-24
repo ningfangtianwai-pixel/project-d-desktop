@@ -10,6 +10,7 @@ export interface RuntimeIpcDependencies {
   getState: () => RuntimePauseSnapshot;
   setManualPaused: (paused: boolean) => RuntimePauseSnapshot;
   getMetrics: () => RuntimeMetricsReport;
+  recordRendererFps: (fps: number) => void;
 }
 
 export function registerRuntimeIpcHandlers(deps: RuntimeIpcDependencies): void {
@@ -27,5 +28,11 @@ export function registerRuntimeIpcHandlers(deps: RuntimeIpcDependencies): void {
   deps.ipc.handle(IPC_CHANNELS.RUNTIME_GET_METRICS, (event) => {
     deps.assertTrustedSender(event, ["", "#/settings"]);
     return deps.getMetrics();
+  });
+
+  deps.ipc.handle(IPC_CHANNELS.RUNTIME_REPORT_FPS, (event, fps: unknown) => {
+    deps.assertTrustedSender(event, ["#/wallpaper"]);
+    if (typeof fps !== "number" || !Number.isFinite(fps) || fps < 0 || fps > 240) throw new Error("Invalid renderer frame rate");
+    deps.recordRendererFps(fps);
   });
 }

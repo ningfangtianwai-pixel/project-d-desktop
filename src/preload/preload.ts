@@ -101,6 +101,7 @@ const api: ProjectDApi = {
   getRuntimeState: () => ipcRenderer.invoke(IPC_CHANNELS.RUNTIME_GET_STATE),
   setRuntimeManualPaused: (paused) => ipcRenderer.invoke(IPC_CHANNELS.RUNTIME_SET_MANUAL_PAUSED, paused),
   getRuntimeMetrics: () => ipcRenderer.invoke(IPC_CHANNELS.RUNTIME_GET_METRICS),
+  reportRendererFps: (fps) => ipcRenderer.invoke(IPC_CHANNELS.RUNTIME_REPORT_FPS, fps),
   onMenuCommand: (handler) => {
     const listener = (_event: Electron.IpcRendererEvent, command: MenuCommand) => {
       handler(command);

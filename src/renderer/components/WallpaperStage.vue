@@ -9,8 +9,8 @@ import {
   type WallpaperPlaybackSnapshot,
   type WallpaperPlaybackState
 } from "@shared/wallpaper-player";
-import type { RuntimePauseSnapshot } from "@shared/runtime";
-import { wallpaperRenderScale, type WallpaperRenderProfile } from "@shared/wallpaper-render-scale";
+import type { EffectivePerformanceProfile, RuntimePauseSnapshot } from "@shared/runtime";
+import { wallpaperRenderProfile, wallpaperRenderScale, type WallpaperRenderProfile } from "@shared/wallpaper-render-scale";
 
 const host = ref<HTMLDivElement | null>(null);
 let app: Application | null = null;
@@ -18,11 +18,13 @@ let rafReady = false;
 let settings: SettingsSnapshot | null = null;
 let currentWeather: CurrentWeather | null = null;
 let wallpaperLibrary: WallpaperLibraryItem[] = [];
-let performanceMode = "auto";
+let performanceMode: EffectivePerformanceProfile = "balanced";
 let fallbackFrame = 0;
 let fallbackRender: FrameRequestCallback | null = null;
 let runtimeTimer = 0;
 let wallpaperTransitionTimer = 0;
+let frameSampleStartedAt = performance.now();
+let sampledFrameCount = 0;
 let unsubscribeSettingsUpdated: (() => void) | null = null;
 let unsubscribeRuntimeState: (() => void) | null = null;
 let unsubscribeWallpaperPlayback: (() => void) | null = null;
@@ -34,8 +36,31 @@ const runtimePaused = ref(false);
 const playbackState = ref<WallpaperPlaybackState>("idle");
 
 function activeRenderProfile(): WallpaperRenderProfile {
-  if (performanceMode === "quality" || performanceMode === "battery-saver") return performanceMode;
-  return "balanced";
+  return wallpaperRenderProfile(performanceMode);
+}
+
+function refreshRenderResolution(): void {
+  if (!app || !host.value) return;
+  const resolution = wallpaperRenderScale({
+    cssWidth: host.value.clientWidth || window.innerWidth,
+    cssHeight: host.value.clientHeight || window.innerHeight,
+    devicePixelRatio: window.devicePixelRatio,
+    profile: activeRenderProfile()
+  });
+  if (app.renderer.resolution === resolution) return;
+  app.renderer.resolution = resolution;
+  app.renderer.resize(host.value.clientWidth || window.innerWidth, host.value.clientHeight || window.innerHeight);
+}
+
+function sampleFrameRate(): void {
+  sampledFrameCount += 1;
+  const now = performance.now();
+  const elapsed = now - frameSampleStartedAt;
+  if (elapsed < 5_000) return;
+  const fps = sampledFrameCount * 1_000 / elapsed;
+  sampledFrameCount = 0;
+  frameSampleStartedAt = now;
+  void window.projectD.reportRendererFps(fps).catch(() => undefined);
 }
 
 async function syncMediaPlayback(): Promise<void> {
@@ -67,6 +92,7 @@ function applyRuntimeState(state: RuntimePauseSnapshot): void {
   else wallpaperPlayer.resume();
   performanceMode = state.effectiveProfile;
   performanceProfile.value = state.effectiveProfile;
+  refreshRenderResolution();
   if (host.value) host.value.dataset.runtimePaused = String(state.paused);
   if (state.paused) {
     app?.ticker.stop();
@@ -462,6 +488,7 @@ onMounted(async () => {
       if (!rafReady || !host.value || document.hidden || runtimePaused.value) {
         return;
       }
+      sampleFrameRate();
 
       const width = host.value.clientWidth;
       const height = host.value.clientHeight;
@@ -590,6 +617,7 @@ function startCanvasFallback(container: HTMLDivElement): void {
   const render = (time: number) => {
     fallbackFrame = 0;
     if (runtimePaused.value) return;
+    sampleFrameRate();
     const width = container.clientWidth || window.innerWidth;
     const height = container.clientHeight || window.innerHeight;
     const renderScale = wallpaperRenderScale({

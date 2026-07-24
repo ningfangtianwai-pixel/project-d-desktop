@@ -1,3 +1,5 @@
+import type { EffectivePerformanceProfile } from "./runtime.js";
+
 export type WallpaperRenderProfile = "quality" | "balanced" | "battery-saver";
 
 export interface WallpaperRenderScaleInput {
@@ -12,6 +14,10 @@ const PROFILE_LIMITS: Record<WallpaperRenderProfile, { maxScale: number; maxPixe
   balanced: { maxScale: 1.5, maxPixels: 8_000_000 },
   "battery-saver": { maxScale: 1, maxPixels: 4_200_000 }
 };
+
+export function wallpaperRenderProfile(profile: EffectivePerformanceProfile): WallpaperRenderProfile {
+  return profile === "batterySaver" ? "battery-saver" : profile;
+}
 
 export function wallpaperRenderScale(input: WallpaperRenderScaleInput): number {
   const width = Math.max(1, input.cssWidth);
