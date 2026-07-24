@@ -84,6 +84,43 @@ export class WallpaperLibraryService {
     }
   }
 
+  async importGeneratedPng(dataUrl: string, requestedLabel: string): Promise<WallpaperLibraryItem> {
+    const match = /^data:image\/png;base64,([A-Za-z0-9+/=\s]+)$/i.exec(dataUrl);
+    if (!match) throw new Error("Generated wallpaper must be a PNG data URL");
+    const data = Buffer.from(match[1].replace(/\s/g, ""), "base64");
+    if (data.length === 0 || data.length > MAX_IMPORT_BYTES) {
+      throw new Error("Generated wallpaper must be no larger than 30 MB");
+    }
+    const image = nativeImage.createFromBuffer(data);
+    if (image.isEmpty()) throw new Error("The generated wallpaper could not be decoded");
+
+    const id = `user-${randomUUID()}`;
+    const storedFile = `${id}.png`;
+    const storedPath = path.join(this.originalsDirectory, storedFile);
+    const thumbnailPath = path.join(this.thumbnailsDirectory, `${id}.png`);
+    const label = requestedLabel.trim().replace(/\s+/g, " ").slice(0, 80) || "My creation";
+    const item: WallpaperLibraryItem = {
+      id,
+      label,
+      style: "minimalist",
+      type: "image",
+      file: storedFile,
+      aliases: ["user", "created", "创作", label],
+      source: "user"
+    };
+
+    try {
+      await this.writeAtomically(storedPath, data);
+      await this.writeAtomically(thumbnailPath, image.resize({ width: 480, quality: "good" }).toPNG());
+      this.database.saveUserMediaAsset(item, storedPath);
+      this.logger.info("app", "generated wallpaper imported", { id, bytes: data.length });
+      return item;
+    } catch (error) {
+      await Promise.allSettled([fs.promises.rm(storedPath, { force: true }), fs.promises.rm(thumbnailPath, { force: true })]);
+      throw error;
+    }
+  }
+
   async importLivePhoto(coverPath: string, videoPath: string): Promise<WallpaperLibraryItem> {
     const resolvedCover = path.resolve(coverPath);
     const resolvedVideo = path.resolve(videoPath);

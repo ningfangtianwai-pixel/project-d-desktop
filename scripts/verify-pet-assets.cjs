@@ -1,5 +1,6 @@
 const fs = require("node:fs");
 const path = require("node:path");
+const crypto = require("node:crypto");
 const { app, nativeImage } = require("electron");
 
 const ROOT = path.resolve(__dirname, "..");
@@ -33,6 +34,7 @@ async function main() {
     if (manifest.id !== id || !manifest.actions || typeof manifest.actions !== "object") {
       fail(`invalid manifest identity for ${id}`);
     }
+    const actionHashes = new Set();
     for (const slot of REQUIRED_SLOTS) {
       const asset = manifest.actions[slot];
       if (!asset || !Number.isInteger(asset.width) || !Number.isInteger(asset.height) || asset.width < 1 || asset.height < 1) {
@@ -45,6 +47,10 @@ async function main() {
       if (image.isEmpty() || image.getSize().width !== asset.width || image.getSize().height !== asset.height) {
         fail(`${id}:${slot} has an unexpected image size`);
       }
+      actionHashes.add(crypto.createHash("sha256").update(fs.readFileSync(assetPath)).digest("hex"));
+    }
+    if (id !== "luna-q" && actionHashes.size !== REQUIRED_SLOTS.length) {
+      fail(`${id} has duplicated action frames; every declared slot must use a distinct asset`);
     }
     summary.push(`${id}: ${REQUIRED_SLOTS.length} action slots`);
   }

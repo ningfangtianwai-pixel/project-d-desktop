@@ -30,6 +30,7 @@ export interface SettingsIpcDependencies {
   getWallpaperLibrary: () => WallpaperLibraryItem[];
   importWallpaper: () => Promise<WallpaperLibraryItem | null>;
   importLivePhotoWallpaper: () => Promise<WallpaperLibraryItem | null>;
+  importGeneratedWallpaper: (dataUrl: string, label: string) => Promise<WallpaperLibraryItem>;
   deleteWallpaper: (id: string) => void;
   applyWallpaper: (id: string) => SettingsSnapshot;
   exportWallpaperOriginal: (id: string) => Promise<{ cancelled: boolean; filename: string | null }>;
@@ -85,6 +86,14 @@ export function registerSettingsIpcHandlers(deps: SettingsIpcDependencies): void
   ipc.handle(IPC_CHANNELS.WALLPAPER_IMPORT_LIVE_PHOTO, async (event): Promise<WallpaperLibraryItem | null> => {
     assertTrustedSender(event, ["#/settings"]);
     return deps.importLivePhotoWallpaper();
+  });
+
+  ipc.handle(IPC_CHANNELS.WALLPAPER_IMPORT_GENERATED, async (event, dataUrl: unknown, label: unknown): Promise<WallpaperLibraryItem> => {
+    assertTrustedSender(event, ["#/settings"]);
+    if (typeof dataUrl !== "string" || dataUrl.length > 42_000_000 || typeof label !== "string" || label.length > 120) {
+      throw new Error("Invalid generated wallpaper payload");
+    }
+    return deps.importGeneratedWallpaper(dataUrl, label);
   });
 
   ipc.handle(IPC_CHANNELS.WALLPAPER_DELETE, (event, wallpaperId: unknown): void => {

@@ -9,7 +9,10 @@ const profile = {
   personality: "gentle",
   tone: "brief and warm",
   forbiddenWords: ["harassment"],
-  actionSuggestions: ["idle", "walk", "happy"]
+  actionSuggestions: ["idle", "walk", "happy"],
+  identityAnchor: "short dark hair, pale blue outfit",
+  dialogueGuidance: "warm and concise",
+  motionGuidance: ["idle", "walk", "happy"]
 };
 
 test("a visual profile must be structured and use declared action slots", () => {

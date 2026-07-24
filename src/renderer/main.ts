@@ -409,6 +409,7 @@ if (!window.projectD) {
     getWallpaperLibrary: async () => WALLPAPER_LIBRARY,
     importWallpaper: async () => null,
     importLivePhotoWallpaper: async () => null,
+    importGeneratedWallpaper: async (_dataUrl, label) => ({ id: `preview-${Date.now()}`, label, style: "minimalist", type: "image", file: "", aliases: ["preview"], source: "user" }),
     deleteWallpaper: async () => undefined,
     applyWallpaper: async (wallpaperId) => {
       const wallpaper = WALLPAPER_LIBRARY.find((item) => item.id === wallpaperId);
@@ -496,7 +497,10 @@ if (!window.projectD) {
       personality: "gentle",
       tone: "温柔、简短",
       forbiddenWords: ["攻击性表达"],
-      actionSuggestions: ["idle", "walk", "happy", "thinking", "sleep", "interaction"]
+      actionSuggestions: ["idle", "walk", "happy", "thinking", "sleep", "interaction"],
+      identityAnchor: "柔和配色的透明背景桌宠",
+      dialogueGuidance: "温柔、简短并尊重用户节奏",
+      motionGuidance: ["idle", "walk", "happy", "thinking", "sleep", "interaction"]
     }),
     savePetVisualProfile: async () => {},
     getChatHistory: async () => chatHistory,

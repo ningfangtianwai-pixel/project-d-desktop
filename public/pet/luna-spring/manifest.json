@@ -3,11 +3,11 @@
   "name": "Luna Spring",
   "source": "/pet/luna-spring/",
   "actions": {
-    "idle": { "image": "../sprites/luna-spring.png", "width": 519, "height": 1200 },
-    "walk": { "image": "../sprites/luna-spring.png", "width": 519, "height": 1200 },
-    "happy": { "image": "../sprites/luna-spring.png", "width": 519, "height": 1200 },
-    "thinking": { "image": "../sprites/luna-spring.png", "width": 519, "height": 1200 },
-    "sleep": { "image": "../sprites/luna-spring.png", "width": 519, "height": 1200 },
-    "interaction": { "image": "../sprites/luna-spring.png", "width": 519, "height": 1200 }
+    "idle": { "image": "actions/idle.png", "width": 512, "height": 512 },
+    "walk": { "image": "actions/walk.png", "width": 512, "height": 512 },
+    "happy": { "image": "actions/happy.png", "width": 512, "height": 512 },
+    "thinking": { "image": "actions/thinking.png", "width": 512, "height": 512 },
+    "sleep": { "image": "actions/sleep.png", "width": 512, "height": 512 },
+    "interaction": { "image": "actions/interaction.png", "width": 512, "height": 512 }
   }
 }

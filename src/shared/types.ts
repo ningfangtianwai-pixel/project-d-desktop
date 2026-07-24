@@ -541,6 +541,7 @@ export interface ProjectDApi {
   getWallpaperLibrary: () => Promise<WallpaperLibraryItem[]>;
   importWallpaper: () => Promise<WallpaperLibraryItem | null>;
   importLivePhotoWallpaper: () => Promise<WallpaperLibraryItem | null>;
+  importGeneratedWallpaper: (dataUrl: string, label: string) => Promise<WallpaperLibraryItem>;
   deleteWallpaper: (wallpaperId: string) => Promise<void>;
   applyWallpaper: (wallpaperId: string) => Promise<SettingsSnapshot>;
   exportWallpaperOriginal: (wallpaperId: string) => Promise<{ cancelled: boolean; filename: string | null }>;

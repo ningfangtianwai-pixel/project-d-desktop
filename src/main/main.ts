@@ -1894,6 +1894,13 @@ async function importLivePhotoFromDialogs(): Promise<WallpaperLibraryItem | null
   return imported;
 }
 
+async function importGeneratedWallpaper(dataUrl: string, label: string): Promise<WallpaperLibraryItem> {
+  if (!wallpaperLibraryService) throw new Error("Wallpaper library is not initialized");
+  const imported = await wallpaperLibraryService.importGeneratedPng(dataUrl, label);
+  broadcastSettingsUpdated();
+  return imported;
+}
+
 function deleteUserWallpaper(wallpaperId: string): void {
   if (!wallpaperLibraryService) throw new Error("Wallpaper library is not initialized");
   const current = database?.getSettings().wallpaper.dynamicId ?? null;
@@ -2055,6 +2062,7 @@ function buildIpcDeps(): ServiceDeps {
       getWallpaperLibrary,
       importWallpaper: importWallpaperFromDialog,
       importLivePhotoWallpaper: importLivePhotoFromDialogs,
+      importGeneratedWallpaper,
       deleteWallpaper: deleteUserWallpaper,
       applyWallpaper: applyWallpaperById,
       exportWallpaperOriginal,

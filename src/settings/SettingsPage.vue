@@ -219,7 +219,11 @@ const wallpaperSaveOriginal = ref(false);
 const wallpaperStudioCanvas = ref<HTMLCanvasElement | null>(null);
 const wallpaperStudioSource = ref("");
 const wallpaperStudioSignature = ref("");
-const wallpaperStudioSticker = ref<"none" | "sparkles" | "heart" | "moon">("none");
+const wallpaperStudioLabel = ref("我的创作壁纸");
+const wallpaperStudioTemplate = ref<"clean" | "cinema" | "journal" | "night">("clean");
+const wallpaperStudioFont = ref<"sans" | "serif" | "handwritten" | "mono">("sans");
+const wallpaperStudioSticker = ref<"none" | "sparkles" | "moon" | "botanical" | "rain">("none");
+const wallpaperStudioResolution = ref<"1280x720" | "1920x1080" | "2560x1440">("1920x1080");
 const wallpaperStudioStatus = ref("选择一张图片开始创作");
 const weatherMode = ref("manual");
 const manualWeather = ref("clear");
@@ -910,8 +914,9 @@ async function renderWallpaperStudio(): Promise<void> {
   const image = new Image();
   image.src = wallpaperStudioSource.value;
   await image.decode();
-  canvas.width = 1280;
-  canvas.height = 720;
+  const [canvasWidth, canvasHeight] = wallpaperStudioResolution.value.split("x").map(Number);
+  canvas.width = canvasWidth;
+  canvas.height = canvasHeight;
   const context = canvas.getContext("2d");
   if (!context) return;
   const scale = Math.max(canvas.width / image.naturalWidth, canvas.height / image.naturalHeight);
@@ -920,34 +925,119 @@ async function renderWallpaperStudio(): Promise<void> {
   context.clearRect(0, 0, canvas.width, canvas.height);
   context.drawImage(image, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
 
-  const sticker = {
-    none: "",
-    sparkles: "\u2726  \u2727  \u2726",
-    heart: "\u2665",
-    moon: "\u263E"
-  }[wallpaperStudioSticker.value];
-  if (sticker) {
-    context.save();
-    context.font = "700 54px 'Segoe UI Symbol', sans-serif";
-    context.fillStyle = "rgba(255, 244, 188, 0.92)";
-    context.shadowColor = "rgba(0, 0, 0, 0.45)";
-    context.shadowBlur = 14;
-    context.fillText(sticker, 54, 78);
-    context.restore();
-  }
+  drawWallpaperStudioTemplate(context, canvas.width, canvas.height);
+  drawWallpaperStudioSticker(context, canvas.width);
 
   const signature = wallpaperStudioSignature.value.trim().slice(0, 60);
   if (signature) {
     context.save();
-    context.font = "500 30px 'Segoe UI', sans-serif";
+    context.font = `500 ${Math.max(26, Math.round(canvas.width / 42))}px ${wallpaperStudioFontFamily()}`;
     context.textAlign = "right";
     context.fillStyle = "rgba(255, 255, 255, 0.94)";
     context.shadowColor = "rgba(0, 0, 0, 0.72)";
-    context.shadowBlur = 9;
-    context.fillText(signature, canvas.width - 48, canvas.height - 42);
+    context.shadowBlur = 12;
+    const signatureY = wallpaperStudioTemplate.value === "journal" ? canvas.height - 72 : canvas.height - 54;
+    context.fillText(signature, canvas.width - 64, signatureY);
     context.restore();
   }
-  wallpaperStudioStatus.value = "壁纸画布已更新";
+  wallpaperStudioStatus.value = `${canvas.width} x ${canvas.height} 画布已更新`;
+}
+
+function wallpaperStudioFontFamily(): string {
+  return {
+    sans: "'Microsoft YaHei UI', 'Segoe UI', sans-serif",
+    serif: "Georgia, 'Microsoft YaHei', serif",
+    handwritten: "'Segoe Print', 'KaiTi', cursive",
+    mono: "Consolas, 'Microsoft YaHei UI', monospace"
+  }[wallpaperStudioFont.value];
+}
+
+function drawWallpaperStudioTemplate(context: CanvasRenderingContext2D, width: number, height: number): void {
+  context.save();
+  if (wallpaperStudioTemplate.value === "cinema") {
+    const vignette = context.createLinearGradient(0, 0, 0, height);
+    vignette.addColorStop(0, "rgba(5, 10, 20, 0.52)");
+    vignette.addColorStop(0.42, "rgba(5, 10, 20, 0)");
+    vignette.addColorStop(1, "rgba(5, 10, 20, 0.62)");
+    context.fillStyle = vignette;
+    context.fillRect(0, 0, width, height);
+    context.strokeStyle = "rgba(255,255,255,0.32)";
+    context.lineWidth = 2;
+    context.beginPath();
+    context.moveTo(64, height - 104);
+    context.lineTo(width - 64, height - 104);
+    context.stroke();
+  } else if (wallpaperStudioTemplate.value === "journal") {
+    context.fillStyle = "rgba(242, 232, 204, 0.12)";
+    context.fillRect(48, 48, width - 96, height - 96);
+    context.strokeStyle = "rgba(255, 249, 228, 0.52)";
+    context.lineWidth = 2;
+    context.strokeRect(48, 48, width - 96, height - 96);
+  } else if (wallpaperStudioTemplate.value === "night") {
+    const night = context.createRadialGradient(width * 0.72, height * 0.16, 0, width * 0.54, height * 0.42, Math.max(width, height));
+    night.addColorStop(0, "rgba(135, 180, 255, 0.18)");
+    night.addColorStop(0.58, "rgba(10, 20, 54, 0.12)");
+    night.addColorStop(1, "rgba(2, 7, 25, 0.58)");
+    context.fillStyle = night;
+    context.fillRect(0, 0, width, height);
+  }
+  context.restore();
+}
+
+function drawWallpaperStudioSticker(context: CanvasRenderingContext2D, width: number): void {
+  const x = 76;
+  const y = 82;
+  context.save();
+  context.strokeStyle = "rgba(255, 244, 188, 0.94)";
+  context.fillStyle = "rgba(255, 244, 188, 0.86)";
+  context.lineWidth = Math.max(3, width / 430);
+  context.shadowColor = "rgba(0,0,0,0.5)";
+  context.shadowBlur = 12;
+  if (wallpaperStudioSticker.value === "sparkles") {
+    for (const [offsetX, offsetY, radius] of [[0, 0, 22], [58, 26, 12], [93, -10, 17]] as const) {
+      context.beginPath();
+      for (let point = 0; point < 8; point += 1) {
+        const angle = -Math.PI / 2 + point * Math.PI / 4;
+        const distance = point % 2 === 0 ? radius : radius * 0.2;
+        const pointX = x + offsetX + Math.cos(angle) * distance;
+        const pointY = y + offsetY + Math.sin(angle) * distance;
+        if (point === 0) context.moveTo(pointX, pointY);
+        else context.lineTo(pointX, pointY);
+      }
+      context.closePath();
+      context.fill();
+    }
+  } else if (wallpaperStudioSticker.value === "moon") {
+    context.beginPath();
+    context.arc(x + 28, y + 20, 26, 0, Math.PI * 2);
+    context.fill();
+    context.globalCompositeOperation = "destination-out";
+    context.beginPath();
+    context.arc(x + 40, y + 10, 26, 0, Math.PI * 2);
+    context.fill();
+  } else if (wallpaperStudioSticker.value === "botanical") {
+    for (let index = 0; index < 6; index += 1) {
+      const angle = -1.3 + index * 0.5;
+      context.beginPath();
+      context.ellipse(x + 40 + Math.cos(angle) * 32, y + 36 + Math.sin(angle) * 32, 9, 20, angle, 0, Math.PI * 2);
+      context.fill();
+    }
+    context.beginPath();
+    context.moveTo(x + 12, y + 75);
+    context.quadraticCurveTo(x + 43, y + 45, x + 72, y + 5);
+    context.stroke();
+  } else if (wallpaperStudioSticker.value === "rain") {
+    for (let index = 0; index < 5; index += 1) {
+      const dropX = x + index * 26;
+      const dropY = y + (index % 2) * 13;
+      context.beginPath();
+      context.moveTo(dropX, dropY - 17);
+      context.quadraticCurveTo(dropX - 13, dropY + 4, dropX, dropY + 17);
+      context.quadraticCurveTo(dropX + 13, dropY + 4, dropX, dropY - 17);
+      context.fill();
+    }
+  }
+  context.restore();
 }
 
 function exportWallpaperStudioPng(): void {
@@ -955,6 +1045,31 @@ function exportWallpaperStudioPng(): void {
   if (!canvas || !wallpaperStudioSource.value) return;
   downloadCanvasPng(canvas, `project-d-wallpaper-${Date.now()}.png`);
   wallpaperStudioStatus.value = "壁纸 PNG 已导出";
+}
+
+async function addWallpaperStudioToLibrary(): Promise<WallpaperLibraryItem | null> {
+  const canvas = wallpaperStudioCanvas.value;
+  if (!canvas || !wallpaperStudioSource.value) return null;
+  const label = wallpaperStudioLabel.value.trim().slice(0, 80) || "我的创作壁纸";
+  wallpaperStudioStatus.value = "正在保存到壁纸库";
+  try {
+    const item = await window.projectD.importGeneratedWallpaper(canvas.toDataURL("image/png"), label);
+    wallpaperLibrary.value = await window.projectD.getWallpaperLibrary();
+    selectedWallpaperId.value = item.id;
+    wallpaperStudioStatus.value = "已保存到壁纸库，可随时设为桌面";
+    return item;
+  } catch (error) {
+    wallpaperStudioStatus.value = error instanceof Error ? error.message : "保存创作壁纸失败";
+    return null;
+  }
+}
+
+async function applyWallpaperStudioToDesktop(): Promise<void> {
+  const item = await addWallpaperStudioToLibrary();
+  if (!item) return;
+  selectedWallpaperId.value = item.id;
+  await applySelectedWallpaper();
+  wallpaperStudioStatus.value = "创作壁纸已设为桌面";
 }
 
 function readLocalImage(file: File): Promise<string> {
@@ -1517,12 +1632,20 @@ async function saveSettings(): Promise<void> {
           <div class="settings-group wallpaper-studio">
             <div class="group-heading">
               <div><h2>壁纸创作</h2><p class="runtime-line">{{ wallpaperStudioStatus }}</p></div>
-              <button class="secondary-command" type="button" :disabled="!wallpaperStudioSource" @click="exportWallpaperStudioPng"><Download :size="16" /><span>导出 PNG</span></button>
+              <div class="group-actions">
+                <button class="secondary-command" type="button" :disabled="!wallpaperStudioSource" @click="exportWallpaperStudioPng"><Download :size="16" /><span>导出 PNG</span></button>
+                <button class="secondary-command" type="button" :disabled="!wallpaperStudioSource" @click="addWallpaperStudioToLibrary"><FolderPlus :size="16" /><span>存入壁纸库</span></button>
+                <button class="primary-command" type="button" :disabled="!wallpaperStudioSource" @click="applyWallpaperStudioToDesktop"><Palette :size="16" /><span>设为桌面</span></button>
+              </div>
             </div>
             <div class="wallpaper-studio-controls">
               <label class="pet-studio-upload"><input type="file" accept="image/png,image/jpeg,image/webp" @change="loadWallpaperStudioImage" /><ImageIcon :size="18" /><span>选择图片</span></label>
-              <label><span>签名</span><input v-model="wallpaperStudioSignature" maxlength="60" type="text" @input="renderWallpaperStudio" /></label>
-              <label><span>贴纸</span><select v-model="wallpaperStudioSticker" @change="renderWallpaperStudio"><option value="none">无</option><option value="sparkles">星光</option><option value="heart">心形</option><option value="moon">月亮</option></select></label>
+              <label><span>名称</span><input v-model="wallpaperStudioLabel" maxlength="80" type="text" /></label>
+              <label><span>模板</span><select v-model="wallpaperStudioTemplate" @change="renderWallpaperStudio"><option value="clean">纯净画面</option><option value="cinema">电影字幕感</option><option value="journal">手帐留白</option><option value="night">夜色光晕</option></select></label>
+              <label><span>字体</span><select v-model="wallpaperStudioFont" @change="renderWallpaperStudio"><option value="sans">现代无衬线</option><option value="serif">优雅衬线</option><option value="handwritten">手写感</option><option value="mono">等宽</option></select></label>
+              <label><span>贴纸</span><select v-model="wallpaperStudioSticker" @change="renderWallpaperStudio"><option value="none">无</option><option value="sparkles">星芒</option><option value="moon">月相</option><option value="botanical">枝叶</option><option value="rain">雨滴</option></select></label>
+              <label><span>分辨率</span><select v-model="wallpaperStudioResolution" @change="renderWallpaperStudio"><option value="1280x720">1280 x 720</option><option value="1920x1080">1920 x 1080</option><option value="2560x1440">2560 x 1440</option></select></label>
+              <label class="wallpaper-studio-signature"><span>签名</span><input v-model="wallpaperStudioSignature" maxlength="60" type="text" @input="renderWallpaperStudio" /></label>
             </div>
             <canvas ref="wallpaperStudioCanvas" aria-label="壁纸创作预览"></canvas>
           </div>
@@ -1603,7 +1726,7 @@ async function saveSettings(): Promise<void> {
             <label class="pet-studio-upload"><input type="file" accept="image/png,image/jpeg,image/webp" @change="loadPetVisualImage" /><ImageIcon :size="18" /><span>{{ petVisualImage ? `已选择：${petVisualImage.name}` : "选择角色素材" }}</span></label>
             <label class="setting-row"><span><strong>图片发送同意</strong><small>勾选后，只有点击“生成草案”才会向当前视觉模型发送所选图片。</small></span><input v-model="petVisualConsent" class="switch-input" type="checkbox" /></label>
             <div class="button-row"><button class="secondary-command" type="button" :disabled="!petVisualImage || !petVisualConsent || petVisualBusy" @click="createPetVisualDraft"><Bot :size="16" /><span>{{ petVisualBusy ? "正在生成" : "生成草案" }}</span></button><button class="secondary-command" type="button" :disabled="!petVisualDraft" @click="confirmPetVisualDraft"><Save :size="16" /><span>确认写入配置</span></button></div>
-            <div v-if="petVisualDraft" class="personality-preview"><small>{{ petVisualDraft.type }} · {{ petVisualDraft.personality }} · {{ petVisualDraft.tone }}</small><strong>{{ petVisualDraft.appearance.join("；") }}</strong><small>禁用词：{{ petVisualDraft.forbiddenWords.join("、") || "无" }} · 建议动作：{{ petVisualDraft.actionSuggestions.join("、") }}</small></div>
+            <div v-if="petVisualDraft" class="personality-preview"><small>{{ petVisualDraft.type }} · {{ petVisualDraft.personality }} · {{ petVisualDraft.tone }}</small><strong>{{ petVisualDraft.appearance.join("；") }}</strong><small>视觉锚点：{{ petVisualDraft.identityAnchor }} · 对话约束：{{ petVisualDraft.dialogueGuidance }}</small><small>禁用词：{{ petVisualDraft.forbiddenWords.join("、") || "无" }} · 建议动作：{{ petVisualDraft.motionGuidance.join("、") }}</small></div>
             <p class="runtime-line">{{ petVisualStatus }}</p>
           </div>
         </section>
@@ -1836,8 +1959,9 @@ select:focus, input:focus { border-color: rgba(159,215,237,.58); }
 .wallpaper-remove { position: absolute; top: 8px; right: 8px; z-index: 3; display: grid; width: 25px; height: 25px; place-items: center; border: 1px solid rgba(255,255,255,.24); border-radius: 5px; color: #fff; background: rgba(75,22,26,.78); cursor: pointer; }
 .wallpaper-remove:hover { background: rgba(140,43,49,.9); }
 .group-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
-.wallpaper-studio-controls { display: grid; grid-template-columns: 150px minmax(180px,1fr) 150px; gap: 10px; margin-bottom: 12px; }
+.wallpaper-studio-controls { display: grid; grid-template-columns: repeat(3,minmax(150px,1fr)); gap: 10px; margin-bottom: 12px; }
 .wallpaper-studio-controls > label:not(.pet-studio-upload) { display: grid; grid-template-columns: auto minmax(0,1fr); align-items: center; gap: 8px; font-size: 12px; }
+.wallpaper-studio-signature { grid-column: span 2; }
 .wallpaper-studio canvas { display: block; width: 100%; aspect-ratio: 16 / 9; border: 1px solid rgba(255,255,255,.09); border-radius: 7px; background: #11151a; object-fit: contain; }
 .pet-character-grid { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 8px; }
 .pet-character-grid button { position: relative; aspect-ratio: 3 / 4; overflow: hidden; border: 1px solid rgba(255,255,255,.1); border-radius: 8px; padding: 0; color: #f4f1ea; background: #171a1f; cursor: pointer; }

@@ -286,6 +286,10 @@ const rainStreaks = Array.from({ length: 96 }, (_, index) => ({
     "--rain-delay": `${-(index % 11) * 0.12}s`
   }
 }));
+
+function weatherTextureAsset(kind: "rain" | "snow"): string {
+  return `${import.meta.env.BASE_URL}weather/real-${kind}-plate.png`;
+}
 const lightOrbs = Array.from({ length: 18 }, (_, index) => ({
   id: `light-${index}`,
   style: {
@@ -740,7 +744,11 @@ function startCanvasFallback(container: HTMLDivElement): void {
         <span v-for="leaf in leafSprites" :key="leaf.id" class="leaf-sprite" :style="leaf.style"></span>
       </div>
       <div class="weather-rain" aria-hidden="true">
+        <img class="weather-texture weather-texture-rain" :src="weatherTextureAsset('rain')" alt="" />
         <span v-for="streak in rainStreaks" :key="streak.id" class="rain-streak" :class="streak.depth" :style="streak.style"></span>
+      </div>
+      <div class="weather-snow" aria-hidden="true">
+        <img class="weather-texture weather-texture-snow" :src="weatherTextureAsset('snow')" alt="" />
       </div>
       <div class="weather-light" aria-hidden="true">
         <span class="light-beam light-beam-primary"></span>

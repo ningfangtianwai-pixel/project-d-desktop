@@ -7,6 +7,9 @@ export interface PetVisualProfile {
   tone: string;
   forbiddenWords: string[];
   actionSuggestions: PetActionSlot[];
+  identityAnchor: string;
+  dialogueGuidance: string;
+  motionGuidance: string[];
 }
 
 function boundedText(value: unknown, maximum: number): string | null {
@@ -36,7 +39,10 @@ export function validatePetVisualProfile(value: unknown): PetVisualProfile | nul
   if (actionSuggestions.length !== record.actionSuggestions.length || actionSuggestions.length === 0 || actionSuggestions.length > PET_ACTION_SLOTS.length) {
     return null;
   }
-  return { type, appearance, personality, tone, forbiddenWords, actionSuggestions };
+  const identityAnchor = boundedText(record.identityAnchor, 240) ?? `${type}; ${appearance.slice(0, 4).join(", ")}`;
+  const dialogueGuidance = boundedText(record.dialogueGuidance, 240) ?? `${tone}; ${personality}`;
+  const motionGuidance = boundedList(record.motionGuidance, 120, PET_ACTION_SLOTS.length) ?? actionSuggestions;
+  return { type, appearance, personality, tone, forbiddenWords, actionSuggestions, identityAnchor, dialogueGuidance, motionGuidance };
 }
 
 export function parsePetVisualProfile(content: string): PetVisualProfile | null {

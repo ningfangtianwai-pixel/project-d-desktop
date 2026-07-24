@@ -216,6 +216,7 @@ button {
 .weather-fog,
 .weather-leaves,
 .weather-rain,
+.weather-snow,
 .weather-light {
   position: absolute;
   inset: 0;
@@ -234,6 +235,10 @@ button {
 
 .real-weather-layer[data-weather="rain"] .weather-rain {
   opacity: calc(0.78 * var(--weather-intensity));
+}
+
+.real-weather-layer[data-weather="snow"] .weather-snow {
+  opacity: calc(0.88 * var(--weather-intensity));
 }
 
 .real-weather-layer[data-weather="light"] .weather-light,
@@ -256,6 +261,36 @@ button {
 .real-weather-layer[data-performance="batterySaver"] .light-orb:nth-child(n + 8),
 .real-weather-layer[data-performance="batterySaver"] .fog-bank:nth-child(n + 5) {
   display: none;
+}
+
+.weather-texture {
+  position: absolute;
+  inset: -7%;
+  width: 114%;
+  height: 114%;
+  max-width: none;
+  object-fit: cover;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  transform: translate3d(-1.5%, -3%, 0) scale(1.04);
+  will-change: transform;
+}
+
+.weather-texture-rain {
+  filter: contrast(1.08) saturate(0.78);
+  opacity: 0.74;
+  animation: weather-texture-rain 4.8s linear infinite;
+}
+
+.weather-texture-snow {
+  filter: contrast(1.05) brightness(1.08);
+  opacity: 0.82;
+  animation: weather-texture-snow 9.5s ease-in-out infinite;
+}
+
+.real-weather-layer[data-performance="batterySaver"] .weather-texture {
+  animation: none;
+  opacity: 0.48;
 }
 
 .fog-bank {
@@ -320,7 +355,8 @@ button {
   height: var(--rain-length);
   border-radius: 999px;
   background: linear-gradient(180deg, rgba(236, 250, 255, 0), rgba(220, 244, 255, var(--rain-alpha)) 20%, rgba(172, 218, 247, calc(var(--rain-alpha) * 0.86)) 72%, rgba(176, 216, 244, 0));
-  box-shadow: 0 0 5px rgba(177, 220, 248, 0.2);
+  box-shadow: 0 0 5px rgba(177, 220, 248, 0.14);
+  opacity: 0.18;
   transform: rotate(11deg) translate3d(0, 0, 0);
   animation: weather-rain-fall var(--rain-duration) linear infinite;
   animation-delay: var(--rain-delay);
@@ -425,6 +461,16 @@ button {
 @keyframes weather-rain-sheet {
   from { transform: rotate(-1deg) translate3d(-5vw, -16vh, 0); }
   to { transform: rotate(-1deg) translate3d(7vw, 20vh, 0); }
+}
+
+@keyframes weather-texture-rain {
+  from { transform: translate3d(-2.5%, -8%, 0) scale(1.06); }
+  to { transform: translate3d(3%, 7%, 0) scale(1.06); }
+}
+
+@keyframes weather-texture-snow {
+  0%, 100% { transform: translate3d(-2%, -3%, 0) scale(1.05); }
+  50% { transform: translate3d(2.5%, 3%, 0) scale(1.08); }
 }
 
 @keyframes weather-leaf-fall {

@@ -68,6 +68,7 @@ export const IPC_CHANNELS = {
   WALLPAPER_LIBRARY_GET: "wallpaper:get-library",
   WALLPAPER_IMPORT: "wallpaper:import",
   WALLPAPER_IMPORT_LIVE_PHOTO: "wallpaper:import-live-photo",
+  WALLPAPER_IMPORT_GENERATED: "wallpaper:import-generated",
   WALLPAPER_DELETE: "wallpaper:delete",
   WALLPAPER_APPLY: "wallpaper:apply",
   WALLPAPER_EXPORT_ORIGINAL: "wallpaper:export-original",

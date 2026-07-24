@@ -40,7 +40,7 @@ async function run() {
       });
     });
     await page.locator(".wallpaper-bg-img.is-active").waitFor();
-    const modes = ["clear", "rain", "fog", "leaves", "light"];
+    const modes = ["clear", "rain", "snow", "fog", "leaves", "light"];
     const checks = {};
     for (const mode of modes) {
       await page.evaluate(async (nextMode) => {
@@ -53,12 +53,14 @@ async function run() {
         rainVisible: globalThis.getComputedStyle(element.querySelector(".weather-rain")).opacity,
         fogVisible: globalThis.getComputedStyle(element.querySelector(".weather-fog")).opacity,
         leavesVisible: globalThis.getComputedStyle(element.querySelector(".weather-leaves")).opacity,
+        snowVisible: globalThis.getComputedStyle(element.querySelector(".weather-snow")).opacity,
         lightVisible: globalThis.getComputedStyle(element.querySelector(".weather-light")).opacity,
+        weatherTextureCount: element.querySelectorAll(".weather-texture").length,
         rainStreaks: element.querySelectorAll(".rain-streak").length
       }));
       await page.screenshot({ path: path.join(output, `${mode}.png`) });
     }
-    const passed = checks.rain.rainVisible !== "0" && checks.rain.rainStreaks === 96 && checks.fog.fogVisible !== "0" && checks.leaves.leavesVisible !== "0" && checks.light.lightVisible !== "0";
+    const passed = checks.rain.rainVisible !== "0" && checks.rain.rainStreaks === 96 && checks.rain.weatherTextureCount === 2 && checks.snow.snowVisible !== "0" && checks.fog.fogVisible !== "0" && checks.leaves.leavesVisible !== "0" && checks.light.lightVisible !== "0";
     const report = { generatedAt: new Date().toISOString(), passed, checks };
     fs.writeFileSync(path.join(output, "report.json"), `${JSON.stringify(report, null, 2)}\n`, "utf8");
     console.log(JSON.stringify({ ...report, output }, null, 2));

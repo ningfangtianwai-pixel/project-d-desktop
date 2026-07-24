@@ -3,11 +3,11 @@
   "name": "Floral Star",
   "source": "/pet/floral-star/",
   "actions": {
-    "idle": { "image": "../sprites/floral-star.png", "width": 532, "height": 1200 },
-    "walk": { "image": "../sprites/floral-star.png", "width": 532, "height": 1200 },
-    "happy": { "image": "../sprites/floral-star.png", "width": 532, "height": 1200 },
-    "thinking": { "image": "../sprites/floral-star.png", "width": 532, "height": 1200 },
-    "sleep": { "image": "../sprites/floral-star.png", "width": 532, "height": 1200 },
-    "interaction": { "image": "../sprites/floral-star.png", "width": 532, "height": 1200 }
+    "idle": { "image": "actions/idle.png", "width": 512, "height": 512 },
+    "walk": { "image": "actions/walk.png", "width": 512, "height": 512 },
+    "happy": { "image": "actions/happy.png", "width": 512, "height": 512 },
+    "thinking": { "image": "actions/thinking.png", "width": 512, "height": 512 },
+    "sleep": { "image": "actions/sleep.png", "width": 512, "height": 512 },
+    "interaction": { "image": "actions/interaction.png", "width": 512, "height": 512 }
   }
 }

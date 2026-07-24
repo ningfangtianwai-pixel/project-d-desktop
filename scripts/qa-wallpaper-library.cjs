@@ -33,9 +33,18 @@ async function main() {
     assert.ok(service.list().some((asset) => asset.id === livePhoto.id && asset.livePhoto));
     assert.ok(fs.existsSync(service.resolveAssetPath(imported.id, "thumbnail")));
 
+    const generated = await service.importGeneratedPng(
+      `data:image/png;base64,${fs.readFileSync(source).toString("base64")}`,
+      "QA studio wallpaper"
+    );
+    assert.equal(generated.label, "QA studio wallpaper");
+    assert.ok(service.list().some((asset) => asset.id === generated.id));
+    assert.ok(fs.existsSync(service.resolveAssetPath(generated.id, "original")));
+
     database.setDisplayWallpaperAssignment("qa-display", imported.id);
     service.delete(imported.id);
     service.delete(livePhoto.id);
+    service.delete(generated.id);
     assert.equal(database.getDisplayWallpaperAssignments()["qa-display"], undefined);
     assert.equal(service.list().some((asset) => asset.id === imported.id), false);
     database.close();

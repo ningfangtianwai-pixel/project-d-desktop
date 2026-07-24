@@ -72,8 +72,9 @@ export class AiService {
       };
     }
 
-    const providerReply = await this.tryProviderReply(normalized, weather.condition, recentHistory, settings.pet.personality);
-    const reply = providerReply ?? this.createLocalReply(normalized, settings.pet.personality, weather.condition);
+    const visualProfile = this.getPetVisualProfile(settings.pet.characterId);
+    const providerReply = await this.tryProviderReply(normalized, weather.condition, recentHistory, settings.pet.personality, visualProfile);
+    const reply = providerReply ?? this.createLocalReply(normalized, settings.pet.personality, weather.condition, visualProfile);
     const message = this.database.addChatMessage("assistant", reply, settings.pet.personality, JSON.stringify(weather));
 
     this.logger.info("ai", "chat completed", {
@@ -154,7 +155,7 @@ export class AiService {
         messages: [
           {
             role: "system",
-            content: "你是桌宠角色设定分析器。只输出 JSON，不要 Markdown。严格使用字段：type(string), appearance(string[]), personality(string), tone(string), forbiddenWords(string[]), actionSuggestions(string[])。actionSuggestions 只能从 idle, walk, happy, thinking, sleep, interaction 中选择，至少一个。不要识别真人身份、年龄、种族或敏感特征；只描述可见的艺术风格、服饰、配色、姿态和安全的角色气质。"
+            content: "你是桌宠角色设定分析器。只输出 JSON，不要 Markdown。严格使用字段：type(string), appearance(string[]), personality(string), tone(string), forbiddenWords(string[]), actionSuggestions(string[]), identityAnchor(string), dialogueGuidance(string), motionGuidance(string[])。actionSuggestions 与 motionGuidance 只能从 idle, walk, happy, thinking, sleep, interaction 中选择，至少一个。identityAnchor 必须是稳定的视觉锚点，dialogueGuidance 必须是可执行的短对话约束。不要识别真人身份、年龄、种族或敏感特征；只描述可见的艺术风格、服饰、配色、姿态和安全的角色气质。"
           },
           {
             role: "user",
@@ -256,7 +257,7 @@ export class AiService {
     );
   }
 
-  private async tryProviderReply(input: string, weather: string, history: ChatMessage[], personality: string): Promise<string | null> {
+  private async tryProviderReply(input: string, weather: string, history: ChatMessage[], personality: string, visualProfile: PetVisualProfile | null): Promise<string | null> {
     const settings = this.database.getSettings();
     if (!this.networkAllowed() || getPrivacyNetworkState(this.database).paused || !settings.ai.enabled || settings.ai.provider === "local-fallback") {
       return null;
@@ -264,10 +265,10 @@ export class AiService {
 
     try {
       if (settings.ai.provider === "ollama") {
-        return await this.callOllama(input, weather, history, personality);
+        return await this.callOllama(input, weather, history, personality, visualProfile);
       }
 
-      return await this.callOpenAiCompatible(input, weather, history, personality);
+      return await this.callOpenAiCompatible(input, weather, history, personality, visualProfile);
     } catch (error) {
       this.logger.warn("ai", "provider chat failed; using local fallback", {
         provider: settings.ai.provider,
@@ -277,7 +278,7 @@ export class AiService {
     }
   }
 
-  private async callOpenAiCompatible(input: string, weather: string, history: ChatMessage[], personality: string): Promise<string | null> {
+  private async callOpenAiCompatible(input: string, weather: string, history: ChatMessage[], personality: string, visualProfile: PetVisualProfile | null = null): Promise<string | null> {
     const settings = this.database.getSettings();
     const runtime = this.database.getAiRuntimeConfig();
     const apiKey = runtime.apiKey || this.envKeyForProvider(settings.ai.provider);
@@ -302,7 +303,7 @@ export class AiService {
         messages: this.buildProviderMessages(
           {
             role: "system",
-            content: `你是 Project D 桌宠助手。回答要简短、具体、偏桌面整理和陪伴。${petPersonalityInstruction(personality)}当前天气粒子: ${weather}。`
+            content: this.petSystemInstruction(personality, weather, visualProfile)
           },
           history,
           input
@@ -322,7 +323,7 @@ export class AiService {
     return content || null;
   }
 
-  private async callOllama(input: string, weather: string, history: ChatMessage[], personality: string): Promise<string | null> {
+  private async callOllama(input: string, weather: string, history: ChatMessage[], personality: string, visualProfile: PetVisualProfile | null = null): Promise<string | null> {
     const runtime = this.database.getAiRuntimeConfig();
     const endpoint = runtime.endpoint && runtime.endpoint.includes("11434") ? runtime.endpoint : "http://127.0.0.1:11434/api/chat";
     const response = await fetch(endpoint, {
@@ -332,7 +333,7 @@ export class AiService {
         model: runtime.model || "qwen2.5:latest",
         stream: false,
         messages: this.buildProviderMessages(
-          { role: "system", content: `你是 Project D 桌宠助手。${petPersonalityInstruction(personality)}当前天气粒子: ${weather}。` },
+          { role: "system", content: this.petSystemInstruction(personality, weather, visualProfile) },
           history,
           input
         )
@@ -421,7 +422,7 @@ export class AiService {
     return `${provider} 请求失败（${status}）`;
   }
 
-  private createLocalReply(input: string, personality: string, weather: string): string {
+  private createLocalReply(input: string, personality: string, weather: string, visualProfile: PetVisualProfile | null = null): string {
     const lower = input.toLowerCase();
     if (input.includes("整理") || input.includes("文件")) {
       return "桌面文件已按虚拟分区管理。拖到其他容器只会更新分类，不会移动或改名真实文件。";
@@ -432,9 +433,22 @@ export class AiService {
     if (input.includes("桌宠") || input.includes("宠物")) {
       return "我现在是独立置顶桌宠窗口，会按时间和天气切换状态，也可以拖动、双击对话或在设置里调整人格。";
     }
+    const profileHint = visualProfile?.dialogueGuidance ? `我会保持${visualProfile.dialogueGuidance}。` : "";
     if (personality === "gentle") {
-      return "收到。我会先按本地安全逻辑处理，不会擅自移动真实文件；需要外部 AI 时再走可配置 provider。";
+      return `收到。我会先按本地安全逻辑处理，不会擅自移动真实文件；需要外部 AI 时再走可配置 provider。${profileHint}`;
     }
-    return "收到，Project D 会优先保持桌面可复位，再逐步增强自动化。";
+    return `收到，Project D 会优先保持桌面可复位，再逐步增强自动化。${profileHint}`;
+  }
+
+  private getPetVisualProfile(characterId: string): PetVisualProfile | null {
+    const raw = this.database.getAppState(`pet_visual_profile:${characterId}`);
+    return raw ? parsePetVisualProfile(raw) : null;
+  }
+
+  private petSystemInstruction(personality: string, weather: string, visualProfile: PetVisualProfile | null): string {
+    const profile = visualProfile
+      ? `角色一致性：视觉锚点=${visualProfile.identityAnchor}；对话约束=${visualProfile.dialogueGuidance}；禁用词=${visualProfile.forbiddenWords.join("、") || "无"}；建议动作=${visualProfile.motionGuidance.join("、")}。`
+      : "";
+    return `你是 Project D 桌宠助手。回答要简短、具体、偏桌面整理和陪伴。${petPersonalityInstruction(personality)}当前天气粒子: ${weather}。${profile}`;
   }
 }
