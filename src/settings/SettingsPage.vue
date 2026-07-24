@@ -220,9 +220,9 @@ const wallpaperStudioCanvas = ref<HTMLCanvasElement | null>(null);
 const wallpaperStudioSource = ref("");
 const wallpaperStudioSignature = ref("");
 const wallpaperStudioLabel = ref("我的创作壁纸");
-const wallpaperStudioTemplate = ref<"clean" | "cinema" | "journal" | "night">("clean");
-const wallpaperStudioFont = ref<"sans" | "serif" | "handwritten" | "mono">("sans");
-const wallpaperStudioSticker = ref<"none" | "sparkles" | "moon" | "botanical" | "rain">("none");
+const wallpaperStudioTemplate = ref<"clean" | "cinema" | "journal" | "night" | "dawn" | "polaroid">("clean");
+const wallpaperStudioFont = ref<"sans" | "serif" | "handwritten" | "mono" | "display">("sans");
+const wallpaperStudioSticker = ref<"none" | "sparkles" | "moon" | "botanical" | "rain" | "constellation" | "label" | "halo">("none");
 const wallpaperStudioResolution = ref<"1280x720" | "1920x1080" | "2560x1440">("1920x1080");
 const wallpaperStudioStatus = ref("选择一张图片开始创作");
 const weatherMode = ref("manual");
@@ -948,7 +948,8 @@ function wallpaperStudioFontFamily(): string {
     sans: "'Microsoft YaHei UI', 'Segoe UI', sans-serif",
     serif: "Georgia, 'Microsoft YaHei', serif",
     handwritten: "'Segoe Print', 'KaiTi', cursive",
-    mono: "Consolas, 'Microsoft YaHei UI', monospace"
+    mono: "Consolas, 'Microsoft YaHei UI', monospace",
+    display: "'Bahnschrift SemiBold', 'Microsoft YaHei UI', sans-serif"
   }[wallpaperStudioFont.value];
 }
 
@@ -980,6 +981,25 @@ function drawWallpaperStudioTemplate(context: CanvasRenderingContext2D, width: n
     night.addColorStop(1, "rgba(2, 7, 25, 0.58)");
     context.fillStyle = night;
     context.fillRect(0, 0, width, height);
+  } else if (wallpaperStudioTemplate.value === "dawn") {
+    const dawn = context.createLinearGradient(0, 0, width, height);
+    dawn.addColorStop(0, "rgba(255, 230, 184, 0.28)");
+    dawn.addColorStop(0.36, "rgba(247, 178, 130, 0.08)");
+    dawn.addColorStop(1, "rgba(31, 52, 68, 0.32)");
+    context.fillStyle = dawn;
+    context.fillRect(0, 0, width, height);
+    context.strokeStyle = "rgba(255, 245, 220, 0.34)";
+    context.lineWidth = Math.max(1, width / 1600);
+    context.beginPath();
+    context.moveTo(width * 0.08, height * 0.84);
+    context.lineTo(width * 0.92, height * 0.84);
+    context.stroke();
+  } else if (wallpaperStudioTemplate.value === "polaroid") {
+    const inset = Math.round(Math.min(width, height) * 0.045);
+    context.fillStyle = "rgba(248, 244, 232, 0.88)";
+    context.fillRect(inset, inset, width - inset * 2, height - inset * 2);
+    context.globalCompositeOperation = "destination-out";
+    context.fillRect(inset * 1.72, inset * 1.72, width - inset * 3.44, height - inset * 4.75);
   }
   context.restore();
 }
@@ -1036,6 +1056,41 @@ function drawWallpaperStudioSticker(context: CanvasRenderingContext2D, width: nu
       context.quadraticCurveTo(dropX + 13, dropY + 4, dropX, dropY - 17);
       context.fill();
     }
+  } else if (wallpaperStudioSticker.value === "constellation") {
+    const points = [[0, 0], [38, 18], [68, -8], [108, 24], [142, -2]] as const;
+    context.lineWidth = Math.max(1, width / 1300);
+    context.strokeStyle = "rgba(225, 237, 255, 0.72)";
+    context.beginPath();
+    points.forEach(([offsetX, offsetY], index) => {
+      if (index === 0) context.moveTo(x + offsetX, y + offsetY);
+      else context.lineTo(x + offsetX, y + offsetY);
+    });
+    context.stroke();
+    points.forEach(([offsetX, offsetY], index) => {
+      context.beginPath();
+      context.arc(x + offsetX, y + offsetY, index % 2 === 0 ? 5 : 3, 0, Math.PI * 2);
+      context.fill();
+    });
+  } else if (wallpaperStudioSticker.value === "label") {
+    context.fillStyle = "rgba(246, 232, 196, 0.88)";
+    context.strokeStyle = "rgba(111, 84, 47, 0.48)";
+    context.lineWidth = Math.max(2, width / 900);
+    context.beginPath();
+    context.roundRect(x, y, 142, 54, 8);
+    context.fill();
+    context.stroke();
+    context.strokeStyle = "rgba(111, 84, 47, 0.66)";
+    context.beginPath();
+    context.moveTo(x + 22, y + 27);
+    context.lineTo(x + 116, y + 27);
+    context.stroke();
+  } else if (wallpaperStudioSticker.value === "halo") {
+    const glow = context.createRadialGradient(x + 54, y + 42, 3, x + 54, y + 42, 72);
+    glow.addColorStop(0, "rgba(255, 232, 169, 0.84)");
+    glow.addColorStop(0.38, "rgba(255, 210, 121, 0.24)");
+    glow.addColorStop(1, "rgba(255, 210, 121, 0)");
+    context.fillStyle = glow;
+    context.fillRect(x - 26, y - 38, 162, 162);
   }
   context.restore();
 }
@@ -1622,7 +1677,7 @@ async function saveSettings(): Promise<void> {
                 :title="wallpaper.label"
               >
                 <img v-if="wallpaperThumbUrl(wallpaper)" :src="wallpaperThumbUrl(wallpaper)" :alt="wallpaper.label" loading="eager" />
-                <button class="wallpaper-thumb-select" type="button" @click="selectWallpaper(wallpaper.id)"><span>{{ wallpaper.label }}</span><small>{{ WALLPAPER_STYLES.find((style) => style[0] === wallpaper.style)?.[1] }}</small></button>
+                <button class="wallpaper-thumb-select" type="button" @click="selectWallpaper(wallpaper.id)"><span>{{ wallpaper.label }}</span><small>{{ wallpaper.livePhoto ? `Live Photo · ${wallpaper.livePhotoMeta?.fit === 'contain' ? '适应' : '填充'} · 循环静音` : WALLPAPER_STYLES.find((style) => style[0] === wallpaper.style)?.[1] }}</small></button>
                 <button class="wallpaper-apply-now" type="button" @click="applyWallpaperNow(wallpaper.id)"><ImageIcon :size="14" />设为壁纸</button>
                 <button v-if="wallpaper.source === 'user'" class="wallpaper-remove" type="button" :title="`删除 ${wallpaper.label}`" @click="deleteWallpaper(wallpaper)"><Trash2 :size="13" /></button>
               </article>
@@ -1641,9 +1696,9 @@ async function saveSettings(): Promise<void> {
             <div class="wallpaper-studio-controls">
               <label class="pet-studio-upload"><input type="file" accept="image/png,image/jpeg,image/webp" @change="loadWallpaperStudioImage" /><ImageIcon :size="18" /><span>选择图片</span></label>
               <label><span>名称</span><input v-model="wallpaperStudioLabel" maxlength="80" type="text" /></label>
-              <label><span>模板</span><select v-model="wallpaperStudioTemplate" @change="renderWallpaperStudio"><option value="clean">纯净画面</option><option value="cinema">电影字幕感</option><option value="journal">手帐留白</option><option value="night">夜色光晕</option></select></label>
-              <label><span>字体</span><select v-model="wallpaperStudioFont" @change="renderWallpaperStudio"><option value="sans">现代无衬线</option><option value="serif">优雅衬线</option><option value="handwritten">手写感</option><option value="mono">等宽</option></select></label>
-              <label><span>贴纸</span><select v-model="wallpaperStudioSticker" @change="renderWallpaperStudio"><option value="none">无</option><option value="sparkles">星芒</option><option value="moon">月相</option><option value="botanical">枝叶</option><option value="rain">雨滴</option></select></label>
+              <label><span>模板</span><select v-model="wallpaperStudioTemplate" @change="renderWallpaperStudio"><option value="clean">纯净画面</option><option value="cinema">电影字幕感</option><option value="journal">手帐留白</option><option value="night">夜色光晕</option><option value="dawn">晨光地平线</option><option value="polaroid">拍立得留白</option></select></label>
+              <label><span>字体</span><select v-model="wallpaperStudioFont" @change="renderWallpaperStudio"><option value="sans">现代无衬线</option><option value="serif">优雅衬线</option><option value="handwritten">手写感</option><option value="mono">等宽</option><option value="display">展示标题</option></select></label>
+              <label><span>贴纸</span><select v-model="wallpaperStudioSticker" @change="renderWallpaperStudio"><option value="none">无</option><option value="sparkles">星芒</option><option value="moon">月相</option><option value="botanical">枝叶</option><option value="rain">雨滴</option><option value="constellation">星座连线</option><option value="label">纸质标签</option><option value="halo">柔光光环</option></select></label>
               <label><span>分辨率</span><select v-model="wallpaperStudioResolution" @change="renderWallpaperStudio"><option value="1280x720">1280 x 720</option><option value="1920x1080">1920 x 1080</option><option value="2560x1440">2560 x 1440</option></select></label>
               <label class="wallpaper-studio-signature"><span>签名</span><input v-model="wallpaperStudioSignature" maxlength="60" type="text" @input="renderWallpaperStudio" /></label>
             </div>

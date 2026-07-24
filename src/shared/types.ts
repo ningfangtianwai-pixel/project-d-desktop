@@ -152,6 +152,16 @@ export interface WallpaperLibraryItem {
   file: string;
   posterFile?: string;
   livePhoto?: boolean;
+  livePhotoMeta?: {
+    coverWidth: number;
+    coverHeight: number;
+    videoBytes: number;
+    videoExtension: string;
+    loop: boolean;
+    muted: boolean;
+    fit: "cover" | "contain";
+    importedAt: string;
+  };
   aliases: string[];
   source?: "bundled" | "user";
 }

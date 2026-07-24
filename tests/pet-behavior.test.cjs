@@ -1,7 +1,7 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 
-const { petActionIntervalMs, petBubbleDelayMs, petPersonalityInstruction, petSentence } = require("../dist/shared/pet-behavior.js");
+const { petActionIntervalMs, petBubbleCue, petBubbleDelayMs, petPersonalityInstruction, petSentence } = require("../dist/shared/pet-behavior.js");
 
 test("pet talk frequency changes real scheduling ranges", () => {
   assert.equal(petBubbleDelayMs("silent", false, () => 0.5), null);
@@ -29,4 +29,16 @@ test("pet personalities produce visibly different voices", () => {
   assert.match(energetic, /精神|庆祝|冲刺|好耶/);
   assert.match(cold, /正常|异常|优先级|待命/);
   assert.match(tsundere, /不是|误会|而已/);
+});
+
+test("character personality bubbles choose a declared action and a stable visual tone", () => {
+  const energetic = petBubbleCue("floral-star", "energetic", "interaction", () => 0);
+  const cold = petBubbleCue("lin-yuxi", "cold", "ambient", () => 0);
+  const lazy = petBubbleCue("starlight", "lazy", "ambient", () => 0);
+  assert.equal(energetic.action, "interaction");
+  assert.equal(energetic.tone, "bright");
+  assert.equal(cold.action, "idle");
+  assert.equal(cold.tone, "cool");
+  assert.equal(lazy.action, "sleep");
+  assert.ok(energetic.text.length > 0 && cold.text.length > 0 && lazy.text.length > 0);
 });

@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-import { petActionIntervalMs, petBubbleDelayMs, petSentence } from "@shared/pet-behavior";
+import { petActionIntervalMs, petBubbleCue, petBubbleDelayMs, type PetBubbleAction, type PetBubbleMoment } from "@shared/pet-behavior";
 import { getPetCharacter, normalizePetCharacterId } from "@shared/pet-characters";
 import { parsePetManifest, petActionSlotFor, type PetActionSlot } from "@shared/pet-manifest";
 import type { CurrentWeather, SettingsSnapshot, SuggestionRecord } from "@shared/types";
 
 const bubble = ref("我在桌面上。");
 const bubbleVisible = ref(false);
+const bubbleTone = ref("warm");
 const petShell = ref<HTMLElement | null>(null);
 const spriteFailed = ref(false);
 const petScale = ref(1);
@@ -274,6 +275,24 @@ function chooseAmbientAction(): PetAction {
   return actionForClock() ?? actions[Math.floor(Math.random() * actions.length)] ?? "idle";
 }
 
+function actionForBubble(slot: PetBubbleAction): PetAction {
+  const actionsByBubble: Record<PetBubbleAction, PetAction> = {
+    idle: "idle",
+    walk: "walking",
+    happy: "happy",
+    thinking: "thinking",
+    sleep: "sleeping",
+    interaction: "cheerful"
+  };
+  return actionsByBubble[slot];
+}
+
+function showPersonalityBubble(moment: PetBubbleMoment, durationMs: number): void {
+  const cue = petBubbleCue(characterId.value, personality.value, moment);
+  bubbleTone.value = cue.tone;
+  showBubble(cue.text, actionForBubble(cue.action), durationMs);
+}
+
 function showBubble(message: string, nextAction: PetAction, durationMs = 12_000): void {
   activeSuggestion.value = null;
   bubble.value = message;
@@ -314,7 +333,7 @@ function scheduleNextSentence(): void {
       scheduleNextSentence();
       return;
     }
-    showBubble(petSentence(personality.value), Math.random() > 0.45 ? "cheerful" : "happy", 60_000);
+    showPersonalityBubble("ambient", 60_000);
     scheduleNextSentence();
   }, nextMs);
 }
@@ -333,7 +352,7 @@ function scheduleFirstSentence(): void {
       scheduleNextSentence();
       return;
     }
-    showBubble(petSentence(personality.value), "cheerful", 60_000);
+    showPersonalityBubble("greeting", 60_000);
     scheduleNextSentence();
   }, firstMs);
 }
@@ -390,7 +409,7 @@ function handlePetClick(): void {
   if (dragging.value || bubbleVisible.value || Date.now() < suppressClickUntil) {
     return;
   }
-  showBubble(petSentence(personality.value), action.value === "idle" ? "happy" : action.value, 8_000);
+  showPersonalityBubble("interaction", 8_000);
 }
 
 function applyPetSettings(settings: SettingsSnapshot): void {
@@ -416,9 +435,9 @@ async function refreshContextState(reschedule = false): Promise<void> {
     if (!activeSuggestion.value) {
       action.value = weatherAction ?? chooseAmbientAction();
       if (reschedule && personalityChanged) {
-        showBubble(petSentence(personality.value), "cheerful", 8_000);
+        showPersonalityBubble("personality-change", 8_000);
       } else {
-        bubble.value = petStates[action.value].bubble;
+        bubble.value = petBubbleCue(characterId.value, personality.value, "ambient").text;
       }
     }
     if (reschedule) {
@@ -569,6 +588,7 @@ function stopDrag(): void {
       <span
         v-if="bubbleVisible"
         class="pet-bubble"
+        :data-tone="bubbleTone"
         @click.stop="handleBubbleClick"
       >{{ bubble }}</span>
       <span class="pet-stage" :style="petStageStyle">

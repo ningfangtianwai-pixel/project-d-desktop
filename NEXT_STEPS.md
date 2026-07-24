@@ -226,3 +226,9 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 
 1. Exercise the packaged installer through clean-desktop activation, forced termination, Explorer restart, and recovery on a second Windows machine before public beta distribution.
 2. Keep startup auto-activation opt-in and inspect any future recovery failure through the structured `desktop-state.log` before changing icon behavior.
+
+## After Stage 53
+
+1. Add an explicit pre-import preview sheet for Live Photo pairs, including a browser decode probe and an editable fit/loop/mute policy before file copying.
+2. Add user-managed sticker-pack import only with a local source/attribution note, checksum, and removal workflow; procedural stickers remain the default.
+3. Conduct an interactive five-character pass for every personality and action slot on real displays, then tune only from captured behavior evidence.

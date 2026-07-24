@@ -300,6 +300,16 @@ const lightOrbs = Array.from({ length: 18 }, (_, index) => ({
     "--light-duration": `${9 + (index % 5) * 2}s`
   }
 }));
+const weatherGlints = Array.from({ length: 13 }, (_, index) => ({
+  id: `glint-${index}`,
+  style: {
+    "--glint-x": `${(index * 29 + 7) % 100}%`,
+    "--glint-y": `${12 + (index * 19) % 72}%`,
+    "--glint-size": `${18 + (index % 5) * 12}px`,
+    "--glint-delay": `${index * -1.1}s`,
+    "--glint-duration": `${7 + (index % 5) * 1.3}s`
+  }
+}));
 
 const styleIds = ["anime", "aurora", "ink", "garden", "ocean", "sunset", "user"] as const;
 type WallpaperStyleId = (typeof styleIds)[number];
@@ -754,6 +764,10 @@ function startCanvasFallback(container: HTMLDivElement): void {
         <span class="light-beam light-beam-primary"></span>
         <span class="light-beam light-beam-secondary"></span>
         <span v-for="orb in lightOrbs" :key="orb.id" class="light-orb" :style="orb.style"></span>
+      </div>
+      <div class="weather-grade" aria-hidden="true">
+        <span class="weather-grade-veil"></span>
+        <span v-for="glint in weatherGlints" :key="glint.id" class="weather-glint" :style="glint.style"></span>
       </div>
     </div>
   </div>

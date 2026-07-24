@@ -18,3 +18,7 @@ Project D V1 includes twelve local wallpaper assets. Four anime/landscape assets
 | `seasonal-autumn-path.jpg` | Pexels photo 18660410, Hobi Photography |
 
 Pexels source pages describe these photos as free to use. Keep this file with the distributed source archive so later asset replacement remains traceable.
+
+## Personal Use And Open Source Note
+
+Project D is currently maintained as a personal-use-first open-source project. The application code may be shared under the repository license, but every bundled image, video, character sheet, generated weather plate, and user-imported asset keeps its own source and usage note. Contributors must not assume that source-code licensing grants rights to redistribute a visual asset. User-imported wallpaper and Live Photo pairs remain local by default and are never added to the repository automatically.

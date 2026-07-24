@@ -42,6 +42,29 @@ function isWallpaperStyle(value: string): value is WallpaperLibraryItem["style"]
   return WALLPAPER_STYLES.has(value);
 }
 
+function parseLivePhotoMetadata(value: unknown): WallpaperLibraryItem["livePhotoMeta"] | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const record = value as Record<string, unknown>;
+  const coverWidth = Number(record.coverWidth);
+  const coverHeight = Number(record.coverHeight);
+  const videoBytes = Number(record.videoBytes);
+  const videoExtension = typeof record.videoExtension === "string" ? record.videoExtension : "";
+  const importedAt = typeof record.importedAt === "string" ? record.importedAt : "";
+  if (!Number.isInteger(coverWidth) || coverWidth <= 0 || !Number.isInteger(coverHeight) || coverHeight <= 0 || !Number.isFinite(videoBytes) || videoBytes <= 0 || !videoExtension || !importedAt) {
+    return undefined;
+  }
+  return {
+    coverWidth,
+    coverHeight,
+    videoBytes,
+    videoExtension,
+    loop: record.loop !== false,
+    muted: record.muted !== false,
+    fit: record.fit === "contain" ? "contain" : "cover",
+    importedAt
+  };
+}
+
 const SCHEMA_SQL = `
 PRAGMA journal_mode = WAL;
 
@@ -563,7 +586,7 @@ export class DatabaseService {
     return this.selectRows(
       "SELECT id, media_type, file_path, label, style, metadata_json FROM media_assets WHERE source = 'user' ORDER BY updated_at DESC"
     ).flatMap((row) => {
-      const metadata = this.parseJson<{ aliases?: unknown; posterFile?: unknown; livePhoto?: unknown }>(row.metadata_json) ?? {};
+      const metadata = this.parseJson<{ aliases?: unknown; posterFile?: unknown; livePhoto?: unknown; livePhotoMeta?: unknown }>(row.metadata_json) ?? {};
       const style = String(row.style);
       if (!isWallpaperStyle(style)) return [];
       const type = String(row.media_type);
@@ -576,6 +599,7 @@ export class DatabaseService {
         file: path.basename(String(row.file_path)),
         posterFile: typeof metadata.posterFile === "string" ? metadata.posterFile : undefined,
         livePhoto: metadata.livePhoto === true,
+        livePhotoMeta: parseLivePhotoMetadata(metadata.livePhotoMeta),
         aliases: Array.isArray(metadata.aliases) ? metadata.aliases.filter((alias): alias is string => typeof alias === "string") : [],
         source: "user" as const
       }];
@@ -594,7 +618,7 @@ export class DatabaseService {
        VALUES (?, ?, 'user', ?, ?, ?, ?, ?)
        ON CONFLICT(id) DO UPDATE SET media_type = excluded.media_type, source = 'user', file_path = excluded.file_path,
          label = excluded.label, style = excluded.style, metadata_json = excluded.metadata_json, updated_at = excluded.updated_at`,
-      [item.id, item.type, filePath, item.label, item.style, JSON.stringify({ aliases: item.aliases, posterFile: item.posterFile, livePhoto: item.livePhoto === true }), now]
+      [item.id, item.type, filePath, item.label, item.style, JSON.stringify({ aliases: item.aliases, posterFile: item.posterFile, livePhoto: item.livePhoto === true, livePhotoMeta: item.livePhotoMeta }), now]
     );
     this.persist();
   }

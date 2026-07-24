@@ -23,10 +23,19 @@ async function main() {
     assert.ok(fs.existsSync(service.resolveAssetPath(imported.id, "original")));
 
     const pairedVideo = path.join(root, "fixture.mp4");
-    fs.writeFileSync(pairedVideo, Buffer.from("Project D Live Photo fixture"));
+    const mp4Fixture = Buffer.alloc(32);
+    mp4Fixture.writeUInt32BE(32, 0);
+    mp4Fixture.write("ftyp", 4, "ascii");
+    mp4Fixture.write("isom", 8, "ascii");
+    fs.writeFileSync(pairedVideo, mp4Fixture);
     const livePhoto = await service.importLivePhoto(source, pairedVideo);
     assert.equal(livePhoto.type, "video");
     assert.equal(livePhoto.livePhoto, true);
+    assert.ok(livePhoto.livePhotoMeta && livePhoto.livePhotoMeta.coverWidth > 0 && livePhoto.livePhotoMeta.coverHeight > 0);
+    assert.equal(livePhoto.livePhotoMeta?.videoExtension, ".mp4");
+    assert.equal(livePhoto.livePhotoMeta?.loop, true);
+    assert.equal(livePhoto.livePhotoMeta?.muted, true);
+    assert.equal(livePhoto.livePhotoMeta?.fit, "cover");
     assert.ok(fs.existsSync(service.resolveAssetPath(livePhoto.id, "original")));
     assert.ok(fs.existsSync(service.resolveAssetPath(livePhoto.id, "cover")));
     assert.ok(fs.existsSync(service.resolveAssetPath(livePhoto.id, "thumbnail")));

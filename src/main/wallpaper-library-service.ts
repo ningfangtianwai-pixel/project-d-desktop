@@ -132,8 +132,10 @@ export class WallpaperLibraryService {
     const [coverStat, videoStat] = await Promise.all([fs.promises.stat(resolvedCover), fs.promises.stat(resolvedVideo)]);
     if (!coverStat.isFile() || coverStat.size <= 0 || coverStat.size > MAX_IMPORT_BYTES) throw new Error("Live Photo cover must be a valid image no larger than 30 MB");
     if (!videoStat.isFile() || videoStat.size <= 0 || videoStat.size > MAX_VIDEO_IMPORT_BYTES) throw new Error("Live Photo video must be no larger than 300 MB");
+    await this.assertSupportedVideoContainer(resolvedVideo, videoExtension);
     const coverImage = nativeImage.createFromPath(resolvedCover);
     if (coverImage.isEmpty()) throw new Error("The selected Live Photo cover could not be decoded");
+    const coverSize = coverImage.getSize();
 
     const id = `user-${randomUUID()}`;
     const storedVideoFile = `${id}${videoExtension}`;
@@ -149,6 +151,16 @@ export class WallpaperLibraryService {
       file: storedVideoFile,
       posterFile: coverFile,
       livePhoto: true,
+      livePhotoMeta: {
+        coverWidth: coverSize.width,
+        coverHeight: coverSize.height,
+        videoBytes: videoStat.size,
+        videoExtension,
+        loop: true,
+        muted: true,
+        fit: "cover",
+        importedAt: new Date().toISOString()
+      },
       aliases: ["user", "local", "live photo", "动态照片", path.basename(resolvedCover, coverExtension).slice(0, 80)],
       source: "user"
     };
@@ -205,6 +217,20 @@ export class WallpaperLibraryService {
     const root = path.resolve(parent) + path.sep;
     if (!resolved.startsWith(root)) throw new Error("Wallpaper asset path is outside managed storage");
     return resolved;
+  }
+
+  private async assertSupportedVideoContainer(sourcePath: string, extension: string): Promise<void> {
+    const handle = await fs.promises.open(sourcePath, "r");
+    try {
+      const header = Buffer.alloc(16);
+      const { bytesRead } = await handle.read(header, 0, header.length, 0);
+      const isWebm = header.subarray(0, 4).equals(Buffer.from([0x1a, 0x45, 0xdf, 0xa3]));
+      const hasIsoBaseMediaBrand = bytesRead >= 8 && header.subarray(4, 8).toString("ascii") === "ftyp";
+      if ((extension === ".webm" && isWebm) || ((extension === ".mp4" || extension === ".mov") && hasIsoBaseMediaBrand)) return;
+      throw new Error("The selected Live Photo video has an invalid or unsupported container header");
+    } finally {
+      await handle.close();
+    }
   }
 
   private async copyAtomically(sourcePath: string, destinationPath: string): Promise<void> {

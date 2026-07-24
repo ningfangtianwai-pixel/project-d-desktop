@@ -13,6 +13,22 @@ export const PET_PERSONALITIES = [
 
 export type PetPersonality = (typeof PET_PERSONALITIES)[number][0];
 export type PetTalkFrequency = "silent" | "rare" | "normal" | "chatty";
+export type PetBubbleAction = "idle" | "walk" | "happy" | "thinking" | "sleep" | "interaction";
+export type PetBubbleMoment = "ambient" | "greeting" | "interaction" | "personality-change";
+
+export interface PetBubbleCue {
+  text: string;
+  action: PetBubbleAction;
+  tone: "warm" | "bright" | "quiet" | "cool" | "playful" | "dreamy";
+}
+
+const CHARACTER_VOICE: Record<string, { lead: string[]; tone: PetBubbleCue["tone"] }> = {
+  "luna-q": { lead: ["Luna 已经到位。", "我会在这里陪着你。"], tone: "warm" },
+  "luna-spring": { lead: ["春日的风也到了。", "我们轻一点开始吧。"], tone: "dreamy" },
+  starlight: { lead: ["星光已为你留好位置。", "这一段时间，慢慢来。"], tone: "quiet" },
+  "floral-star": { lead: ["给今天留一点花香。", "把眼前的一件事做好就够了。"], tone: "bright" },
+  "lin-yuxi": { lead: ["我在，桌面状态正常。", "先确认最重要的那一步。"], tone: "cool" }
+};
 
 const PERSONALITY_LINES: Record<Exclude<PetPersonality, "gentle">, string[]> = {
   energetic: [
@@ -114,4 +130,37 @@ export function petSentence(personality: string, random = Math.random): string {
   }
   const lines = PERSONALITY_LINES[normalized];
   return lines[Math.min(lines.length - 1, Math.floor(Math.max(0, Math.min(0.999999, random())) * lines.length))] ?? lines[0];
+}
+
+export function petBubbleCue(
+  characterId: string,
+  personality: string,
+  moment: PetBubbleMoment,
+  random = Math.random
+): PetBubbleCue {
+  const normalized = normalizePetPersonality(personality);
+  const voice = CHARACTER_VOICE[characterId] ?? CHARACTER_VOICE["luna-q"];
+  const lead = voice.lead[Math.min(voice.lead.length - 1, Math.floor(Math.max(0, Math.min(0.999999, random())) * voice.lead.length))] ?? "我在这里。";
+  const actions: Record<PetPersonality, PetBubbleAction> = {
+    gentle: "interaction",
+    energetic: "happy",
+    literary: "idle",
+    philosophical: "thinking",
+    humorous: "interaction",
+    tsundere: "interaction",
+    cold: "idle",
+    lazy: "sleep"
+  };
+  const momentAction: Record<PetBubbleMoment, PetBubbleAction | null> = {
+    ambient: null,
+    greeting: "interaction",
+    interaction: "interaction",
+    "personality-change": "happy"
+  };
+  const text = moment === "ambient" ? petSentence(normalized, random) : `${lead}${petSentence(normalized, random)}`;
+  return {
+    text,
+    action: momentAction[moment] ?? actions[normalized],
+    tone: normalized === "cold" ? "cool" : normalized === "humorous" ? "playful" : voice.tone
+  };
 }
