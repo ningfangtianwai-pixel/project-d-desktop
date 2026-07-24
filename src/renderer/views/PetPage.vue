@@ -147,6 +147,7 @@ const currentCharacterImage = computed(() => currentCharacter.value.renderMode =
   : `${import.meta.env.BASE_URL}${currentCharacter.value.asset}`);
 const currentCharacterLabel = computed(() => `${currentCharacter.value.name} · ${currentState.value.label}`);
 const visibleOutfit = computed(() => {
+  if (currentCharacter.value.renderMode === "cutout") return "default";
   if (!autoOutfit.value) return currentOutfit.value;
   if (action.value === "rain") return "raincoat";
   if (action.value === "winter") return "winter";
@@ -527,7 +528,6 @@ function stopDrag(): void {
       <span class="pet-stage" :style="petStageStyle">
         <span class="pet-shadow"></span>
         <span class="pet-emote" aria-hidden="true"></span>
-        <span class="pet-outfit-accessory" aria-hidden="true"></span>
         <img
           v-if="!spriteFailed"
           class="pet-sprite"

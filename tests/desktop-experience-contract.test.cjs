@@ -13,22 +13,45 @@ test("desktop IPC opens real entries, reports shell errors, and uses the live wo
   assert.match(source, /getDesktopWorkArea\(\)/);
   assert.match(source, /workArea\.width/);
   assert.match(source, /workArea\.height/);
+  assert.match(source, /assertTrustedSender\(event, \["", "#\/settings", "#\/overlay"\]\)/);
 });
 
-test("desktop overlay renders recognizable folders and surfaces open failures", () => {
+test("desktop overlay renders recognizable folders, previews them, and surfaces open failures", () => {
   const source = read("src/renderer/views/OverlayPage.vue");
   assert.match(source, /file\.category === 'folder'/);
-  assert.match(source, /class="desktop-folder-icon"/);
+  assert.match(source, /class="desktop-folder-art"/);
+  assert.match(source, /preview\.type === ['"]folder['"]/);
+  assert.match(source, /preview\.entries/);
   assert.match(source, /message: error instanceof Error \? error\.message : String\(error\)/);
 });
 
-test("pet behavior exposes the expanded action set and manual outfits", () => {
+test("pet behavior exposes the expanded action set without synthetic outfit stickers", () => {
   const source = read("src/renderer/views/PetPage.vue");
   for (const action of ["walking", "dancing", "stretching", "looking", "surprised"]) {
     assert.match(source, new RegExp(`"${action}"`));
   }
   assert.match(source, /data-outfit/);
-  assert.match(source, /pet-outfit-accessory/);
+  assert.doesNotMatch(source, /pet-outfit-accessory/);
+});
+
+test("desktop scanner resolves folder shortcuts before categorizing them", () => {
+  const source = read("src/main/file-scanner.ts");
+  assert.match(source, /shell\.readShortcutLink/);
+  assert.match(source, /target\.isDirectory\(\)/);
+});
+
+test("folder preview reads real directory entries and caps the result", () => {
+  const source = read("src/main/main.ts");
+  assert.match(source, /category === "folder"/);
+  assert.match(source, /readdir\(folderPath, \{ withFileTypes: true \}\)/);
+  assert.match(source, /\.slice\(0, 48\)/);
+});
+
+test("layout service preserves the selected 2, 4, 6, or 8 columns", () => {
+  const source = read("src/main/database.ts");
+  assert.match(source, /const columns = requestedColumns/);
+  assert.match(source, /Math\.max\(112, Math\.min\(800, width\)\)/);
+  assert.doesNotMatch(source, /Math\.min\(requestedColumns, maxColumns\)/);
 });
 
 test("pet bounds use the virtual display union instead of one work area", () => {
@@ -45,4 +68,16 @@ test("clean desktop uses a display sleep blocker and restores taskbar state", ()
   assert.match(source, /setWindowsTaskbarVisible\(false\)/);
   assert.match(source, /restoreTaskbar\("application-shutdown"\)/);
   assert.doesNotMatch(source, /SendKeys|keybd_event|three.minutes/i);
+});
+
+test("desktop icon recovery does not fail after visibility succeeds only because icon counting times out", () => {
+  const source = read("src/main/windows-desktop-icons.ts");
+  assert.match(source, /\$count = -1/);
+  assert.match(source, /if \(\$null -eq \$desired\) \{ throw \}/);
+});
+
+test("idle shutdown does not persist a false deactivating crash marker", () => {
+  const source = read("src/main/desktop-controller.ts");
+  assert.match(source, /const requiresRecoveryMarker = this\.status\.mode !== "idle"/);
+  assert.match(source, /if \(requiresRecoveryMarker\) \{\s*this\.setStatus\("deactivating"/);
 });

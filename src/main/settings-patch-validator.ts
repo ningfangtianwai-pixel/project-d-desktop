@@ -58,7 +58,9 @@ const writableStateKeys = new Set([
   "launch_at_login",
   "cover_all_displays",
   "performance_mode",
-  "clean_desktop_exit_shortcut"
+  "clean_desktop_exit_shortcut",
+  "theme_mode",
+  "wallpaper_save_original"
 ]);
 
 export function validateSettingsPatch(input: unknown): SettingsPatch {
@@ -86,6 +88,12 @@ export function validateSettingsPatch(input: unknown): SettingsPatch {
       }
       if (key === "clean_desktop_exit_shortcut" && !["Escape", "F12", "Control+Shift+Q"].includes(value)) {
         throw new Error("Invalid clean desktop exit shortcut");
+      }
+      if (key === "theme_mode" && !["dark", "light", "system"].includes(value)) {
+        throw new Error("Invalid theme mode");
+      }
+      if (key === "wallpaper_save_original" && !["true", "false"].includes(value)) {
+        throw new Error("Invalid wallpaper save-original setting");
       }
     }
   }

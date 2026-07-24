@@ -1,5 +1,29 @@
 # Dev Log
 
+## 2026-07-24 - V5 Phase 0 Baseline Freeze
+
+### Implemented
+
+- Moved the development identity to `0.3.0-dev.0` and recorded the Stage 50 desktop/personalization work as the V5 starting point.
+- Added the V5 product requirements and implementation/acceptance documents; they separate code work from hardware, signing, legal, and asset-evidence gates.
+
+### Commands And Results
+
+- `pnpm lint`: passed.
+- `pnpm typecheck`: passed for renderer, main, and server projects.
+- `pnpm test`: passed, 203/203.
+- `pnpm test:component`: passed, 2/2.
+- `pnpm build`: passed.
+- Focused Electron `first-launch.spec.ts`: passed in 22.8 seconds.
+- Focused Electron `organizer-safe-restore.spec.ts`: passed in 47.2 seconds and restored Explorer icons afterward.
+- The first full E2E invocation was terminated by the external 240-second command budget while serial scenarios were still running. It left isolated test Electron processes, which were terminated; Project D's existing icon recovery function restored desktop icons.
+- Replayed `pnpm test:e2e:built` with a sufficient execution budget: passed, 11/11 in 5.1 minutes. This confirms the earlier interruption was a test-runner budget limitation, not a product failure.
+
+### Next
+
+- Run clean-checkout verification from the committed V5 baseline.
+- Begin V5 desktop-organizer closure only after the baseline installer is reproducible.
+
 ## 2026-07-16 - Stage 32 Renderer Self-Healing And Bounded Shutdown
 
 ### Implemented
@@ -1453,3 +1477,26 @@
   - `pnpm test:e2e:built`: 10/10 passed.
   - `pnpm qa:user-reported-ui`: passed; all five character images loaded, wallpaper backdrop rendered, chat remained usable, and a non-Luna winter accessory rendered.
   - Real shell probe after E2E: taskbar visible, desktop list visible with 63 icons, zero Project D processes.
+
+## 2026-07-24 Stage 50 Native Desktop And Personalization Closure
+
+- Replaced generic folder tiles in both main and overlay renderers with native-inspired yellow folder artwork and shortcut markers.
+- Added real directory preview data and folder-child rendering; previews are bounded to 48 entries and never mutate files.
+- Resolved Windows `.lnk` targets during scanning so shortcuts to directories enter the folder category.
+- Fixed overlay authorization for `desktop:deactivate` and added a real Electron safe-restore E2E.
+- The first safe-restore E2E exposed a Windows Shell edge case: visibility restoration succeeded, then optional icon counting timed out and incorrectly failed the whole operation. Icon counting is now best-effort during a state change while standalone probes remain strict.
+- Preserved exact 2/4/6/8-column choices and lowered the shared resize minimum to 112 DIP.
+- Added wallpaper search/category browsing, direct apply, original export, decoded `<img>` thumbnails, and a local 1280x720 wallpaper creation/export canvas.
+- Added dark/light/system appearance, privacy disclosure, About attribution/contact/GitHub/MIT code-license boundaries, local pet background removal, and runtime-cache cleanup.
+- Removed synthetic CSS outfit stickers for characters without real outfit artwork.
+- Verification results:
+  - `pnpm typecheck`: passed.
+  - `pnpm lint`: passed.
+  - `pnpm test`: 202/202 passed.
+  - `pnpm test:component`: 2/2 passed.
+  - `pnpm build`: passed.
+  - `pnpm qa:user-reported-ui`: passed; 0 unloaded wallpaper images, 0 unloaded pet images, and folder preview is included in the browser fixture.
+  - `pnpm test:e2e:built`: 11/11 passed, including organizer restore, corrupted configuration, forced termination, renderer crash/white-screen recovery, clean desktop, duplicate launch, settings restart, AI fallback, and tray exit.
+- The first complete E2E replay exposed an idle-shutdown race that could persist `deactivating` and display a false crash-recovery notice. Idle shutdown now performs idempotent Shell recovery without writing a crash marker.
+- The renderer-crash test originally waited on the renderer `Page` that the test intentionally destroyed. It now validates the replacement window through the Electron main process and capture pixels; the runtime recovered and reported healthy in every final run.
+- Deferred honestly: Live Photo import, persistent user-wallpaper ingestion, vision-model character analysis, and licensed multi-action/multi-outfit packs.

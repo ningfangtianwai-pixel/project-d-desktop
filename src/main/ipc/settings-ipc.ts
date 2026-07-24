@@ -13,6 +13,8 @@ const READABLE_STATE_KEYS = new Set([
   "launch_at_login",
   "cover_all_displays",
   "clean_desktop_exit_shortcut",
+  "theme_mode",
+  "wallpaper_save_original",
   "shortcut_peek",
   "shortcut_peek_status",
   "boot_recovery_notice"
@@ -26,6 +28,7 @@ export interface SettingsIpcDependencies {
   getWeather: () => Promise<CurrentWeather>;
   getWallpaperLibrary: () => WallpaperLibraryItem[];
   applyWallpaper: (id: string) => SettingsSnapshot;
+  exportWallpaperOriginal: (id: string) => Promise<{ cancelled: boolean; filename: string | null }>;
   broadcastSettings: () => void;
   syncWindows: (settings: SettingsSnapshot) => void;
   validateSettingsPatch: (patch: unknown) => SettingsPatch;
@@ -73,6 +76,12 @@ export function registerSettingsIpcHandlers(deps: SettingsIpcDependencies): void
     assertTrustedSender(event, ["", "#/settings", "#/overlay"]);
     if (typeof wallpaperId !== "string" || wallpaperId.length > 80) throw new Error("Invalid wallpaper id");
     return deps.applyWallpaper(wallpaperId);
+  });
+
+  ipc.handle(IPC_CHANNELS.WALLPAPER_EXPORT_ORIGINAL, async (event, wallpaperId: unknown) => {
+    assertTrustedSender(event, ["#/settings"]);
+    if (typeof wallpaperId !== "string" || wallpaperId.length > 80) throw new Error("Invalid wallpaper id");
+    return deps.exportWallpaperOriginal(wallpaperId);
   });
 
   ipc.handle(IPC_CHANNELS.WEATHER_GET_CURRENT, async (event): Promise<CurrentWeather> => {

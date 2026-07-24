@@ -138,7 +138,11 @@ export class DesktopController {
   }
 
   async recoverBeforeShutdown(): Promise<DesktopStatus> {
-    this.setStatus("deactivating", "正在退出前恢复桌面");
+    const persistedState = this.database.getAppState("desktop_state");
+    const requiresRecoveryMarker = this.status.mode !== "idle" || (persistedState !== null && persistedState !== "idle");
+    if (requiresRecoveryMarker) {
+      this.setStatus("deactivating", "正在退出前恢复桌面");
+    }
 
     try {
       await this.showDesktopIcons();

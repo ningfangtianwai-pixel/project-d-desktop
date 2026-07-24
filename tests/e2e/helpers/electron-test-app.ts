@@ -66,8 +66,10 @@ export async function launchProjectD(label: string, options: LaunchOptions = {})
   const entry = options.entry ?? root;
   const args = entry === root ? [root, qaToken] : [entry, root, qaToken];
   const app = await electron.launch({ args, cwd: root, env });
-  await app.firstWindow();
-  const window = await findMainWindow(app);
+  const firstWindow = await app.firstWindow();
+  const window = options.env?.PROJECTD_QA_CRASH_RENDERER
+    ? firstWindow
+    : await findMainWindow(app);
   if (options.waitForHealthy !== false) await waitForHealthyMainWindow(window);
   return { app, env, root, userDataDir, window };
 }

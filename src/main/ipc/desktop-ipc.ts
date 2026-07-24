@@ -41,7 +41,7 @@ export function registerDesktopIpcHandlers(deps: DesktopIpcDependencies): void {
   });
 
   ipc.handle(IPC_CHANNELS.DESKTOP_DEACTIVATE, async (event): Promise<DesktopStatus> => {
-    assertTrustedSender(event, ["", "#/settings"]);
+    assertTrustedSender(event, ["", "#/settings", "#/overlay"]);
     const status = (await deps.getDesktopController()?.deactivate()) ?? deps.updateDesktopStatus("idle");
     deps.closeOverlayWindow();
     deps.showMainWindow();

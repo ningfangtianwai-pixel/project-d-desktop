@@ -19,6 +19,7 @@ import {
   RefreshCcw,
   RotateCcw,
   Save,
+  Search,
   ShieldCheck,
   LockKeyhole,
   PlayCircle,
@@ -171,6 +172,7 @@ const launchAtLogin = ref(false);
 const coverAllDisplays = ref(false);
 const performanceMode = ref("auto");
 const cleanDesktopExitShortcut = ref("Escape");
+const themeMode = ref<"dark" | "light" | "system">("dark");
 const runtimeState = ref<RuntimePauseSnapshot | null>(null);
 const runtimeMetrics = ref<RuntimeMetricsReport | null>(null);
 const runtimePauseDetail = computed(() => {
@@ -198,10 +200,21 @@ const petScale = ref(100);
 const petAutoOutfit = ref(true);
 const petCurrentOutfit = ref("default");
 const petActionInterval = ref(120);
+const petStudioCanvas = ref<HTMLCanvasElement | null>(null);
+const petStudioSource = ref("");
+const petStudioThreshold = ref(54);
+const petStudioStatus = ref("上传一张背景相对干净的人像或动物图片");
 const wallpaperDynamic = ref(true);
 const wallpaperStyle = ref("anime");
 const selectedWallpaperId = ref("");
 const wallpaperStyleFilter = ref("all");
+const wallpaperSearch = ref("");
+const wallpaperSaveOriginal = ref(false);
+const wallpaperStudioCanvas = ref<HTMLCanvasElement | null>(null);
+const wallpaperStudioSource = ref("");
+const wallpaperStudioSignature = ref("");
+const wallpaperStudioSticker = ref<"none" | "sparkles" | "heart" | "moon">("none");
+const wallpaperStudioStatus = ref("选择一张图片开始创作");
 const weatherMode = ref("manual");
 const manualWeather = ref("clear");
 const city = ref("");
@@ -263,9 +276,22 @@ const locationSourceLabel = computed(() => {
 const personalities = PET_PERSONALITIES;
 const petCharacters = PET_CHARACTERS;
 const baseUrl = import.meta.env.BASE_URL;
-const filteredWallpapers = computed(() => wallpaperStyleFilter.value === "all"
-  ? wallpaperLibrary.value
-  : wallpaperLibrary.value.filter((wallpaper) => wallpaper.style === wallpaperStyleFilter.value));
+const filteredWallpapers = computed(() => {
+  const query = wallpaperSearch.value.trim().toLowerCase();
+  return wallpaperLibrary.value.filter((wallpaper) => {
+    if (wallpaperStyleFilter.value !== "all" && wallpaper.style !== wallpaperStyleFilter.value) return false;
+    if (!query) return true;
+    return [wallpaper.label, wallpaper.style, ...wallpaper.aliases]
+      .some((value) => value.toLowerCase().includes(query));
+  });
+});
+
+function applyTheme(mode: "dark" | "light" | "system"): void {
+  const resolved = mode === "system"
+    ? (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
+    : mode;
+  document.documentElement.dataset.theme = resolved;
+}
 const recoverySystemItems = computed(() => {
   const snapshot = recoverySystemStatus.value;
   if (!snapshot) return [];
@@ -311,7 +337,7 @@ function formatSuppressionTime(value: string): string {
 }
 
 async function loadSettings(): Promise<void> {
-  const [nextLibrary, nextDisplays, nextSettings, nextLayouts, nextContainers, nextAutoRules, nextAppInfo, nextHost, nextLocationSource, nextRecoveryPath, nextPerformance, nextAutoActivate, nextLaunchAtLogin, nextCoverAllDisplays, nextCleanDesktopExitShortcut, nextRuntimeState, nextPortals, nextScenes, nextActionHistory, nextInterruptedRecoveries, nextSuggestionDelivery, nextSuppressionHistory, nextPrivacyNetwork, nextRecoverySystemStatus, nextUpdateStatus] = await Promise.all([
+  const [nextLibrary, nextDisplays, nextSettings, nextLayouts, nextContainers, nextAutoRules, nextAppInfo, nextHost, nextLocationSource, nextRecoveryPath, nextPerformance, nextAutoActivate, nextLaunchAtLogin, nextCoverAllDisplays, nextCleanDesktopExitShortcut, nextThemeMode, nextWallpaperSaveOriginal, nextRuntimeState, nextPortals, nextScenes, nextActionHistory, nextInterruptedRecoveries, nextSuggestionDelivery, nextSuppressionHistory, nextPrivacyNetwork, nextRecoverySystemStatus, nextUpdateStatus] = await Promise.all([
     window.projectD.getWallpaperLibrary(),
     window.projectD.getWallpaperDisplays(),
     window.projectD.getSettings(),
@@ -327,6 +353,8 @@ async function loadSettings(): Promise<void> {
     window.projectD.getState("launch_at_login").catch(() => null),
     window.projectD.getState("cover_all_displays").catch(() => null),
     window.projectD.getState("clean_desktop_exit_shortcut").catch(() => null),
+    window.projectD.getState("theme_mode").catch(() => null),
+    window.projectD.getState("wallpaper_save_original").catch(() => null),
     window.projectD.getRuntimeState(),
     window.projectD.getFolderPortals(),
     window.projectD.getWorkspaceScenes(),
@@ -358,6 +386,9 @@ async function loadSettings(): Promise<void> {
   launchAtLogin.value = nextLaunchAtLogin === "true";
   coverAllDisplays.value = nextCoverAllDisplays === "true";
   cleanDesktopExitShortcut.value = nextCleanDesktopExitShortcut ?? "Escape";
+  themeMode.value = nextThemeMode === "light" || nextThemeMode === "system" ? nextThemeMode : "dark";
+  wallpaperSaveOriginal.value = nextWallpaperSaveOriginal === "true";
+  applyTheme(themeMode.value);
   runtimeState.value = nextRuntimeState;
   portals.value = nextPortals;
   scenes.value = nextScenes;
@@ -679,6 +710,16 @@ async function resetUserData(): Promise<void> {
   }
 }
 
+async function clearRuntimeCache(): Promise<void> {
+  privacyBusy.value = true;
+  try {
+    const result = await window.projectD.clearRuntimeCache();
+    saveStatus.value = `运行缓存已清理 · ${new Date(result.at).toLocaleTimeString()}`;
+  } finally {
+    privacyBusy.value = false;
+  }
+}
+
 async function openPortalResource(resource: PortalResource): Promise<void> {
   if (resource.status !== "ready" || !resource.relativePath || !selectedPortalId.value) return;
   await window.projectD.openFolderPortalResource(selectedPortalId.value, resource.relativePath);
@@ -781,6 +822,21 @@ async function applySelectedWallpaper(): Promise<void> {
   wallpaperDynamic.value = settings.value.wallpaper.isDynamic;
   wallpaperStyle.value = settings.value.wallpaper.currentStyle;
   saveStatus.value = "壁纸已应用";
+  if (wallpaperSaveOriginal.value) {
+    const exported = await window.projectD.exportWallpaperOriginal(selectedWallpaperId.value);
+    saveStatus.value = exported.cancelled ? "壁纸已应用，原图保存已取消" : `壁纸已应用并保存：${exported.filename}`;
+  }
+}
+
+async function applyWallpaperNow(wallpaperId: string): Promise<void> {
+  selectedWallpaperId.value = wallpaperId;
+  await applySelectedWallpaper();
+}
+
+async function exportSelectedWallpaper(): Promise<void> {
+  if (!selectedWallpaperId.value) return;
+  const result = await window.projectD.exportWallpaperOriginal(selectedWallpaperId.value);
+  saveStatus.value = result.cancelled ? "已取消保存原图" : `原图已保存：${result.filename}`;
 }
 
 async function assignWallpaper(displayId: string, wallpaperId: string): Promise<void> {
@@ -793,10 +849,178 @@ function selectWallpaper(wallpaperId: string): void {
   wallpaperStyle.value = "user";
 }
 
-function wallpaperThumbStyle(wallpaper: WallpaperLibraryItem): Record<string, string> {
-  return {
-    backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.02), rgba(0,0,0,0.4)), url("${import.meta.env.BASE_URL}wallpapers/${wallpaper.file}")`
+function wallpaperThumbUrl(wallpaper: WallpaperLibraryItem): string {
+  const file = wallpaper.type === "video" ? wallpaper.posterFile : wallpaper.file;
+  return file ? `${import.meta.env.BASE_URL}wallpapers/${file}` : "";
+}
+
+async function loadWallpaperStudioImage(event: Event): Promise<void> {
+  const file = (event.target as HTMLInputElement).files?.[0];
+  if (!file) return;
+  if (!file.type.startsWith("image/") || file.size > 30 * 1024 * 1024) {
+    wallpaperStudioStatus.value = "请选择 30 MB 以内的图片";
+    return;
+  }
+  wallpaperStudioSource.value = await readLocalImage(file);
+  await renderWallpaperStudio();
+}
+
+async function renderWallpaperStudio(): Promise<void> {
+  const canvas = wallpaperStudioCanvas.value;
+  if (!canvas || !wallpaperStudioSource.value) return;
+  const image = new Image();
+  image.src = wallpaperStudioSource.value;
+  await image.decode();
+  canvas.width = 1280;
+  canvas.height = 720;
+  const context = canvas.getContext("2d");
+  if (!context) return;
+  const scale = Math.max(canvas.width / image.naturalWidth, canvas.height / image.naturalHeight);
+  const width = image.naturalWidth * scale;
+  const height = image.naturalHeight * scale;
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
+
+  const sticker = {
+    none: "",
+    sparkles: "\u2726  \u2727  \u2726",
+    heart: "\u2665",
+    moon: "\u263E"
+  }[wallpaperStudioSticker.value];
+  if (sticker) {
+    context.save();
+    context.font = "700 54px 'Segoe UI Symbol', sans-serif";
+    context.fillStyle = "rgba(255, 244, 188, 0.92)";
+    context.shadowColor = "rgba(0, 0, 0, 0.45)";
+    context.shadowBlur = 14;
+    context.fillText(sticker, 54, 78);
+    context.restore();
+  }
+
+  const signature = wallpaperStudioSignature.value.trim().slice(0, 60);
+  if (signature) {
+    context.save();
+    context.font = "500 30px 'Segoe UI', sans-serif";
+    context.textAlign = "right";
+    context.fillStyle = "rgba(255, 255, 255, 0.94)";
+    context.shadowColor = "rgba(0, 0, 0, 0.72)";
+    context.shadowBlur = 9;
+    context.fillText(signature, canvas.width - 48, canvas.height - 42);
+    context.restore();
+  }
+  wallpaperStudioStatus.value = "壁纸画布已更新";
+}
+
+function exportWallpaperStudioPng(): void {
+  const canvas = wallpaperStudioCanvas.value;
+  if (!canvas || !wallpaperStudioSource.value) return;
+  downloadCanvasPng(canvas, `project-d-wallpaper-${Date.now()}.png`);
+  wallpaperStudioStatus.value = "壁纸 PNG 已导出";
+}
+
+function readLocalImage(file: File): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+function downloadCanvasPng(canvas: HTMLCanvasElement, filename: string): void {
+  canvas.toBlob((blob) => {
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, "image/png");
+}
+
+async function loadPetStudioImage(event: Event): Promise<void> {
+  const file = (event.target as HTMLInputElement).files?.[0];
+  if (!file) return;
+  if (!file.type.startsWith("image/") || file.size > 20 * 1024 * 1024) {
+    petStudioStatus.value = "请选择 20 MB 以内的图片";
+    return;
+  }
+  petStudioSource.value = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+  await removePetStudioBackground();
+}
+
+async function removePetStudioBackground(): Promise<void> {
+  const canvas = petStudioCanvas.value;
+  if (!canvas || !petStudioSource.value) return;
+  const image = new Image();
+  image.src = petStudioSource.value;
+  await image.decode();
+  const scale = Math.min(1, 720 / Math.max(image.naturalWidth, image.naturalHeight));
+  canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+  canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) return;
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
+  const data = pixels.data;
+  const width = canvas.width;
+  const height = canvas.height;
+  const cornerIndexes = [0, width - 1, (height - 1) * width, height * width - 1];
+  const backgrounds = cornerIndexes.map((index) => [data[index * 4], data[index * 4 + 1], data[index * 4 + 2]]);
+  const visited = new Uint8Array(width * height);
+  const queue = new Int32Array(width * height);
+  let head = 0;
+  let tail = 0;
+  const thresholdSquared = petStudioThreshold.value ** 2;
+  const enqueue = (index: number) => {
+    if (visited[index]) return;
+    visited[index] = 1;
+    queue[tail++] = index;
   };
+  for (let x = 0; x < width; x += 1) { enqueue(x); enqueue((height - 1) * width + x); }
+  for (let y = 0; y < height; y += 1) { enqueue(y * width); enqueue(y * width + width - 1); }
+  while (head < tail) {
+    const index = queue[head++];
+    const offset = index * 4;
+    const removable = backgrounds.some(([red, green, blue]) => {
+      const dr = data[offset] - red;
+      const dg = data[offset + 1] - green;
+      const db = data[offset + 2] - blue;
+      return dr * dr + dg * dg + db * db <= thresholdSquared;
+    });
+    if (!removable) continue;
+    data[offset + 3] = 0;
+    const x = index % width;
+    const y = Math.floor(index / width);
+    if (x > 0) enqueue(index - 1);
+    if (x + 1 < width) enqueue(index + 1);
+    if (y > 0) enqueue(index - width);
+    if (y + 1 < height) enqueue(index + width);
+  }
+  context.putImageData(pixels, 0, 0);
+  petStudioStatus.value = "背景已在本机抠除，可调整阈值后重新处理";
+}
+
+function exportPetStudioPng(): void {
+  const canvas = petStudioCanvas.value;
+  if (!canvas || !petStudioSource.value) return;
+  canvas.toBlob((blob) => {
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `project-d-pet-${Date.now()}.png`;
+    link.click();
+    URL.revokeObjectURL(url);
+    petStudioStatus.value = "透明 PNG 已导出";
+  }, "image/png");
 }
 
 async function saveSettings(): Promise<void> {
@@ -838,9 +1062,12 @@ async function saveSettings(): Promise<void> {
       launch_at_login: launchAtLogin.value ? "true" : "false",
       cover_all_displays: coverAllDisplays.value ? "true" : "false",
       performance_mode: performanceMode.value,
-      clean_desktop_exit_shortcut: cleanDesktopExitShortcut.value
+      clean_desktop_exit_shortcut: cleanDesktopExitShortcut.value,
+      theme_mode: themeMode.value,
+      wallpaper_save_original: wallpaperSaveOriginal.value ? "true" : "false"
     }
   });
+  applyTheme(themeMode.value);
 
   weatherApiKey.value = "";
   aiApiKey.value = "";
@@ -916,6 +1143,14 @@ async function saveSettings(): Promise<void> {
                 <option value="Escape">Esc</option>
                 <option value="F12">F12</option>
                 <option value="Control+Shift+Q">Ctrl + Shift + Q</option>
+              </select>
+            </label>
+            <label class="setting-row">
+              <span><strong>外观模式</strong><small>设置页与主控制台同步</small></span>
+              <select v-model="themeMode" @change="applyTheme(themeMode)">
+                <option value="dark">深色</option>
+                <option value="light">浅色</option>
+                <option value="system">跟随系统</option>
               </select>
             </label>
             <label class="setting-row">
@@ -1132,10 +1367,17 @@ async function saveSettings(): Promise<void> {
               <div><ShieldCheck :size="17" /><span><strong>需要明确操作</strong><small>目录授权、真实文件整理、诊断导出和桌面图标隐藏</small></span></div>
               <div><FileText :size="17" /><span><strong>不会自动收集</strong><small>文件内容、完整磁盘索引、浏览器记录和其他应用数据</small></span></div>
             </div>
+            <details class="privacy-agreement">
+              <summary>隐私协议摘要</summary>
+              <p>Project D 默认在本机处理桌面文件索引、布局、聊天记录和设置。未经明确操作，不上传桌面文件名、完整路径、聊天内容或诊断日志。</p>
+              <p>天气自动定位和第三方 AI 仅在对应功能开启且未暂停联网时请求外部服务；API Key 通过 Windows 安全存储加密。</p>
+              <p>目录门户必须由用户通过系统选择器授权；真实文件移动执行前提供方案预览，并保留可撤销记录。</p>
+            </details>
             <div class="privacy-actions">
               <button class="secondary-command privacy-pause-command" type="button" :class="{ active: privacyNetwork.paused }" :disabled="privacyBusy" @click="togglePrivacyNetwork"><Wifi v-if="privacyNetwork.paused" :size="16" /><WifiOff v-else :size="16" /><span>{{ privacyNetwork.paused ? "恢复联网服务" : "暂停联网服务" }}</span></button>
               <button class="secondary-command" type="button" @click="previewDiagnostics"><ShieldCheck :size="16" /><span>查看诊断范围</span></button>
               <button class="secondary-command" type="button" :disabled="privacyBusy" @click="exportUserData"><Download :size="16" /><span>导出全部数据</span></button>
+              <button class="secondary-command" type="button" :disabled="privacyBusy" @click="clearRuntimeCache"><RefreshCcw :size="16" /><span>清理运行缓存</span></button>
               <button class="secondary-command" type="button" @click="replayOnboarding"><PlayCircle :size="16" /><span>重播新手引导</span></button>
               <button class="danger-command privacy-danger" type="button" :disabled="privacyBusy" @click="resetUserData"><Trash2 :size="16" /><span>彻底删除数据</span></button>
             </div>
@@ -1148,28 +1390,46 @@ async function saveSettings(): Promise<void> {
               <span><strong>动态桌面背景</strong><small>{{ wallpaperHostLabel }}</small></span>
               <input v-model="wallpaperDynamic" class="switch-input" type="checkbox" />
             </label>
-            <label class="setting-row">
-              <span><strong>壁纸分类</strong><small>6 类 · 12 张本地资源</small></span>
-              <select v-model="wallpaperStyleFilter">
-                <option value="all">全部</option>
-                <option v-for="style in WALLPAPER_STYLES" :key="style[0]" :value="style[0]">{{ style[1] }}</option>
-              </select>
-            </label>
+            <label class="setting-row"><span><strong>保存原图</strong><small>设置壁纸后询问保存位置</small></span><input v-model="wallpaperSaveOriginal" class="switch-input" type="checkbox" /></label>
           </div>
           <div class="settings-group">
-            <div class="group-heading"><h2>壁纸库</h2><button class="secondary-command" type="button" @click="applySelectedWallpaper"><ImageIcon :size="16" /><span>应用</span></button></div>
+            <div class="group-heading">
+              <div><h2>壁纸浏览</h2><p class="runtime-line">按分类或名称筛选，卡片可直接设为桌面壁纸。</p></div>
+              <button class="secondary-command" type="button" @click="exportSelectedWallpaper"><Download :size="16" /><span>保存原图</span></button>
+            </div>
+            <div class="wallpaper-browser-tools">
+              <label class="wallpaper-search"><Search :size="16" /><input v-model="wallpaperSearch" type="search" placeholder="搜索名称、风格或关键词" /></label>
+              <div class="wallpaper-category-tabs">
+                <button type="button" :class="{ active: wallpaperStyleFilter === 'all' }" @click="wallpaperStyleFilter = 'all'">全部</button>
+                <button v-for="style in WALLPAPER_STYLES" :key="style[0]" type="button" :class="{ active: wallpaperStyleFilter === style[0] }" @click="wallpaperStyleFilter = style[0]">{{ style[1] }}</button>
+              </div>
+            </div>
             <div class="wallpaper-thumb-grid">
-              <button
+              <article
                 v-for="wallpaper in filteredWallpapers"
                 :key="wallpaper.id"
-                type="button"
                 class="wallpaper-thumb"
                 :class="{ selected: selectedWallpaperId === wallpaper.id }"
-                :style="wallpaperThumbStyle(wallpaper)"
                 :title="wallpaper.label"
-                @click="selectWallpaper(wallpaper.id)"
-              ><span>{{ wallpaper.label }}</span></button>
+              >
+                <img v-if="wallpaperThumbUrl(wallpaper)" :src="wallpaperThumbUrl(wallpaper)" :alt="wallpaper.label" loading="eager" />
+                <button class="wallpaper-thumb-select" type="button" @click="selectWallpaper(wallpaper.id)"><span>{{ wallpaper.label }}</span><small>{{ WALLPAPER_STYLES.find((style) => style[0] === wallpaper.style)?.[1] }}</small></button>
+                <button class="wallpaper-apply-now" type="button" @click="applyWallpaperNow(wallpaper.id)"><ImageIcon :size="14" />设为壁纸</button>
+              </article>
             </div>
+            <p v-if="filteredWallpapers.length === 0" class="runtime-line">没有匹配的本地壁纸。</p>
+          </div>
+          <div class="settings-group wallpaper-studio">
+            <div class="group-heading">
+              <div><h2>壁纸创作</h2><p class="runtime-line">{{ wallpaperStudioStatus }}</p></div>
+              <button class="secondary-command" type="button" :disabled="!wallpaperStudioSource" @click="exportWallpaperStudioPng"><Download :size="16" /><span>导出 PNG</span></button>
+            </div>
+            <div class="wallpaper-studio-controls">
+              <label class="pet-studio-upload"><input type="file" accept="image/png,image/jpeg,image/webp" @change="loadWallpaperStudioImage" /><ImageIcon :size="18" /><span>选择图片</span></label>
+              <label><span>签名</span><input v-model="wallpaperStudioSignature" maxlength="60" type="text" @input="renderWallpaperStudio" /></label>
+              <label><span>贴纸</span><select v-model="wallpaperStudioSticker" @change="renderWallpaperStudio"><option value="none">无</option><option value="sparkles">星光</option><option value="heart">心形</option><option value="moon">月亮</option></select></label>
+            </div>
+            <canvas ref="wallpaperStudioCanvas" aria-label="壁纸创作预览"></canvas>
           </div>
           <div v-if="wallpaperDisplays.length > 0" class="settings-group">
             <h2>多显示器分配</h2>
@@ -1221,7 +1481,7 @@ async function saveSettings(): Promise<void> {
           <div class="settings-group">
             <label class="setting-row"><span><strong>显示桌宠</strong><small>{{ petCharacters.find((item) => item.id === petCharacterId)?.name ?? 'Luna Q' }}</small></span><input v-model="petEnabled" class="switch-input" type="checkbox" /></label>
             <label class="setting-row"><span><strong>自动换装</strong><small>weather outfit</small></span><input v-model="petAutoOutfit" class="switch-input" type="checkbox" /></label>
-            <label v-if="!petAutoOutfit" class="setting-row"><span><strong>当前装扮</strong><small>所有角色均显示对应配饰</small></span><select v-model="petCurrentOutfit"><option value="default">日常装</option><option value="raincoat">雨天装</option><option value="winter">冬日装</option><option value="summer">夏日装</option><option value="pajamas">睡衣</option></select></label>
+            <label v-if="!petAutoOutfit" class="setting-row"><span><strong>当前装扮</strong><small>{{ petCharacterId === 'luna-q' ? 'Luna Q 使用真实服装帧' : '该角色当前只有原始透明立绘，不叠加贴纸' }}</small></span><select v-model="petCurrentOutfit" :disabled="petCharacterId !== 'luna-q'"><option value="default">日常装</option><option value="raincoat">雨天装</option><option value="winter">冬日装</option><option value="summer">夏日装</option><option value="pajamas">睡衣</option></select></label>
             <label class="setting-row"><span><strong>话频率</strong><small>bubble frequency</small></span><select v-model="petTalkFrequency"><option value="silent">安静</option><option value="rare">偶尔</option><option value="normal">正常</option><option value="chatty">话痨</option></select></label>
             <label class="setting-row"><span><strong>动作间隔</strong><small>ambient actions</small></span><select v-model="petActionInterval"><option :value="30">30 秒</option><option :value="60">1 分钟</option><option :value="120">2 分钟</option><option :value="300">5 分钟</option></select></label>
             <label class="range-setting"><span><strong>缩放</strong><b>{{ petScale }}%</b></span><input v-model="petScale" min="50" max="160" type="range" /></label>
@@ -1233,6 +1493,15 @@ async function saveSettings(): Promise<void> {
             </div>
             <div class="personality-preview" aria-live="polite"><small>人格试听</small><strong>{{ petPersonalityPreview }}</strong></div>
             <button class="secondary-command reset-pet" type="button" @click="resetPetPosition"><RotateCcw :size="16" /><span>复位桌宠位置</span></button>
+          </div>
+          <div class="settings-group pet-studio">
+            <div class="group-heading"><div><h2>桌宠制作工具</h2><p class="runtime-line">图片只在本机处理；从画布边缘识别并移除连续背景。</p></div><button class="secondary-command" type="button" :disabled="!petStudioSource" @click="exportPetStudioPng"><Download :size="16" /><span>导出透明 PNG</span></button></div>
+            <div class="pet-studio-layout">
+              <label class="pet-studio-upload"><input type="file" accept="image/png,image/jpeg,image/webp" @change="loadPetStudioImage" /><ImageIcon :size="18" /><span>选择图片</span></label>
+              <label class="range-field"><span>抠图阈值 <b>{{ petStudioThreshold }}</b></span><input v-model="petStudioThreshold" min="12" max="120" type="range" :disabled="!petStudioSource" @change="removePetStudioBackground" /></label>
+              <canvas ref="petStudioCanvas" aria-label="透明桌宠预览"></canvas>
+            </div>
+            <p class="runtime-line">{{ petStudioStatus }}</p>
           </div>
         </section>
 
@@ -1309,11 +1578,16 @@ async function saveSettings(): Promise<void> {
           <div class="about-mark">D</div>
           <h2>Project D</h2>
           <p>v{{ appInfo?.version ?? appVersionFallback }} · {{ appInfo?.platform ?? "win32" }}</p>
+          <p class="about-intro">由 Manny 先生与人工智能协作开发。项目以开放协作方式持续完善桌面整理、壁纸、天气与桌宠体验。</p>
           <dl>
+            <div><dt>源代码</dt><dd><a href="https://github.com/ningfangtianwai-pixel/project-d-desktop" target="_blank" rel="noreferrer">GitHub · project-d-desktop</a></dd></div>
+            <div><dt>联系邮箱</dt><dd><a href="mailto:ningfangtianwai@gmail.com">ningfangtianwai@gmail.com</a></dd></div>
+            <div><dt>代码许可</dt><dd>MIT License · 允许商业使用、修改与再分发</dd></div>
             <div><dt>壁纸宿主</dt><dd>{{ wallpaperHostLabel }}</dd></div>
             <div><dt>天气定位</dt><dd>{{ locationSourceLabel }}</dd></div>
             <div><dt>恢复脚本</dt><dd>{{ recoveryScriptPath || "已生成" }}</dd></div>
           </dl>
+          <p class="license-note">MIT 仅覆盖本项目代码；壁纸、角色和用户导入素材仍以各自授权证明为准。</p>
           <div class="settings-group diagnostics-group">
             <div class="group-heading">
               <div><h2>本机诊断</h2><p class="runtime-line">只包含版本、运行状态、数量与脱敏错误摘要，不包含聊天、文件名、文件路径或密钥。</p></div>
@@ -1440,9 +1714,23 @@ select:focus, input:focus { border-color: rgba(159,215,237,.58); }
 .layout-mini-grid { display: grid; grid-template-columns: repeat(var(--layout-cols), 1fr); gap: 3px; width: 100%; height: 34px; }
 .layout-mini-grid i { border-radius: 2px; background: rgba(244,241,234,.22); }
 .wallpaper-thumb-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
-.wallpaper-thumb { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border: 1px solid rgba(255,255,255,.12); border-radius: 8px; padding: 0; color: #fff; background-position: center; background-size: cover; cursor: pointer; }
+.wallpaper-browser-tools { display: grid; gap: 9px; margin-bottom: 12px; }
+.wallpaper-search { display: grid; grid-template-columns: auto minmax(0,1fr); align-items: center; gap: 8px; min-height: 38px; border: 1px solid rgba(255,255,255,.1); border-radius: 7px; padding: 0 10px; background: rgba(255,255,255,.035); }
+.wallpaper-search input { width: 100%; border: 0; color: inherit; background: transparent; outline: none; }
+.wallpaper-category-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.wallpaper-category-tabs button { min-height: 30px; border: 1px solid rgba(255,255,255,.1); border-radius: 6px; padding: 0 10px; color: rgba(244,241,234,.7); background: rgba(255,255,255,.025); cursor: pointer; }
+.wallpaper-category-tabs button.active { border-color: rgba(159,215,237,.55); color: #e9f7fb; background: rgba(159,215,237,.12); }
+.wallpaper-thumb { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border: 1px solid rgba(255,255,255,.12); border-radius: 8px; padding: 0; color: #fff; background: #11151a; }
+.wallpaper-thumb::after { position: absolute; inset: 0; background: linear-gradient(180deg,rgba(0,0,0,.01),rgba(0,0,0,.42)); content: ""; pointer-events: none; }
+.wallpaper-thumb > img { width: 100%; height: 100%; object-fit: cover; }
 .wallpaper-thumb.selected { border-color: #9fd7ed; box-shadow: 0 0 0 1px rgba(159,215,237,.38); }
-.wallpaper-thumb span { position: absolute; right: 7px; bottom: 7px; left: 7px; overflow: hidden; padding: 4px 6px; border-radius: 5px; background: rgba(8,10,12,.62); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.wallpaper-thumb-select { position: absolute; inset: 0; z-index: 1; width: 100%; border: 0; color: #fff; background: transparent; cursor: pointer; }
+.wallpaper-thumb-select span { position: absolute; right: 7px; bottom: 7px; left: 7px; overflow: hidden; padding: 4px 72px 4px 6px; border-radius: 5px; background: rgba(8,10,12,.66); font-size: 11px; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.wallpaper-thumb-select small { position: absolute; top: 7px; left: 7px; border-radius: 4px; padding: 3px 5px; background: rgba(8,10,12,.6); font-size: 9px; }
+.wallpaper-apply-now { position: absolute; right: 10px; bottom: 10px; z-index: 2; display: inline-flex; align-items: center; gap: 4px; min-height: 24px; border: 0; border-radius: 5px; padding: 0 7px; color: #101114; background: #d7d28d; cursor: pointer; font-size: 10px; }
+.wallpaper-studio-controls { display: grid; grid-template-columns: 150px minmax(180px,1fr) 150px; gap: 10px; margin-bottom: 12px; }
+.wallpaper-studio-controls > label:not(.pet-studio-upload) { display: grid; grid-template-columns: auto minmax(0,1fr); align-items: center; gap: 8px; font-size: 12px; }
+.wallpaper-studio canvas { display: block; width: 100%; aspect-ratio: 16 / 9; border: 1px solid rgba(255,255,255,.09); border-radius: 7px; background: #11151a; object-fit: contain; }
 .pet-character-grid { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 8px; }
 .pet-character-grid button { position: relative; aspect-ratio: 3 / 4; overflow: hidden; border: 1px solid rgba(255,255,255,.1); border-radius: 8px; padding: 0; color: #f4f1ea; background: #171a1f; cursor: pointer; }
 .pet-character-grid button.selected { border-color: #9fd7ed; box-shadow: inset 0 0 0 1px rgba(159,215,237,.35); }
@@ -1450,6 +1738,10 @@ select:focus, input:focus { border-color: rgba(159,215,237,.58); }
 .pet-character-grid button.cutout img { padding: 6px 5px 18px; object-fit: contain; object-position: center bottom; }
 .pet-character-grid button:hover img, .pet-character-grid button.selected img { opacity: 1; transform: scale(1.025); }
 .pet-character-grid span { position: absolute; right: 4px; bottom: 4px; left: 4px; overflow: hidden; padding: 4px 5px; border-radius: 5px; background: rgba(9,11,14,.76); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.pet-studio-layout { display: grid; grid-template-columns: minmax(130px,.5fr) minmax(180px,1fr) minmax(180px,1fr); align-items: center; gap: 12px; }
+.pet-studio-upload { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; border: 1px dashed rgba(159,215,237,.38); border-radius: 7px; color: #bde7f5; background: rgba(159,215,237,.055); cursor: pointer; font-size: 12px; }
+.pet-studio-upload input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.pet-studio canvas { width: 100%; max-height: 260px; border: 1px solid rgba(255,255,255,.09); border-radius: 7px; background-image: linear-gradient(45deg,#262a30 25%,transparent 25%),linear-gradient(-45deg,#262a30 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#262a30 75%),linear-gradient(-45deg,transparent 75%,#262a30 75%); background-position: 0 0,0 8px,8px -8px,-8px 0; background-size: 16px 16px; object-fit: contain; }
 .personality-preview { display: grid; gap: 4px; min-height: 58px; margin-top: 10px; border-left: 2px solid rgba(159,215,237,.58); padding: 8px 10px; background: rgba(159,215,237,.055); }
 .personality-preview small { color: rgba(159,215,237,.68); font-size: 10px; }
 .personality-preview strong { color: rgba(244,241,234,.88); font-size: 12px; font-weight: 500; line-height: 1.55; }
@@ -1507,6 +1799,29 @@ input[type="range"] { width: 100%; accent-color: #86c8df; }
 .about-pane p { margin-top: 5px; color: rgba(244,241,234,.5); }
 .about-pane dl { width: min(620px,100%); margin: 28px auto 18px; text-align: left; }
 .about-pane dl div { display: grid; grid-template-columns: 110px minmax(0,1fr); gap: 18px; border-top: 1px solid rgba(255,255,255,.08); padding: 12px 0; }
+.about-pane a { color: #9fd7ed; text-decoration: none; }
+.about-pane a:hover { text-decoration: underline; }
+.about-intro { max-width: 680px; color: rgba(244,241,234,.68); line-height: 1.7; }
+.license-note { max-width: 680px; border-left: 2px solid rgba(215,210,141,.6); padding: 8px 10px; color: rgba(244,241,234,.55); background: rgba(215,210,141,.05); font-size: 11px; line-height: 1.6; }
+.privacy-agreement { margin-top: 14px; border: 1px solid rgba(255,255,255,.08); border-radius: 7px; padding: 10px 12px; background: rgba(255,255,255,.025); }
+.privacy-agreement summary { cursor: pointer; font-size: 12px; font-weight: 700; }
+.privacy-agreement p { color: rgba(244,241,234,.58); font-size: 11px; line-height: 1.65; }
+
+:global(html[data-theme="light"]) .settings-app { color: #20262b; background: #eef2f4; }
+:global(html[data-theme="light"]) .settings-sidebar { border-color: rgba(21,37,47,.12); background: rgba(242,246,248,.98); }
+:global(html[data-theme="light"]) .settings-commandbar,
+:global(html[data-theme="light"]) .settings-statusbar { border-color: rgba(21,37,47,.11); color: #20262b; background: rgba(250,252,253,.96); }
+:global(html[data-theme="light"]) .settings-group { border-color: rgba(21,37,47,.12); background: rgba(255,255,255,.72); }
+:global(html[data-theme="light"]) .settings-sidebar nav button { color: rgba(29,42,50,.72); }
+:global(html[data-theme="light"]) .settings-sidebar nav button:hover { color: #20262b; background: rgba(31,86,108,.07); }
+:global(html[data-theme="light"]) .settings-sidebar nav button.active { color: #174d64; background: rgba(62,139,169,.12); }
+:global(html[data-theme="light"]) input,
+:global(html[data-theme="light"]) select { color: #20262b; background-color: rgba(255,255,255,.9); }
+:global(html[data-theme="light"]) .runtime-line,
+:global(html[data-theme="light"]) .setting-row small,
+:global(html[data-theme="light"]) .about-intro,
+:global(html[data-theme="light"]) .license-note,
+:global(html[data-theme="light"]) .privacy-agreement p { color: rgba(30,43,51,.62); }
 .about-pane dt { color: rgba(244,241,234,.5); }
 .about-pane dd { margin: 0; overflow-wrap: anywhere; }
 .about-actions { justify-content: center; }
@@ -1517,5 +1832,5 @@ input[type="range"] { width: 100%; accent-color: #86c8df; }
 .shortcut-record-input[data-recording="true"] { border-color: rgba(159,215,237,.8); background: rgba(159,215,237,.08); animation: shortcut-pulse 1.2s ease-in-out infinite; }
 @keyframes shortcut-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(159,215,237,.25); } 50% { box-shadow: 0 0 0 4px rgba(159,215,237,.12); } }
 .shortcut-error { color: #f2aaaa; font-size: 11px; white-space: nowrap; }
-@media (max-width: 720px) { .settings-app { grid-template-columns: 68px minmax(0,1fr); } .settings-brand div, .settings-sidebar nav span, .sidebar-runtime span { display: none; } .settings-sidebar nav button { justify-content: center; padding: 0; } .settings-brand { justify-content: center; padding-inline: 0; } .layout-choice-grid, .persona-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 720px) { .settings-app { grid-template-columns: 68px minmax(0,1fr); } .settings-brand div, .settings-sidebar nav span, .sidebar-runtime span { display: none; } .settings-sidebar nav button { justify-content: center; padding: 0; } .settings-brand { justify-content: center; padding-inline: 0; } .layout-choice-grid, .persona-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .wallpaper-studio-controls { grid-template-columns: 1fr; } }
 </style>

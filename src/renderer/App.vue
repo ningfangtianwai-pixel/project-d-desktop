@@ -136,7 +136,7 @@ function pushLog(message: string): void {
 }
 
 async function refreshStatus(): Promise<void> {
-  const [nextDesktopStatus, nextDatabaseStatus, nextContainers, nextSettings, nextWallpaperHost, nextLocationSource, nextWallpaperLibrary, nextSuggestion] = await Promise.all([
+  const [nextDesktopStatus, nextDatabaseStatus, nextContainers, nextSettings, nextWallpaperHost, nextLocationSource, nextWallpaperLibrary, nextSuggestion, nextThemeMode] = await Promise.all([
     window.projectD.getDesktopStatus(),
     window.projectD.getDatabaseStatus(),
     window.projectD.getDesktopFiles(),
@@ -144,8 +144,13 @@ async function refreshStatus(): Promise<void> {
     window.projectD.getState("wallpaper_host"),
     window.projectD.getState("weather_location_source"),
     window.projectD.getWallpaperLibrary(),
-    window.projectD.getLatestSuggestion()
+    window.projectD.getLatestSuggestion(),
+    window.projectD.getState("theme_mode").catch(() => "dark")
   ]);
+  const resolvedTheme = nextThemeMode === "system"
+    ? (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
+    : nextThemeMode === "light" ? "light" : "dark";
+  document.documentElement.dataset.theme = resolvedTheme;
   desktopStatus.value = nextDesktopStatus;
   databaseStatus.value = nextDatabaseStatus;
   containers.value = nextContainers;
@@ -506,8 +511,12 @@ onUnmounted(() => {
                   @contextmenu="showFileMenu($event, file)"
                 >
                   <span class="desktop-icon-art" :data-kind="file.category">
-                    <img v-if="file.iconDataUrl" class="desktop-native-icon" :src="file.iconDataUrl" :alt="fileKindLabel(file)" />
+                    <span v-if="file.category === 'folder'" class="desktop-folder-art" aria-hidden="true">
+                      <i class="folder-tab"></i><i class="folder-sheet"></i><i class="folder-body"></i>
+                    </span>
+                    <img v-else-if="file.iconDataUrl" class="desktop-native-icon" :src="file.iconDataUrl" :alt="fileKindLabel(file)" />
                     <component v-else :is="fileIcon(file)" :size="32" :stroke-width="1.8" />
+                    <span v-if="file.isShortcut" class="desktop-shortcut-badge" aria-label="快捷方式">↗</span>
                   </span>
                   <span class="desktop-icon-name">{{ file.displayName || file.filename }}</span>
                   <small>{{ fileKindLabel(file) }}</small>

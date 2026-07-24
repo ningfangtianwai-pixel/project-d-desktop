@@ -140,7 +140,12 @@ if ($null -ne $desired -and $before -ne $desired) {
 }
 ${registryUpdate}
 $after = [ProjectDDesktopIcons]::IsWindowVisible($list)
-$count = [ProjectDDesktopIcons]::SendMessageSafe($list, 0x1004, [IntPtr]::Zero, [IntPtr]::Zero).ToInt64()
+$count = -1
+try {
+  $count = [ProjectDDesktopIcons]::SendMessageSafe($list, 0x1004, [IntPtr]::Zero, [IntPtr]::Zero).ToInt64()
+} catch {
+  if ($null -eq $desired) { throw }
+}
 [pscustomobject]@{
   visible = $after
   iconCount = $count

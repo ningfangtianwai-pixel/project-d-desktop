@@ -6,6 +6,7 @@ export interface PrivacyIpcDependencies {
   ipc: IpcMain;
   assertTrustedSender: (event: IpcMainInvokeEvent, routes?: readonly string[]) => void;
   exportData: () => Promise<{ cancelled: boolean; filename: string | null }>;
+  clearCache: () => Promise<{ cleared: true; at: string }>;
   resetData: () => Promise<void>;
   getNetworkState: () => PrivacyNetworkState;
   setNetworkPaused: (paused: boolean) => PrivacyNetworkState;
@@ -19,6 +20,10 @@ export function registerPrivacyIpcHandlers(deps: PrivacyIpcDependencies): void {
   deps.ipc.handle(IPC_CHANNELS.PRIVACY_RESET_ALL, (event) => {
     deps.assertTrustedSender(event, ["#/settings"]);
     return deps.resetData();
+  });
+  deps.ipc.handle(IPC_CHANNELS.PRIVACY_CLEAR_CACHE, (event) => {
+    deps.assertTrustedSender(event, ["#/settings"]);
+    return deps.clearCache();
   });
   deps.ipc.handle(IPC_CHANNELS.PRIVACY_GET_NETWORK_STATE, (event) => {
     deps.assertTrustedSender(event, ["#/settings"]);

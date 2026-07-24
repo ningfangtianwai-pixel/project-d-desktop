@@ -230,11 +230,16 @@ export interface LayoutRecord {
 }
 
 export interface FilePreviewData {
-  type: "text" | "image" | "unsupported";
+  type: "text" | "image" | "folder" | "unsupported";
   content: string;
   filename: string;
   sizeLabel: string;
   modifiedAt: string;
+  entries?: Array<{
+    name: string;
+    isDirectory: boolean;
+    extension: string;
+  }>;
 }
 
 export type ActionRiskLevel = "L0" | "L1" | "L2" | "L3";
@@ -527,6 +532,7 @@ export interface ProjectDApi {
   updateSettings: (patch: SettingsPatch) => Promise<SettingsSnapshot>;
   getWallpaperLibrary: () => Promise<WallpaperLibraryItem[]>;
   applyWallpaper: (wallpaperId: string) => Promise<SettingsSnapshot>;
+  exportWallpaperOriginal: (wallpaperId: string) => Promise<{ cancelled: boolean; filename: string | null }>;
   getWallpaperDisplays: () => Promise<WallpaperDisplayInfo[]>;
   assignWallpaperToDisplay: (displayId: string, wallpaperId: string | null) => Promise<WallpaperDisplayInfo[]>;
   getCurrentWeather: () => Promise<CurrentWeather>;
@@ -535,6 +541,7 @@ export interface ProjectDApi {
   getChatHistory: () => Promise<ChatMessage[]>;
   clearChatHistory: () => Promise<void>;
   exportAllData: () => Promise<{ cancelled: boolean; filename: string | null }>;
+  clearRuntimeCache: () => Promise<{ cleared: true; at: string }>;
   resetAllData: () => Promise<void>;
   getPrivacyNetworkState: () => Promise<PrivacyNetworkState>;
   setPrivacyNetworkPaused: (paused: boolean) => Promise<PrivacyNetworkState>;

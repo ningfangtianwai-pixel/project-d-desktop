@@ -229,7 +229,7 @@ function zoneStyle(container: ContainerWithFiles, index: number): Record<string,
   const hasStoredPosition = container.positionX > 0 || container.positionY > 0;
   const left = Math.max(12, hasStoredPosition ? container.positionX : fallbackLeft);
   const top = Math.max(76, hasStoredPosition ? container.positionY : fallbackTop);
-  const width = Math.max(180, container.width);
+  const width = Math.max(112, container.width);
   const height = container.isCollapsed ? 54 : Math.max(120, container.height);
   return {
     left: `${left}px`,
@@ -332,7 +332,7 @@ function handleLayoutPointerMove(event: PointerEvent): void {
   }
 
   if (operation.kind === "resize-corner") {
-    container.width = clamp(operation.initialWidth + deltaX, 180, Math.max(180, window.innerWidth - container.positionX - 16));
+    container.width = clamp(operation.initialWidth + deltaX, 112, Math.max(112, window.innerWidth - container.positionX - 16));
   }
   container.height = clamp(operation.initialHeight + deltaY, 120, Math.max(120, window.innerHeight - container.positionY - 18));
 }
@@ -723,9 +723,12 @@ onUnmounted(() => {
             @dragstart="startFileDrag($event, file)" @dragend="endFileDrag"
             @contextmenu.stop="showFileMenu($event, file)">
             <span class="desktop-icon-art" :data-kind="file.category">
-              <Folder v-if="file.category === 'folder'" class="desktop-folder-icon" :size="38" :stroke-width="1.45" />
+              <span v-if="file.category === 'folder'" class="desktop-folder-art" aria-hidden="true">
+                <i class="folder-tab"></i><i class="folder-sheet"></i><i class="folder-body"></i>
+              </span>
               <img v-else-if="file.iconDataUrl" class="desktop-native-icon" :src="file.iconDataUrl" :alt="fileKindLabel(file)" />
               <component v-else :is="fileIcon(file)" :size="36" :stroke-width="1.75" />
+              <span v-if="file.isShortcut" class="desktop-shortcut-badge" aria-label="快捷方式">↗</span>
             </span>
             <span class="desktop-icon-name">{{ file.displayName || file.filename }}</span>
             <small>{{ fileKindLabel(file) }}</small>
@@ -847,6 +850,19 @@ onUnmounted(() => {
         <div v-if="previewLoading" class="preview-loading">加载中...</div>
         <pre v-else-if="preview.type === 'text'" class="preview-text">{{ preview.content }}</pre>
         <img v-else-if="preview.type === 'image'" class="preview-image" :src="preview.content" :alt="preview.filename" />
+        <div v-else-if="preview.type === 'folder'" class="folder-preview">
+          <p>{{ preview.content }}</p>
+          <div class="folder-preview-grid">
+            <article v-for="entry in preview.entries ?? []" :key="entry.name">
+              <span class="folder-preview-icon" :data-directory="entry.isDirectory">
+                <Folder v-if="entry.isDirectory" :size="22" />
+                <FileText v-else :size="22" />
+              </span>
+              <strong>{{ entry.name }}</strong>
+              <small>{{ entry.isDirectory ? '文件夹' : (entry.extension.replace('.', '').toUpperCase() || '文件') }}</small>
+            </article>
+          </div>
+        </div>
         <p v-else class="preview-unsupported">{{ preview.content }}</p>
       </div>
     </aside>

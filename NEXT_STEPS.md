@@ -1,5 +1,13 @@
 # Next Steps
 
+## V5 Immediate Queue
+
+1. Run `pnpm verify:clean-checkout` from the committed `0.3.0-dev.0` baseline, then create a new internal installer with matching SHA-256 evidence.
+2. Retain the successful full Electron E2E report and configure CI with an execution budget above five minutes for the serial suite.
+3. Complete desktop-organizer closure: verify scene pinned-resource UI, search result actions, scene save/apply/restart behavior, and recovery after interrupted organizer actions.
+4. Start Wallpaper 2.0 with a persistent user-library data model, bounded thumbnail cache, CRUD paths, and a static-cover fallback contract for Live Photo/video import.
+5. Add weather performance controls only after wallpaper playback establishes reliable pause/resume and fallback behavior.
+
 ## After Stage 44
 
 1. Have qualified counsel replace the draft privacy/user-agreement material with approved final text.
@@ -196,3 +204,12 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 3. Run physical dual-display tests with a negative-origin monitor, mixed DPI, portrait orientation, hot-plug, and cross-display pet dragging.
 4. Evaluate organizer density with a real desktop containing 100+ mixed items at 100/125/150/200 percent scaling and tune only from captured evidence.
 5. Complete the 4-hour/24-hour soak and asset-license/signing gates before public distribution.
+
+## After Stage 50
+
+1. Build a persistent custom-wallpaper asset store with checksum, quota, thumbnail generation, removal, and recovery before wiring DIY exports directly into the live library.
+2. Design Live Photo/video import as a separate media pipeline with poster extraction, supported codec checks, loop/pause policy, decode-failure fallback, and package/runtime tests.
+3. Obtain approved transparent idle/walk/happy/thinking/sleeping and outfit frames for the four non-Luna characters; the current source directory contains design sheets, not complete animation packs.
+4. Define the exact vision-provider schema, consent boundary, cost limit, moderation policy, and deterministic prompt output before adding automatic character/personality generation.
+5. Run 100+ real-desktop-item density tests for 2/4/6/8 columns across 100/125/150/200 percent DPI and portrait/landscape displays.
+6. Repeat organizer activate/safe-restore, folder preview, wallpaper apply, and cache cleanup from the packaged installer on Windows 10 and a clean Windows 11 account.

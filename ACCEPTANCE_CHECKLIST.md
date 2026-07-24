@@ -794,3 +794,23 @@
 - [x] Real shell-state E2E and all other Electron scenarios pass 10/10.
 - [ ] Four non-Luna characters have approved transparent multi-action and multi-outfit artwork.
 - [ ] Physical mixed-DPI multi-display and Windows 10 clean-desktop evidence is complete.
+
+## Stage 50 Native Desktop And Personalization Closure
+
+- [x] Folder entries have consistent native-inspired artwork in the main workspace and organizer overlay.
+- [x] Folder-target Windows shortcuts are classified as folders without moving their targets.
+- [x] Folder previews list real child names and types with a bounded read.
+- [x] Organizer safe restore can be invoked from the overlay route.
+- [x] A real Electron safe-restore E2E returns desktop mode to idle.
+- [x] Explorer recovery ignores optional icon-count timeout after visibility has already been verified.
+- [x] Layout choices preserve exactly 2, 4, 6, or 8 columns.
+- [x] Wallpaper library supports category filtering, search, direct apply, original export, and stable decoded thumbnails.
+- [x] Wallpaper studio exports a local 16:9 PNG with signature and simple sticker layers.
+- [x] Dark/light/system themes, privacy disclosure, About attribution, GitHub, email, and MIT code-license scope are present.
+- [x] Synthetic outfit stickers are removed for characters without real outfit frames.
+- [x] Pet studio performs local edge-connected background removal and transparent PNG export.
+- [x] Runtime cache cleanup clears Chromium and bounded icon caches without deleting user data.
+- [x] 202 Node tests, 2 component tests, lint, typecheck, build, UI QA, and all 11 Electron E2E scenarios pass.
+- [ ] Live Photo/video import and persistent custom-wallpaper ingestion pass packaged-runtime tests.
+- [ ] Vision-generated character/personality workflow has an approved provider, consent, moderation, and cost contract.
+- [ ] Four non-Luna characters have approved multi-action and multi-outfit transparent packs.

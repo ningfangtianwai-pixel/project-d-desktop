@@ -1,6 +1,32 @@
 # Project D Status
 
-Current stage: Stage 42 - external commercial audit reconciled, plaintext secret fallback removed, structured rotating logs and coverage gates added, tray/shortcut ownership extracted, and current-source recovery/package acceptance passed. Controlled internal Beta is conditionally accepted; public and paid release gates remain open.
+Current stage: V5 Phase 0 - the Stage 50 desktop and personalization work is frozen as version `0.3.0-dev.0` after local lint, typecheck, 203/203 Node tests, 2/2 component tests, production build, and focused Electron startup/safe-restore verification. Controlled internal Beta remains appropriate; physical hardware, artwork-license, Live Photo, signing, and long-soak gates remain open.
+
+## V5 Phase 0 Baseline Freeze
+
+- [x] Version identity advanced from `0.2.0-beta.2` to `0.3.0-dev.0` for the V5 development line.
+- [x] Preserved the Stage 50 source changes and V5 requirements/implementation documents in one reviewable baseline commit.
+- [x] Verified lint, three TypeScript projects, 203 Node tests, two component tests, and the production renderer/main/preload build.
+- [x] Verified the complete 11-scenario isolated Electron suite, including startup, duplicate launch, settings restart, tray exit, white-screen recovery, forced termination, AI fallback, configuration recovery, clean desktop, and organizer safe return.
+- [ ] Run the clean-checkout build against this committed baseline, then generate a fresh installer before any internal distribution.
+
+## Stage 50 Native Desktop And Personalization Closure
+
+- [x] Folder entries use native-inspired yellow folder artwork before and after organizer activation.
+- [x] Real folders and folder-target `.lnk` shortcuts are classified as folders; broken or program shortcuts remain ordinary shortcuts.
+- [x] Folder preview enumerates up to 48 real children without modifying the directory.
+- [x] Organizer safe restore is authorized from the overlay route and has a dedicated real Electron/Explorer E2E.
+- [x] Explorer icon restoration no longer fails only because the optional icon-count diagnostic times out.
+- [x] The 2/4/6/8-column layouts preserve the selected column count with a 112-DIP minimum container width.
+- [x] Wallpaper Settings supports category/search filters, decoded thumbnails, direct desktop apply, optional original export, and per-display assignment.
+- [x] A local-only 16:9 wallpaper studio adds a bounded signature/sticker layer and exports PNG without uploading the source.
+- [x] Dark/light/system themes, privacy disclosure, MIT code-license boundaries, project attribution, GitHub, and contact details are visible in Settings.
+- [x] Non-Luna characters no longer receive synthetic CSS outfit stickers; only real supplied frames are advertised as outfits.
+- [x] A local pet cutout tool performs edge-connected background removal and exports transparent PNG.
+- [x] Runtime browser cache and bounded icon caches can be cleared without deleting user settings or the database.
+- [x] Current verification: 202/202 Node tests, 2/2 component tests, typecheck, lint, production build, user-reported UI QA, and all 11/11 Electron E2E scenarios pass.
+- [ ] Live Photo/video import and a persistent custom-wallpaper library are not yet implemented.
+- [ ] Vision-model character analysis and generated multi-action/personality packs require a provider contract plus approved artwork.
 
 ## Stage 42 Acceptance Audit And Code Hardening
 

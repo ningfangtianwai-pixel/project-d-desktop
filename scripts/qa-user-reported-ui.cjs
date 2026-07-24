@@ -76,10 +76,26 @@ async function run() {
     page.once("dialog", (dialog) => dialog.accept("UI regression scene"));
     await page.locator(".toolbar-right > button").first().click();
     await page.screenshot({ path: path.join(output, "overlay-wallpaper-toolbar.png"), fullPage: true });
+    await page.locator('.desktop-icon-art[data-kind="folder"]').first().click();
+    await page.locator(".folder-preview").waitFor();
+    const folderPreviewEntries = await page.locator(".folder-preview-grid article").count();
+    await page.screenshot({ path: path.join(output, "overlay-folder-preview.png"), fullPage: true });
 
     await page.evaluate(() => { globalThis.location.hash = "#/settings"; });
     await page.locator(".settings-app").waitFor();
     const navButtons = page.locator(".settings-sidebar nav button");
+    await navButtons.nth(5).click();
+    const wallpaperSearch = page.locator(".wallpaper-search input");
+    await wallpaperSearch.fill("动漫");
+    const wallpaperSearchResults = await page.locator(".wallpaper-thumb").count();
+    const wallpaperApplyButtons = await page.locator(".wallpaper-apply-now").count();
+    await page.waitForFunction(() => Array.from(globalThis.document.querySelectorAll(".wallpaper-thumb img"))
+      .every((image) => image.complete && image.naturalWidth > 0), undefined, { timeout: 15_000 });
+    const unloadedWallpaperImages = await page.locator(".wallpaper-thumb img").evaluateAll((images) =>
+      images.filter((image) => !image.complete || image.naturalWidth === 0).length
+    );
+    await page.screenshot({ path: path.join(output, "settings-wallpaper-browser.png"), fullPage: true });
+
     await navButtons.nth(8).click();
     const aiStatus = page.locator(".settings-pane .inline-status span");
     await page.locator(".settings-pane .inline-status .secondary-command").click();
@@ -117,10 +133,7 @@ async function run() {
       && image.naturalWidth > 0
     );
     const petOutfit = await petShell.getAttribute("data-outfit");
-    const outfitAccessoryVisible = await page.locator(".pet-outfit-accessory").evaluate((element) =>
-      globalThis.getComputedStyle(element).display !== "none"
-      && globalThis.getComputedStyle(element).visibility !== "hidden"
-    );
+    const outfitStickerCount = await page.locator(".pet-outfit-accessory").count();
     await page.screenshot({ path: path.join(output, "pet-cutout.png"), fullPage: true });
 
     const checks = {
@@ -128,24 +141,32 @@ async function run() {
       chatMessageCount,
       chatInputVisible,
       overlayBackdrop,
+      folderPreviewEntries,
+      wallpaperSearchResults,
+      wallpaperApplyButtons,
+      unloadedWallpaperImages,
       characterCount,
       unloadedCharacterImages,
       personalityPreview,
       petCutoutLoaded,
       petOutfit,
-      outfitAccessoryVisible
+      outfitStickerCount
     };
     const passed = mainWallpaperVisible
       && chatMessageCount === 14
       && chatInputVisible
       && overlayBackdrop.backgroundImage.includes("url(")
       && overlayBackdrop.pointerEvents === "none"
+      && folderPreviewEntries === 3
+      && wallpaperSearchResults >= 2
+      && wallpaperApplyButtons === wallpaperSearchResults
+      && unloadedWallpaperImages === 0
       && characterCount === 5
       && unloadedCharacterImages === 0
       && Boolean(personalityPreview?.trim())
       && petCutoutLoaded
-      && petOutfit === "winter"
-      && outfitAccessoryVisible;
+      && petOutfit === "default"
+      && outfitStickerCount === 0;
     const report = { generatedAt: new Date().toISOString(), passed, checks };
     fs.writeFileSync(path.join(output, "report.json"), `${JSON.stringify(report, null, 2)}\n`, "utf8");
     console.log(JSON.stringify({ ...report, reportPath: path.join(output, "report.json") }, null, 2));

@@ -1,4 +1,4 @@
-import { app } from "electron";
+import { app, shell } from "electron";
 import nativeFs from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -82,7 +82,7 @@ export class FileScanner {
       const fullPath = path.join(desktopPath, entry.name);
       const stat = await fs.stat(fullPath);
       const extension = entry.isDirectory() ? "" : path.extname(entry.name).toLowerCase();
-      const category = this.classify(extension, entry.isDirectory());
+      const category = await this.classifyPath(fullPath, extension, entry.isDirectory());
 
       files.push({
         filename: entry.name,
@@ -205,6 +205,23 @@ export class FileScanner {
       return "design";
     }
     return "other";
+  }
+
+  private async classifyPath(fullPath: string, extension: string, isDirectory: boolean): Promise<FileCategory> {
+    if (isDirectory || extension !== ".lnk" || process.platform !== "win32") {
+      return this.classify(extension, isDirectory);
+    }
+
+    try {
+      const shortcut = shell.readShortcutLink(fullPath);
+      if (shortcut.target) {
+        const target = await fs.stat(shortcut.target);
+        if (target.isDirectory()) return "folder";
+      }
+    } catch {
+      // Broken and non-filesystem shortcuts remain ordinary program shortcuts.
+    }
+    return this.classify(extension, false);
   }
 
   private shouldSkip(name: string): boolean {

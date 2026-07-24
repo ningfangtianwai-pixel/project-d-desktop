@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, globalShortcut, Menu, powerMonitor, powerSaveBlocker, screen, shell } from "electron";
+import { app, BrowserWindow, dialog, globalShortcut, Menu, powerMonitor, powerSaveBlocker, screen, session, shell } from "electron";
 import type { IpcMainInvokeEvent, OpenDialogOptions } from "electron";
 import fs from "node:fs";
 import path from "node:path";
@@ -1726,6 +1726,10 @@ async function containersWithNativeIcons(): Promise<ReturnType<DatabaseService["
         try {
           const icon = await app.getFileIcon(file.fullPath, { size: "normal" });
           const dataUrl = icon.isEmpty() ? null : icon.toDataURL();
+          if (fileIconCache.size >= 512) {
+            const oldest = fileIconCache.keys().next().value;
+            if (typeof oldest === "string") fileIconCache.delete(oldest);
+          }
           fileIconCache.set(file.fullPath, dataUrl);
           file.iconDataUrl = dataUrl;
         } catch {
@@ -1808,16 +1812,62 @@ function broadcastUpdateStatus(status: UpdateStatus): void {
   window.webContents.send(IPC_CHANNELS.UPDATE_STATUS_CHANGED, status);
 }
 
+async function exportWallpaperOriginal(wallpaperId: string): Promise<{ cancelled: boolean; filename: string | null }> {
+  const wallpaper = WALLPAPER_LIBRARY.find((item) => item.id === wallpaperId);
+  if (!wallpaper) throw new Error("Wallpaper was not found");
+  const sourcePath = path.join(__dirname, "../renderer/wallpapers", wallpaper.file);
+  if (!fs.existsSync(sourcePath)) throw new Error("Wallpaper source is unavailable");
+  const extension = path.extname(wallpaper.file) || ".png";
+  const owner = settingsWindow && !settingsWindow.isDestroyed() ? settingsWindow : mainWindow;
+  const options = {
+    title: "保存壁纸原图",
+    defaultPath: `${wallpaper.label}${extension}`,
+    filters: [{ name: "壁纸原图", extensions: [extension.replace(".", "")] }]
+  };
+  const result = owner && !owner.isDestroyed()
+    ? await dialog.showSaveDialog(owner, options)
+    : await dialog.showSaveDialog(options);
+  if (result.canceled || !result.filePath) return { cancelled: true, filename: null };
+  await fs.promises.copyFile(sourcePath, result.filePath);
+  return { cancelled: false, filename: path.basename(result.filePath) };
+}
+
 /** @internal File preview logic extracted from old registerIpc */
 async function readFilePreviewImpl(fileId: number): Promise<FilePreviewData> {
   const file = database?.getDesktopFileById(fileId);
   if (!file) throw new Error("File not found");
-  const { readFile, open } = await import("node:fs/promises");
+  const { readFile, open, readdir, stat } = await import("node:fs/promises");
   const previewable = new Set([".txt",".md",".csv",".json",".xml",".yml",".yaml",".log",".ini",".cfg",".py",".js",".ts",".html",".css",".gitignore"]);
   const images = new Set([".png",".jpg",".jpeg",".gif",".webp",".svg",".bmp",".ico"]);
   const ext = file.extension?.toLowerCase() ?? "";
   const sizeLabel = file.sizeBytes >= 1_000_000 ? `${(file.sizeBytes/1_000_000).toFixed(1)} MB` : `${(file.sizeBytes/1_000).toFixed(0)} KB`;
   const modifiedAt = file.modifiedAt ? new Date(file.modifiedAt).toLocaleString() : "";
+  if (file.category === "folder") {
+    let folderPath = file.fullPath;
+    if (file.isShortcut && process.platform === "win32") {
+      const shortcut = shell.readShortcutLink(file.fullPath);
+      folderPath = shortcut.target;
+    }
+    if (!(await stat(folderPath)).isDirectory()) {
+      return { type: "unsupported", content: "目标不是可预览的文件夹", filename: file.filename, sizeLabel, modifiedAt };
+    }
+    const entries = (await readdir(folderPath, { withFileTypes: true }))
+      .filter((entry) => entry.name !== "desktop.ini")
+      .slice(0, 48)
+      .map((entry) => ({
+        name: entry.name,
+        isDirectory: entry.isDirectory(),
+        extension: entry.isDirectory() ? "" : path.extname(entry.name).toLowerCase()
+      }));
+    return {
+      type: "folder",
+      content: entries.length ? `${entries.length} 个可见项目` : "空文件夹",
+      filename: file.displayName || file.filename,
+      sizeLabel,
+      modifiedAt,
+      entries
+    };
+  }
   if (previewable.has(ext)) {
     if (file.sizeBytes > 2_000_000) return { type: "unsupported", content: "超过 2 MB", filename: file.filename, sizeLabel, modifiedAt };
     const h = await open(file.fullPath, "r");
@@ -1844,6 +1894,14 @@ function updatePrivacyNetworkPaused(paused: boolean): PrivacyNetworkState {
   logger?.info("app", paused ? "privacy external network paused" : "privacy external network resumed", { changedAt: state.changedAt });
   broadcastSettingsUpdated();
   return state;
+}
+
+async function clearRuntimeCache(): Promise<{ cleared: true; at: string }> {
+  await session.defaultSession.clearCache();
+  fileIconCache.clear();
+  const at = new Date().toISOString();
+  logger?.info("app", "runtime cache cleared", { at });
+  return { cleared: true, at };
 }
 
 function recoveryHealth(status: RecoveryHealthCode, detail: string) {
@@ -1922,6 +1980,7 @@ function buildIpcDeps(): ServiceDeps {
       getWeather: () => weatherService?.getCurrentWeather() ?? Promise.reject(new Error("Weather not initialized")),
       getWallpaperLibrary: () => WALLPAPER_LIBRARY,
       applyWallpaper: applyWallpaperById,
+      exportWallpaperOriginal,
       broadcastSettings: broadcastSettingsUpdated,
       syncWindows: syncWindowsFromSettings,
       validateSettingsPatch,
@@ -2057,6 +2116,7 @@ function buildIpcDeps(): ServiceDeps {
     },
     privacy: {
       exportData: exportAllUserData,
+      clearCache: clearRuntimeCache,
       resetData: resetAllUserData,
       getNetworkState: readPrivacyNetworkState,
       setNetworkPaused: updatePrivacyNetworkPaused

@@ -98,8 +98,8 @@ if (!window.projectD) {
     scanDesktop: async () => ({
       desktopPath: "browser-preview",
       scannedAt: now(),
-      totalEntries: 4,
-      insertedOrUpdated: 4,
+      totalEntries: 5,
+      insertedOrUpdated: 5,
       markedMissing: 0,
       durationMs: 12
     }),
@@ -151,6 +151,36 @@ if (!window.projectD) {
         layoutGroup: 0,
         accentColor: "sky",
         files: []
+      },
+      {
+        id: 3,
+        name: "文件夹",
+        icon: "folder",
+        categoryFilter: ["folder"],
+        positionX: 680,
+        positionY: 116,
+        width: 300,
+        height: 400,
+        sortOrder: 2,
+        isCollapsed: false,
+        isVisible: true,
+        layoutGroup: 0,
+        accentColor: "amber",
+        files: [{
+          id: 3,
+          filename: "项目资料",
+          displayName: null,
+          fullPath: "browser-preview/项目资料",
+          extension: "",
+          category: "folder",
+          sizeBytes: 0,
+          modifiedAt: now(),
+          isShortcut: false,
+          customCategory: null,
+          containerId: 3,
+          sortOrder: 0,
+          isMissing: false
+        }]
       }
     ],
     openFile: async () => undefined,
@@ -338,7 +368,20 @@ if (!window.projectD) {
       { id: 4, name: "高密 8 列", columns: 8, isActive: false }
     ],
     applyLayout: async () => undefined,
-    getFilePreview: async (fileId) => ({ type: "text", content: "浏览器预览模式：文件内容预览仅在 Electron 中可用。", filename: `file-${fileId}`, sizeLabel: "—", modifiedAt: "—" }),
+    getFilePreview: async (fileId) => fileId === 3
+      ? {
+          type: "folder",
+          content: "3 项 · 2 个文件夹",
+          filename: "项目资料",
+          sizeLabel: "文件夹",
+          modifiedAt: "刚刚",
+          entries: [
+            { name: "设计稿", isDirectory: true, extension: "" },
+            { name: "会议纪要", isDirectory: true, extension: "" },
+            { name: "README.md", isDirectory: false, extension: ".md" }
+          ]
+        }
+      : { type: "text", content: "浏览器预览模式：文件内容预览仅在 Electron 中可用。", filename: `file-${fileId}`, sizeLabel: "—", modifiedAt: "—" },
     getSettings: async () => cloneSettings(),
     updateSettings: async (patch) => {
       if (patch.wallpaper) {
@@ -380,6 +423,7 @@ if (!window.projectD) {
       notifySettingsUpdated();
       return cloneSettings();
     },
+    exportWallpaperOriginal: async () => ({ cancelled: false, filename: "Project-D-Wallpaper.png" }),
     getWallpaperDisplays: async () => [{
       id: "preview-display",
       label: "预览显示器",
@@ -448,6 +492,7 @@ if (!window.projectD) {
       chatHistory.splice(0, chatHistory.length);
     },
     exportAllData: async () => ({ cancelled: false, filename: "preview.json" }),
+    clearRuntimeCache: async () => ({ cleared: true, at: new Date().toISOString() }),
     resetAllData: async () => {},
     getPrivacyNetworkState: async () => ({ paused: memoryState.get("privacy_network_paused") === "true", changedAt: null }),
     setPrivacyNetworkPaused: async (paused) => {
