@@ -66,6 +66,8 @@ export const IPC_CHANNELS = {
   SETTINGS_UPDATE: "settings:update",
   SETTINGS_UPDATED: "settings:updated",
   WALLPAPER_LIBRARY_GET: "wallpaper:get-library",
+  WALLPAPER_IMPORT: "wallpaper:import",
+  WALLPAPER_DELETE: "wallpaper:delete",
   WALLPAPER_APPLY: "wallpaper:apply",
   WALLPAPER_EXPORT_ORIGINAL: "wallpaper:export-original",
   WALLPAPER_DISPLAYS_GET: "wallpaper:get-displays",

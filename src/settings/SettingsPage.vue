@@ -839,6 +839,27 @@ async function exportSelectedWallpaper(): Promise<void> {
   saveStatus.value = result.cancelled ? "已取消保存原图" : `原图已保存：${result.filename}`;
 }
 
+async function importWallpaper(): Promise<void> {
+  const imported = await window.projectD.importWallpaper();
+  if (!imported) return;
+  wallpaperLibrary.value = await window.projectD.getWallpaperLibrary();
+  selectedWallpaperId.value = imported.id;
+  wallpaperStyle.value = "user";
+  saveStatus.value = `已导入本地壁纸：${imported.label}`;
+}
+
+async function deleteWallpaper(wallpaper: WallpaperLibraryItem): Promise<void> {
+  if (wallpaper.source !== "user") return;
+  if (!window.confirm(`删除“${wallpaper.label}”及其本地副本？`)) return;
+  await window.projectD.deleteWallpaper(wallpaper.id);
+  wallpaperLibrary.value = await window.projectD.getWallpaperLibrary();
+  if (selectedWallpaperId.value === wallpaper.id) {
+    selectedWallpaperId.value = wallpaperLibrary.value[0]?.id ?? "";
+  }
+  wallpaperDisplays.value = await window.projectD.getWallpaperDisplays();
+  saveStatus.value = "本地壁纸已删除";
+}
+
 async function assignWallpaper(displayId: string, wallpaperId: string): Promise<void> {
   wallpaperDisplays.value = await window.projectD.assignWallpaperToDisplay(displayId, wallpaperId || null);
   saveStatus.value = "显示器壁纸已更新";
@@ -850,6 +871,9 @@ function selectWallpaper(wallpaperId: string): void {
 }
 
 function wallpaperThumbUrl(wallpaper: WallpaperLibraryItem): string {
+  if (wallpaper.source === "user") {
+    return `projectd-media://wallpaper/${encodeURIComponent(wallpaper.id)}?variant=thumbnail`;
+  }
   const file = wallpaper.type === "video" ? wallpaper.posterFile : wallpaper.file;
   return file ? `${import.meta.env.BASE_URL}wallpapers/${file}` : "";
 }
@@ -1395,7 +1419,10 @@ async function saveSettings(): Promise<void> {
           <div class="settings-group">
             <div class="group-heading">
               <div><h2>壁纸浏览</h2><p class="runtime-line">按分类或名称筛选，卡片可直接设为桌面壁纸。</p></div>
-              <button class="secondary-command" type="button" @click="exportSelectedWallpaper"><Download :size="16" /><span>保存原图</span></button>
+              <div class="group-actions">
+                <button class="secondary-command" type="button" @click="importWallpaper"><FolderPlus :size="16" /><span>导入本地图片</span></button>
+                <button class="secondary-command" type="button" @click="exportSelectedWallpaper"><Download :size="16" /><span>保存原图</span></button>
+              </div>
             </div>
             <div class="wallpaper-browser-tools">
               <label class="wallpaper-search"><Search :size="16" /><input v-model="wallpaperSearch" type="search" placeholder="搜索名称、风格或关键词" /></label>
@@ -1415,6 +1442,7 @@ async function saveSettings(): Promise<void> {
                 <img v-if="wallpaperThumbUrl(wallpaper)" :src="wallpaperThumbUrl(wallpaper)" :alt="wallpaper.label" loading="eager" />
                 <button class="wallpaper-thumb-select" type="button" @click="selectWallpaper(wallpaper.id)"><span>{{ wallpaper.label }}</span><small>{{ WALLPAPER_STYLES.find((style) => style[0] === wallpaper.style)?.[1] }}</small></button>
                 <button class="wallpaper-apply-now" type="button" @click="applyWallpaperNow(wallpaper.id)"><ImageIcon :size="14" />设为壁纸</button>
+                <button v-if="wallpaper.source === 'user'" class="wallpaper-remove" type="button" :title="`删除 ${wallpaper.label}`" @click="deleteWallpaper(wallpaper)"><Trash2 :size="13" /></button>
               </article>
             </div>
             <p v-if="filteredWallpapers.length === 0" class="runtime-line">没有匹配的本地壁纸。</p>
@@ -1728,6 +1756,9 @@ select:focus, input:focus { border-color: rgba(159,215,237,.58); }
 .wallpaper-thumb-select span { position: absolute; right: 7px; bottom: 7px; left: 7px; overflow: hidden; padding: 4px 72px 4px 6px; border-radius: 5px; background: rgba(8,10,12,.66); font-size: 11px; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
 .wallpaper-thumb-select small { position: absolute; top: 7px; left: 7px; border-radius: 4px; padding: 3px 5px; background: rgba(8,10,12,.6); font-size: 9px; }
 .wallpaper-apply-now { position: absolute; right: 10px; bottom: 10px; z-index: 2; display: inline-flex; align-items: center; gap: 4px; min-height: 24px; border: 0; border-radius: 5px; padding: 0 7px; color: #101114; background: #d7d28d; cursor: pointer; font-size: 10px; }
+.wallpaper-remove { position: absolute; top: 8px; right: 8px; z-index: 3; display: grid; width: 25px; height: 25px; place-items: center; border: 1px solid rgba(255,255,255,.24); border-radius: 5px; color: #fff; background: rgba(75,22,26,.78); cursor: pointer; }
+.wallpaper-remove:hover { background: rgba(140,43,49,.9); }
+.group-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .wallpaper-studio-controls { display: grid; grid-template-columns: 150px minmax(180px,1fr) 150px; gap: 10px; margin-bottom: 12px; }
 .wallpaper-studio-controls > label:not(.pet-studio-upload) { display: grid; grid-template-columns: auto minmax(0,1fr); align-items: center; gap: 8px; font-size: 12px; }
 .wallpaper-studio canvas { display: block; width: 100%; aspect-ratio: 16 / 9; border: 1px solid rgba(255,255,255,.09); border-radius: 7px; background: #11151a; object-fit: contain; }

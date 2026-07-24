@@ -170,6 +170,15 @@ function handleVideoEvent(layer: WallpaperAsset, event: WallpaperMediaEvent, dom
 }
 
 function wallpaperAsset(item: WallpaperLibraryItem): WallpaperAsset {
+  if (item.source === "user") {
+    const mediaUrl = `projectd-media://wallpaper/${encodeURIComponent(item.id)}`;
+    return {
+      id: item.id,
+      type: item.type,
+      src: mediaUrl,
+      posterSrc: mediaUrl + "?variant=thumbnail"
+    };
+  }
   const basePath = window.location.protocol === "file:" ? "./wallpapers/" : "/wallpapers/";
   const posterFile = item.posterFile;
   return {

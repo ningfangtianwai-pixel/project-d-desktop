@@ -1,8 +1,8 @@
-import { app, BrowserWindow, dialog, globalShortcut, Menu, powerMonitor, powerSaveBlocker, screen, session, shell } from "electron";
+import { app, BrowserWindow, dialog, globalShortcut, Menu, net, powerMonitor, powerSaveBlocker, protocol, screen, session, shell } from "electron";
 import type { IpcMainInvokeEvent, OpenDialogOptions } from "electron";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { DatabaseService } from "./database.js";
 import { DesktopController } from "./desktop-controller.js";
 import { FileScanner } from "./file-scanner.js";
@@ -47,7 +47,8 @@ import { setWindowsTaskbarVisible } from "./windows-taskbar.js";
 import { IPC_CHANNELS, MENU_COMMANDS, type MenuCommand } from "../shared/ipc.js";
 import { registerAllIpcHandlers, type ServiceDeps } from "./ipc/register-all.js";
 import { WALLPAPER_LIBRARY } from "../shared/wallpaper-library.js";
-import type { ActionExecution, DesktopStatus, FilePreviewData, InterruptedActionRecovery, PetWindowBounds, PrivacyNetworkState, RecoveryHealthCode, RecoverySystemStatus, SettingsPatch, SettingsSnapshot, SuggestionDeliveryControls, SuggestionPolicy, SuggestionRecord, SuggestionSuppressionHistoryEntry, SupportDiagnosticsReport, WallpaperDisplayInfo, WorkspaceSearchResult } from "../shared/types.js";
+import { WallpaperLibraryService } from "./wallpaper-library-service.js";
+import type { ActionExecution, DesktopStatus, FilePreviewData, InterruptedActionRecovery, PetWindowBounds, PrivacyNetworkState, RecoveryHealthCode, RecoverySystemStatus, SettingsPatch, SettingsSnapshot, SuggestionDeliveryControls, SuggestionPolicy, SuggestionRecord, SuggestionSuppressionHistoryEntry, SupportDiagnosticsReport, WallpaperDisplayInfo, WallpaperLibraryItem, WorkspaceSearchResult } from "../shared/types.js";
 import type { UpdateStatus } from "../shared/update.js";
 import type { PerformanceMode, RuntimePauseSnapshot } from "../shared/runtime.js";
 
@@ -59,6 +60,11 @@ const safeRendererMode = process.argv.includes(SAFE_RENDERER_ARG);
 const startHidden = process.argv.includes(START_HIDDEN_ARG);
 const GITHUB_RELEASES_URL = "https://github.com/ningfangtianwai-pixel/project-d-desktop/releases";
 const SUGGESTION_SUPPRESSION_HISTORY_KEY = "suggestion:suppression-history";
+const USER_MEDIA_SCHEME = "projectd-media";
+protocol.registerSchemesAsPrivileged([{
+  scheme: USER_MEDIA_SCHEME,
+  privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true }
+}]);
 if (safeRendererMode) app.disableHardwareAcceleration();
 
 let mainWindow: BrowserWindow | null = null;
@@ -79,6 +85,7 @@ let trayManager: ProjectTrayManager | null = null;
 let shortcutManager: ShortcutManager | null = null;
 let logger: AppLogger | null = null;
 let database: DatabaseService | null = null;
+let wallpaperLibraryService: WallpaperLibraryService | null = null;
 let fileScanner: FileScanner | null = null;
 let desktopController: DesktopController | null = null;
 let wallpaperHost: WallpaperHost | null = null;
@@ -570,12 +577,33 @@ function getWallpaperDisplays(): WallpaperDisplayInfo[] {
   });
 }
 
+function getWallpaperLibrary(): WallpaperLibraryItem[] {
+  return wallpaperLibraryService?.list() ?? WALLPAPER_LIBRARY;
+}
+
+function registerUserWallpaperProtocol(): void {
+  protocol.handle(USER_MEDIA_SCHEME, async (request) => {
+    try {
+      const url = new URL(request.url);
+      if (url.hostname !== "wallpaper") return new Response(null, { status: 404 });
+      const id = decodeURIComponent(url.pathname.replace(/^\//, ""));
+      if (!/^user-[0-9a-f-]{36}$/i.test(id)) return new Response(null, { status: 400 });
+      const variant = url.searchParams.get("variant") === "thumbnail" ? "thumbnail" : "original";
+      const assetPath = wallpaperLibraryService?.resolveAssetPath(id, variant) ?? null;
+      if (!assetPath) return new Response(null, { status: 404 });
+      return net.fetch(pathToFileURL(assetPath).toString());
+    } catch {
+      return new Response(null, { status: 404 });
+    }
+  });
+}
+
 function assignWallpaperToDisplay(displayId: string, wallpaperId: string | null): WallpaperDisplayInfo[] {
   if (!database) throw new Error("Database is not initialized");
   if (!screen.getAllDisplays().some((display) => String(display.id) === displayId)) {
     throw new Error("Display is not available");
   }
-  if (wallpaperId && !WALLPAPER_LIBRARY.some((item) => item.id === wallpaperId)) {
+  if (wallpaperId && !getWallpaperLibrary().some((item) => item.id === wallpaperId)) {
     throw new Error("Wallpaper is not available");
   }
   database.setDisplayWallpaperAssignment(displayId, wallpaperId);
@@ -1349,7 +1377,7 @@ function applyWallpaperById(wallpaperId: string): SettingsSnapshot {
     throw new Error("Database is not initialized");
   }
 
-  const wallpaper = WALLPAPER_LIBRARY.find((item) => item.id === wallpaperId);
+  const wallpaper = getWallpaperLibrary().find((item) => item.id === wallpaperId);
   if (!wallpaper) {
     throw new Error("Wallpaper was not found in the local library");
   }
@@ -1813,9 +1841,12 @@ function broadcastUpdateStatus(status: UpdateStatus): void {
 }
 
 async function exportWallpaperOriginal(wallpaperId: string): Promise<{ cancelled: boolean; filename: string | null }> {
-  const wallpaper = WALLPAPER_LIBRARY.find((item) => item.id === wallpaperId);
+  const wallpaper = getWallpaperLibrary().find((item) => item.id === wallpaperId);
   if (!wallpaper) throw new Error("Wallpaper was not found");
-  const sourcePath = path.join(__dirname, "../renderer/wallpapers", wallpaper.file);
+  const sourcePath = wallpaper.source === "user"
+    ? wallpaperLibraryService?.resolveAssetPath(wallpaper.id, "original")
+    : path.join(__dirname, "../renderer/wallpapers", wallpaper.file);
+  if (!sourcePath) throw new Error("Wallpaper source is no longer available");
   if (!fs.existsSync(sourcePath)) throw new Error("Wallpaper source is unavailable");
   const extension = path.extname(wallpaper.file) || ".png";
   const owner = settingsWindow && !settingsWindow.isDestroyed() ? settingsWindow : mainWindow;
@@ -1830,6 +1861,35 @@ async function exportWallpaperOriginal(wallpaperId: string): Promise<{ cancelled
   if (result.canceled || !result.filePath) return { cancelled: true, filename: null };
   await fs.promises.copyFile(sourcePath, result.filePath);
   return { cancelled: false, filename: path.basename(result.filePath) };
+}
+
+async function importWallpaperFromDialog(): Promise<WallpaperLibraryItem | null> {
+  if (!wallpaperLibraryService) throw new Error("Wallpaper library is not initialized");
+  const owner = settingsWindow && !settingsWindow.isDestroyed() ? settingsWindow : mainWindow ?? undefined;
+  const options: OpenDialogOptions = {
+    title: "Import wallpaper image",
+    properties: ["openFile"],
+    filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "webp", "bmp", "avif"] }]
+  };
+  const result = owner && !owner.isDestroyed()
+    ? await dialog.showOpenDialog(owner, options)
+    : await dialog.showOpenDialog(options);
+  if (result.canceled || !result.filePaths[0]) return null;
+  const imported = await wallpaperLibraryService.importImage(result.filePaths[0]);
+  broadcastSettingsUpdated();
+  return imported;
+}
+
+function deleteUserWallpaper(wallpaperId: string): void {
+  if (!wallpaperLibraryService) throw new Error("Wallpaper library is not initialized");
+  const current = database?.getSettings().wallpaper.dynamicId ?? null;
+  wallpaperLibraryService.delete(wallpaperId);
+  let settings = database?.getSettings() ?? null;
+  if (current === wallpaperId && database) {
+    settings = database.updateSettings({ wallpaper: { dynamicId: null, isDynamic: false } });
+  }
+  if (settings) syncWindowsFromSettings(settings);
+  broadcastSettingsUpdated();
 }
 
 /** @internal File preview logic extracted from old registerIpc */
@@ -1978,7 +2038,9 @@ function buildIpcDeps(): ServiceDeps {
     settings: {
       getDatabase: () => database,
       getWeather: () => weatherService?.getCurrentWeather() ?? Promise.reject(new Error("Weather not initialized")),
-      getWallpaperLibrary: () => WALLPAPER_LIBRARY,
+      getWallpaperLibrary,
+      importWallpaper: importWallpaperFromDialog,
+      deleteWallpaper: deleteUserWallpaper,
       applyWallpaper: applyWallpaperById,
       exportWallpaperOriginal,
       broadcastSettings: broadcastSettingsUpdated,
@@ -2237,6 +2299,9 @@ async function initializeCoreServices(): Promise<void> {
     database.setAppState("privacy_network_paused", "true");
   }
   database.syncMediaAssets(WALLPAPER_LIBRARY);
+  wallpaperLibraryService = new WallpaperLibraryService(app.getPath("userData"), database, logger);
+  await wallpaperLibraryService.initialize();
+  registerUserWallpaperProtocol();
   const operationsPublicKey = (process.env.PROJECTD_OPERATIONS_PUBLIC_KEY
     ?? database.getAppState("operations_public_key"))?.replace(/\\n/g, "\n") ?? null;
   operationsControl = new OperationsControlService({

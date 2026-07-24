@@ -54,3 +54,29 @@ test("AI connection test is exposed only to settings and does not send a chat me
   assert.deepEqual(trustedRoutes.at(-1), ["#/settings"]);
   assert.equal(chatCalls, 0);
 });
+
+test("wallpaper import and deletion remain settings-only privileged actions", async () => {
+  const handlers = new Map();
+  let imported = 0;
+  let deleted = "";
+  registerSettingsIpcHandlers({
+    ipc: { handle: (channel, handler) => handlers.set(channel, handler) },
+    assertTrustedSender: () => {},
+    getDatabase: () => null,
+    getWeather: async () => ({}),
+    getWallpaperLibrary: () => [],
+    importWallpaper: async () => { imported += 1; return { id: "user-1" }; },
+    deleteWallpaper: (id) => { deleted = id; },
+    applyWallpaper: () => ({}),
+    broadcastSettings: () => {},
+    syncWindows: () => {},
+    validateSettingsPatch: (patch) => patch,
+    sendChatMessage: async () => ({}),
+    testAiConnection: async () => ({ provider: "local", mode: "local", message: "ok" })
+  });
+
+  assert.deepEqual(await handlers.get(IPC_CHANNELS.WALLPAPER_IMPORT)({}), { id: "user-1" });
+  handlers.get(IPC_CHANNELS.WALLPAPER_DELETE)({}, "user-1");
+  assert.equal(imported, 1);
+  assert.equal(deleted, "user-1");
+});

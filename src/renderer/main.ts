@@ -407,6 +407,8 @@ if (!window.projectD) {
       return cloneSettings();
     },
     getWallpaperLibrary: async () => WALLPAPER_LIBRARY,
+    importWallpaper: async () => null,
+    deleteWallpaper: async () => undefined,
     applyWallpaper: async (wallpaperId) => {
       const wallpaper = WALLPAPER_LIBRARY.find((item) => item.id === wallpaperId);
       if (!wallpaper) {

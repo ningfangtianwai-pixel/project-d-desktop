@@ -27,6 +27,8 @@ export interface SettingsIpcDependencies {
   getDatabase: () => { getSettings(): SettingsSnapshot; updateSettings(patch: SettingsPatch): SettingsSnapshot; getAiRuntimeConfig(): { apiKey?: string | null; endpoint: string; model: string }; getAppState(key: string): string | null; setAppState(key: string, value: string): void; getChatHistory(limit?: number): unknown[]; addChatMessage(role: string, content: string, personality?: string, weather?: string): unknown; clearChatHistory(): void } | null;
   getWeather: () => Promise<CurrentWeather>;
   getWallpaperLibrary: () => WallpaperLibraryItem[];
+  importWallpaper: () => Promise<WallpaperLibraryItem | null>;
+  deleteWallpaper: (id: string) => void;
   applyWallpaper: (id: string) => SettingsSnapshot;
   exportWallpaperOriginal: (id: string) => Promise<{ cancelled: boolean; filename: string | null }>;
   broadcastSettings: () => void;
@@ -70,6 +72,17 @@ export function registerSettingsIpcHandlers(deps: SettingsIpcDependencies): void
   ipc.handle(IPC_CHANNELS.WALLPAPER_LIBRARY_GET, (event) => {
     assertTrustedSender(event, ["", "#/settings", "#/overlay", "#/wallpaper"]);
     return deps.getWallpaperLibrary();
+  });
+
+  ipc.handle(IPC_CHANNELS.WALLPAPER_IMPORT, async (event): Promise<WallpaperLibraryItem | null> => {
+    assertTrustedSender(event, ["#/settings"]);
+    return deps.importWallpaper();
+  });
+
+  ipc.handle(IPC_CHANNELS.WALLPAPER_DELETE, (event, wallpaperId: unknown): void => {
+    assertTrustedSender(event, ["#/settings"]);
+    if (typeof wallpaperId !== "string" || wallpaperId.length > 80) throw new Error("Invalid wallpaper id");
+    deps.deleteWallpaper(wallpaperId);
   });
 
   ipc.handle(IPC_CHANNELS.WALLPAPER_APPLY, (event, wallpaperId: unknown): SettingsSnapshot => {

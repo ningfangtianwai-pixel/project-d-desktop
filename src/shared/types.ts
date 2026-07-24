@@ -146,6 +146,7 @@ export interface WallpaperLibraryItem {
   file: string;
   posterFile?: string;
   aliases: string[];
+  source?: "bundled" | "user";
 }
 
 export interface WallpaperDisplayInfo {
@@ -531,6 +532,8 @@ export interface ProjectDApi {
   getSettings: () => Promise<SettingsSnapshot>;
   updateSettings: (patch: SettingsPatch) => Promise<SettingsSnapshot>;
   getWallpaperLibrary: () => Promise<WallpaperLibraryItem[]>;
+  importWallpaper: () => Promise<WallpaperLibraryItem | null>;
+  deleteWallpaper: (wallpaperId: string) => Promise<void>;
   applyWallpaper: (wallpaperId: string) => Promise<SettingsSnapshot>;
   exportWallpaperOriginal: (wallpaperId: string) => Promise<{ cancelled: boolean; filename: string | null }>;
   getWallpaperDisplays: () => Promise<WallpaperDisplayInfo[]>;

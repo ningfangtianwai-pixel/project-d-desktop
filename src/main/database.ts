@@ -36,6 +36,11 @@ export interface UpsertDesktopFileInput {
 }
 
 const LATEST_SCHEMA_VERSION = 6;
+const WALLPAPER_STYLES = new Set(["anime", "landscape", "cinematic", "cyberpunk", "minimalist", "seasonal"]);
+
+function isWallpaperStyle(value: string): value is WallpaperLibraryItem["style"] {
+  return WALLPAPER_STYLES.has(value);
+}
 
 const SCHEMA_SQL = `
 PRAGMA journal_mode = WAL;
@@ -550,6 +555,61 @@ export class DatabaseService {
       this.persist();
     } catch (error) {
       this.getDb().run("ROLLBACK");
+      throw error;
+    }
+  }
+
+  getUserMediaAssets(): WallpaperLibraryItem[] {
+    return this.selectRows(
+      "SELECT id, media_type, file_path, label, style, metadata_json FROM media_assets WHERE source = 'user' ORDER BY updated_at DESC"
+    ).flatMap((row) => {
+      const metadata = this.parseJson<{ aliases?: unknown }>(row.metadata_json) ?? {};
+      const style = String(row.style);
+      if (!isWallpaperStyle(style)) return [];
+      const type = String(row.media_type);
+      if (type !== "image" && type !== "video") return [];
+      return [{
+        id: String(row.id),
+        label: String(row.label),
+        style,
+        type,
+        file: path.basename(String(row.file_path)),
+        aliases: Array.isArray(metadata.aliases) ? metadata.aliases.filter((alias): alias is string => typeof alias === "string") : [],
+        source: "user" as const
+      }];
+    });
+  }
+
+  getUserMediaAssetPath(id: string): string | null {
+    const row = this.selectRows("SELECT file_path FROM media_assets WHERE id = ? AND source = 'user'", [id])[0];
+    return row ? String(row.file_path) : null;
+  }
+
+  saveUserMediaAsset(item: WallpaperLibraryItem, filePath: string): void {
+    const now = new Date().toISOString();
+    this.getDb().run(
+      `INSERT INTO media_assets(id, media_type, source, file_path, label, style, metadata_json, updated_at)
+       VALUES (?, ?, 'user', ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET media_type = excluded.media_type, source = 'user', file_path = excluded.file_path,
+         label = excluded.label, style = excluded.style, metadata_json = excluded.metadata_json, updated_at = excluded.updated_at`,
+      [item.id, item.type, filePath, item.label, item.style, JSON.stringify({ aliases: item.aliases }), now]
+    );
+    this.persist();
+  }
+
+  deleteUserMediaAsset(id: string): boolean {
+    const db = this.getDb();
+    const exists = this.selectRows("SELECT id FROM media_assets WHERE id = ? AND source = 'user'", [id])[0];
+    if (!exists) return false;
+    db.run("BEGIN");
+    try {
+      db.run("UPDATE display_wallpaper_assignments SET wallpaper_id = NULL, updated_at = ? WHERE wallpaper_id = ?", [new Date().toISOString(), id]);
+      db.run("DELETE FROM media_assets WHERE id = ? AND source = 'user'", [id]);
+      db.run("COMMIT");
+      this.persist();
+      return true;
+    } catch (error) {
+      db.run("ROLLBACK");
       throw error;
     }
   }

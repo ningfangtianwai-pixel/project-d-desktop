@@ -46,6 +46,9 @@ const currentWallpaperLabel = computed(() =>
 const overlayWallpaperStyle = computed(() => {
   const wallpaper = currentWallpaper.value;
   if (!wallpaper) return {};
+  if (wallpaper.source === "user") {
+    return { backgroundImage: `url("projectd-media://wallpaper/${encodeURIComponent(wallpaper.id)}?variant=thumbnail")` };
+  }
   const file = wallpaper.type === "video" ? wallpaper.posterFile : wallpaper.file;
   return file
     ? { backgroundImage: `url("${import.meta.env.BASE_URL}wallpapers/${file}")` }
