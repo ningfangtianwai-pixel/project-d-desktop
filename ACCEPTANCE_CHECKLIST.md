@@ -814,3 +814,16 @@
 - [ ] Live Photo/video import and persistent custom-wallpaper ingestion pass packaged-runtime tests.
 - [ ] Vision-generated character/personality workflow has an approved provider, consent, moderation, and cost contract.
 - [ ] Four non-Luna characters have approved multi-action and multi-outfit transparent packs.
+
+## Stage 51 - Ambient Assets And Creator Closure
+
+- [x] Rain and snow use bitmap-composited multi-depth weather plates rather than a black fill or only abstract line particles.
+- [x] Clear, rain, snow, fog, leaves, and light states have screenshot-based visual QA.
+- [x] The four non-Luna characters each have six declared action frames: idle, walk, happy, thinking, sleep, and interaction.
+- [x] Pet asset verification rejects absent, empty, incorrectly sized, and duplicate non-Luna action frames.
+- [x] Visual profiles include identity, dialogue, forbidden-term, and motion guidance.
+- [x] AI chat consumes the selected visual profile while preserving the consent-first visual-upload boundary.
+- [x] Wallpaper Studio supports templates, fonts, sticker layers, 720p/1080p/1440p output, safe library import, export, and direct apply.
+- [x] Generated wallpaper ingestion validates PNG payloads, size limits, thumbnail creation, and cleanup.
+- [ ] A live image-provider request has been verified with an approved image-capable provider key.
+- [ ] Commercial source and license evidence is recorded for the generated weather, wallpaper, and character-action assets.

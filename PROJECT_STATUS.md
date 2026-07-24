@@ -1045,3 +1045,12 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Clean desktop now hides and verifies the Windows taskbar, keeps the display awake with Electron `powerSaveBlocker`, supports Escape/F12/Ctrl+Shift+Q as a saved exit shortcut, and restores taskbar/icons through normal exit, shutdown, and watchdog recovery.
 - Verification passes: lint; 198/198 Node tests; 2/2 component tests; 10/10 Electron E2E; all TypeScript targets; production build; UI regression QA. Final machine state has the taskbar visible, 63 desktop icon objects visible, and zero Project D processes.
 - Remaining artwork boundary: the four non-Luna source sheets still need approved transparent multi-outfit/action exports for true clothing replacement. CSS accessories are intentionally not recorded as final character artwork.
+
+## Stage 51 - Ambient Assets And Creator Closure (Complete)
+
+- Rain and snow now use layered bitmap weather plates with motion, quality-aware opacity, and battery-saver reduction; the visual QA captures rain, snow, fog, leaves, and light states.
+- Luna Spring, Starlight, Floral Star, and Lin Yuxi each now ship idle, walk, happy, thinking, sleep, and interaction transparent action frames. Asset validation checks every declared frame and rejects missing, empty, wrong-sized, or duplicate non-Luna action slots.
+- The consent-first visual profile workflow now carries an identity anchor, dialogue guidance, forbidden terms, and motion guidance into AI chat prompts. DeepSeek remains text-only; visual uploads require an image-capable OpenAI-compatible or MiMo provider.
+- Wallpaper Studio now supports templates, font choices, procedural sticker layers, 720p/1080p/1440p canvas output, library import, PNG export, and direct desktop apply.
+- Verification passes: lint, all TypeScript targets, 212/212 Node tests, 2/2 component tests, production build, pet-asset verification, wallpaper-library QA, asset-ledger verification, and bitmap-weather screenshot QA.
+- All generated visual assets remain `pending-evidence` in the asset ledger and are not approved for commercial distribution until source and license evidence is recorded.

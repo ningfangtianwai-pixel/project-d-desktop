@@ -213,3 +213,11 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 4. Define the exact vision-provider schema, consent boundary, cost limit, moderation policy, and deterministic prompt output before adding automatic character/personality generation.
 5. Run 100+ real-desktop-item density tests for 2/4/6/8 columns across 100/125/150/200 percent DPI and portrait/landscape displays.
 6. Repeat organizer activate/safe-restore, folder preview, wallpaper apply, and cache cleanup from the packaged installer on Windows 10 and a clean Windows 11 account.
+
+## After Stage 51
+
+1. Use an approved image-capable OpenAI-compatible or MiMo key to complete a live visual-profile request; DeepSeek V4 remains a text-only provider and must not receive image uploads.
+2. Obtain and record commercial source/license evidence for every generated weather, wallpaper, and action asset before enabling public commercial distribution.
+3. Run physical multi-display, DPI, sleep/wake, battery, and long-soak verification with the new bitmap weather layers enabled.
+4. Profile and split the 501.70 kB renderer chunk only after runtime measurements identify the dominant modules.
+5. Define a moderated user-sticker import policy before allowing arbitrary external sticker packs in Wallpaper Studio.

@@ -1501,3 +1501,12 @@
 - The first complete E2E replay exposed an idle-shutdown race that could persist `deactivating` and display a false crash-recovery notice. Idle shutdown now performs idempotent Shell recovery without writing a crash marker.
 - The renderer-crash test originally waited on the renderer `Page` that the test intentionally destroyed. It now validates the replacement window through the Electron main process and capture pixels; the runtime recovered and reported healthy in every final run.
 - Deferred honestly: Live Photo import, persistent user-wallpaper ingestion, vision-model character analysis, and licensed multi-action/multi-outfit packs.
+
+## 2026-07-24 - Stage 51 Ambient Assets And Creator Closure
+
+- Added real bitmap-composited rain and snow plates, quality-aware animation behavior, and screenshot QA for clear, rain, snow, fog, leaves, and light weather states.
+- Generated and processed six transparent action frames for each of Luna Spring, Starlight, Floral Star, and Lin Yuxi; strengthened the verifier to require every declared frame and unique non-Luna action art.
+- Extended consent-first visual profiles with identity, dialogue, forbidden-term, and motion guidance; the selected profile now informs both remote and local AI chat responses.
+- Expanded Wallpaper Studio with templates, font styles, procedural sticker layers, 720p/1080p/1440p rendering, safe PNG library ingestion, export, and direct apply.
+- Commands passed: `pnpm typecheck`, `pnpm lint`, `pnpm test` (212/212), `pnpm test:component` (2/2), `pnpm build`, `pnpm verify:pet-assets`, `pnpm verify:assets:sync`, `pnpm verify:assets`, `pnpm qa:wallpaper-library`, and bitmap weather QA.
+- Vite reports one 501.70 kB minified renderer chunk; this is recorded as P2 packaging/performance debt, not a build or runtime failure.
