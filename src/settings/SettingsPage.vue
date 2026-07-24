@@ -854,6 +854,15 @@ async function importWallpaper(): Promise<void> {
   saveStatus.value = `已导入本地壁纸：${imported.label}`;
 }
 
+async function importLivePhotoWallpaper(): Promise<void> {
+  const imported = await window.projectD.importLivePhotoWallpaper();
+  if (!imported) return;
+  wallpaperLibrary.value = await window.projectD.getWallpaperLibrary();
+  selectedWallpaperId.value = imported.id;
+  wallpaperStyle.value = "user";
+  saveStatus.value = `已导入 Live Photo：${imported.label}`;
+}
+
 async function deleteWallpaper(wallpaper: WallpaperLibraryItem): Promise<void> {
   if (wallpaper.source !== "user") return;
   if (!window.confirm(`删除“${wallpaper.label}”及其本地副本？`)) return;
@@ -1478,6 +1487,7 @@ async function saveSettings(): Promise<void> {
               <div><h2>壁纸浏览</h2><p class="runtime-line">按分类或名称筛选，卡片可直接设为桌面壁纸。</p></div>
               <div class="group-actions">
                 <button class="secondary-command" type="button" @click="importWallpaper"><FolderPlus :size="16" /><span>导入本地图片</span></button>
+                <button class="secondary-command" type="button" @click="importLivePhotoWallpaper"><PlayCircle :size="16" /><span>导入 Live Photo</span></button>
                 <button class="secondary-command" type="button" @click="exportSelectedWallpaper"><Download :size="16" /><span>保存原图</span></button>
               </div>
             </div>

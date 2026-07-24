@@ -202,7 +202,7 @@ function wallpaperAsset(item: WallpaperLibraryItem): WallpaperAsset {
       id: item.id,
       type: item.type,
       src: mediaUrl,
-      posterSrc: mediaUrl + "?variant=thumbnail"
+      posterSrc: mediaUrl + (item.type === "video" ? "?variant=cover" : "?variant=thumbnail")
     };
   }
   const basePath = window.location.protocol === "file:" ? "./wallpapers/" : "/wallpapers/";
@@ -271,6 +271,19 @@ const leafSprites = Array.from({ length: 34 }, (_, index) => ({
     "--leaf-drift": `${(index % 2 === 0 ? 1 : -1) * (70 + (index % 8) * 18)}px`,
     "--leaf-rotate": `${(index % 2 === 0 ? 1 : -1) * (160 + index * 17)}deg`,
     "--leaf-alpha": `${0.34 + (index % 5) * 0.08}`
+  }
+}));
+const rainStreaks = Array.from({ length: 96 }, (_, index) => ({
+  id: `rain-${index}`,
+  depth: index < 50 ? "rain-far" : index < 84 ? "rain-mid" : "rain-near",
+  style: {
+    "--rain-x": `${(index * 37) % 104 - 2}%`,
+    "--rain-y": `${(index * 19) % 110 - 24}vh`,
+    "--rain-length": index < 50 ? `${18 + (index % 7) * 5}px` : index < 84 ? `${38 + (index % 8) * 8}px` : `${76 + (index % 6) * 14}px`,
+    "--rain-width": index >= 84 && index % 3 === 0 ? "2px" : "1px",
+    "--rain-alpha": index < 50 ? `${0.12 + (index % 5) * 0.025}` : index < 84 ? `${0.2 + (index % 6) * 0.04}` : `${0.3 + (index % 5) * 0.045}`,
+    "--rain-duration": index < 50 ? `${0.86 + (index % 7) * 0.09}s` : index < 84 ? `${0.64 + (index % 7) * 0.07}s` : `${0.48 + (index % 5) * 0.055}s`,
+    "--rain-delay": `${-(index % 11) * 0.12}s`
   }
 }));
 const lightOrbs = Array.from({ length: 18 }, (_, index) => ({
@@ -725,6 +738,9 @@ function startCanvasFallback(container: HTMLDivElement): void {
       </div>
       <div class="weather-leaves" aria-hidden="true">
         <span v-for="leaf in leafSprites" :key="leaf.id" class="leaf-sprite" :style="leaf.style"></span>
+      </div>
+      <div class="weather-rain" aria-hidden="true">
+        <span v-for="streak in rainStreaks" :key="streak.id" class="rain-streak" :class="streak.depth" :style="streak.style"></span>
       </div>
       <div class="weather-light" aria-hidden="true">
         <span class="light-beam light-beam-primary"></span>

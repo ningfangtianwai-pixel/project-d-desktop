@@ -588,7 +588,8 @@ function registerUserWallpaperProtocol(): void {
       if (url.hostname !== "wallpaper") return new Response(null, { status: 404 });
       const id = decodeURIComponent(url.pathname.replace(/^\//, ""));
       if (!/^user-[0-9a-f-]{36}$/i.test(id)) return new Response(null, { status: 400 });
-      const variant = url.searchParams.get("variant") === "thumbnail" ? "thumbnail" : "original";
+      const requestedVariant = url.searchParams.get("variant");
+      const variant = requestedVariant === "thumbnail" || requestedVariant === "cover" ? requestedVariant : "original";
       const assetPath = wallpaperLibraryService?.resolveAssetPath(id, variant) ?? null;
       if (!assetPath) return new Response(null, { status: 404 });
       return net.fetch(pathToFileURL(assetPath).toString());
@@ -1880,6 +1881,19 @@ async function importWallpaperFromDialog(): Promise<WallpaperLibraryItem | null>
   return imported;
 }
 
+async function importLivePhotoFromDialogs(): Promise<WallpaperLibraryItem | null> {
+  if (!wallpaperLibraryService) throw new Error("Wallpaper library is not initialized");
+  const owner = settingsWindow && !settingsWindow.isDestroyed() ? settingsWindow : mainWindow ?? undefined;
+  const showOpen = (options: OpenDialogOptions) => owner && !owner.isDestroyed() ? dialog.showOpenDialog(owner, options) : dialog.showOpenDialog(options);
+  const cover = await showOpen({ title: "选择 Live Photo 静态封面", properties: ["openFile"], filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "webp", "bmp", "avif"] }] });
+  if (cover.canceled || !cover.filePaths[0]) return null;
+  const video = await showOpen({ title: "选择与封面配对的视频", properties: ["openFile"], filters: [{ name: "Video", extensions: ["mp4", "webm", "mov"] }] });
+  if (video.canceled || !video.filePaths[0]) return null;
+  const imported = await wallpaperLibraryService.importLivePhoto(cover.filePaths[0], video.filePaths[0]);
+  broadcastSettingsUpdated();
+  return imported;
+}
+
 function deleteUserWallpaper(wallpaperId: string): void {
   if (!wallpaperLibraryService) throw new Error("Wallpaper library is not initialized");
   const current = database?.getSettings().wallpaper.dynamicId ?? null;
@@ -2040,6 +2054,7 @@ function buildIpcDeps(): ServiceDeps {
       getWeather: () => weatherService?.getCurrentWeather() ?? Promise.reject(new Error("Weather not initialized")),
       getWallpaperLibrary,
       importWallpaper: importWallpaperFromDialog,
+      importLivePhotoWallpaper: importLivePhotoFromDialogs,
       deleteWallpaper: deleteUserWallpaper,
       applyWallpaper: applyWallpaperById,
       exportWallpaperOriginal,

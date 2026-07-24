@@ -215,6 +215,7 @@ button {
 
 .weather-fog,
 .weather-leaves,
+.weather-rain,
 .weather-light {
   position: absolute;
   inset: 0;
@@ -231,20 +232,27 @@ button {
   opacity: calc(0.9 * var(--weather-intensity));
 }
 
+.real-weather-layer[data-weather="rain"] .weather-rain {
+  opacity: calc(0.78 * var(--weather-intensity));
+}
+
 .real-weather-layer[data-weather="light"] .weather-light,
 .real-weather-layer[data-weather="clear"] .weather-light {
   opacity: calc(0.72 * var(--weather-intensity));
 }
 
 .real-weather-layer[data-performance="balanced"] .leaf-sprite:nth-child(n + 23),
+.real-weather-layer[data-performance="balanced"] .rain-streak:nth-child(n + 39),
 .real-weather-layer[data-performance="balanced"] .light-orb:nth-child(n + 13),
 .real-weather-layer[data-performance="balanced"] .fog-bank:nth-child(n + 6),
 .real-weather-layer[data-performance="auto"] .leaf-sprite:nth-child(n + 27),
+.real-weather-layer[data-performance="auto"] .rain-streak:nth-child(n + 57),
 .real-weather-layer[data-performance="auto"] .light-orb:nth-child(n + 15) {
   display: none;
 }
 
 .real-weather-layer[data-performance="batterySaver"] .leaf-sprite:nth-child(n + 13),
+.real-weather-layer[data-performance="batterySaver"] .rain-streak:nth-child(n + 19),
 .real-weather-layer[data-performance="batterySaver"] .light-orb:nth-child(n + 8),
 .real-weather-layer[data-performance="batterySaver"] .fog-bank:nth-child(n + 5) {
   display: none;
@@ -304,6 +312,62 @@ button {
   transform: rotate(-8deg);
 }
 
+.rain-streak {
+  position: absolute;
+  top: var(--rain-y);
+  left: var(--rain-x);
+  width: var(--rain-width);
+  height: var(--rain-length);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(236, 250, 255, 0), rgba(220, 244, 255, var(--rain-alpha)) 20%, rgba(172, 218, 247, calc(var(--rain-alpha) * 0.86)) 72%, rgba(176, 216, 244, 0));
+  box-shadow: 0 0 5px rgba(177, 220, 248, 0.2);
+  transform: rotate(11deg) translate3d(0, 0, 0);
+  animation: weather-rain-fall var(--rain-duration) linear infinite;
+  animation-delay: var(--rain-delay);
+}
+
+.rain-streak.rain-far {
+  filter: blur(0.35px);
+  opacity: 0.75;
+}
+
+.rain-streak.rain-mid {
+  box-shadow: 0 0 7px rgba(177, 220, 248, 0.24);
+}
+
+.rain-streak.rain-near {
+  filter: blur(0.22px);
+  box-shadow: 0 0 10px rgba(193, 228, 249, 0.32);
+}
+
+.weather-rain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 6%, rgba(150, 190, 216, 0.18), transparent 46%),
+    linear-gradient(180deg, rgba(18, 47, 69, 0.16), rgba(22, 55, 77, 0.05) 52%, rgba(7, 21, 34, 0.2));
+  backdrop-filter: saturate(0.82) blur(0.35px);
+  opacity: 0.72;
+}
+
+.weather-rain::after {
+  content: "";
+  position: absolute;
+  inset: -28%;
+  background: repeating-linear-gradient(
+    104deg,
+    transparent 0 19px,
+    rgba(205, 230, 244, 0.14) 20px,
+    rgba(205, 230, 244, 0.04) 21px,
+    transparent 22px 42px
+  );
+  mix-blend-mode: screen;
+  opacity: 0.22;
+  transform: rotate(-1deg) translate3d(-3vw, -6vh, 0);
+  animation: weather-rain-sheet 1.65s linear infinite;
+}
+
 .light-beam {
   position: absolute;
   top: -16vh;
@@ -351,6 +415,16 @@ button {
   50% {
     transform: translate3d(7vw, 1.8vh, 0) scale(calc(var(--fog-scale) * 1.05));
   }
+}
+
+@keyframes weather-rain-fall {
+  from { transform: rotate(11deg) translate3d(-2vw, -12vh, 0); }
+  to { transform: rotate(11deg) translate3d(8vw, 122vh, 0); }
+}
+
+@keyframes weather-rain-sheet {
+  from { transform: rotate(-1deg) translate3d(-5vw, -16vh, 0); }
+  to { transform: rotate(-1deg) translate3d(7vw, 20vh, 0); }
 }
 
 @keyframes weather-leaf-fall {

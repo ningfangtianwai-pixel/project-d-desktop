@@ -408,6 +408,7 @@ if (!window.projectD) {
     },
     getWallpaperLibrary: async () => WALLPAPER_LIBRARY,
     importWallpaper: async () => null,
+    importLivePhotoWallpaper: async () => null,
     deleteWallpaper: async () => undefined,
     applyWallpaper: async (wallpaperId) => {
       const wallpaper = WALLPAPER_LIBRARY.find((item) => item.id === wallpaperId);
@@ -447,8 +448,8 @@ if (!window.projectD) {
       }];
     },
     getCurrentWeather: async () => ({
-      mode: "manual",
-      condition: "clear",
+      mode: mockSettings.weather.mode,
+      condition: mockSettings.weather.mode === "manual" ? mockSettings.weather.manualWeather : "clear",
       city: null,
       temperatureC: null,
       humidity: null,

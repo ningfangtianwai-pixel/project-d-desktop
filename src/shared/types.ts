@@ -151,6 +151,7 @@ export interface WallpaperLibraryItem {
   type: "image" | "video";
   file: string;
   posterFile?: string;
+  livePhoto?: boolean;
   aliases: string[];
   source?: "bundled" | "user";
 }
@@ -539,6 +540,7 @@ export interface ProjectDApi {
   updateSettings: (patch: SettingsPatch) => Promise<SettingsSnapshot>;
   getWallpaperLibrary: () => Promise<WallpaperLibraryItem[]>;
   importWallpaper: () => Promise<WallpaperLibraryItem | null>;
+  importLivePhotoWallpaper: () => Promise<WallpaperLibraryItem | null>;
   deleteWallpaper: (wallpaperId: string) => Promise<void>;
   applyWallpaper: (wallpaperId: string) => Promise<SettingsSnapshot>;
   exportWallpaperOriginal: (wallpaperId: string) => Promise<{ cancelled: boolean; filename: string | null }>;

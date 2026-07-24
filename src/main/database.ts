@@ -563,7 +563,7 @@ export class DatabaseService {
     return this.selectRows(
       "SELECT id, media_type, file_path, label, style, metadata_json FROM media_assets WHERE source = 'user' ORDER BY updated_at DESC"
     ).flatMap((row) => {
-      const metadata = this.parseJson<{ aliases?: unknown }>(row.metadata_json) ?? {};
+      const metadata = this.parseJson<{ aliases?: unknown; posterFile?: unknown; livePhoto?: unknown }>(row.metadata_json) ?? {};
       const style = String(row.style);
       if (!isWallpaperStyle(style)) return [];
       const type = String(row.media_type);
@@ -574,6 +574,8 @@ export class DatabaseService {
         style,
         type,
         file: path.basename(String(row.file_path)),
+        posterFile: typeof metadata.posterFile === "string" ? metadata.posterFile : undefined,
+        livePhoto: metadata.livePhoto === true,
         aliases: Array.isArray(metadata.aliases) ? metadata.aliases.filter((alias): alias is string => typeof alias === "string") : [],
         source: "user" as const
       }];
@@ -592,7 +594,7 @@ export class DatabaseService {
        VALUES (?, ?, 'user', ?, ?, ?, ?, ?)
        ON CONFLICT(id) DO UPDATE SET media_type = excluded.media_type, source = 'user', file_path = excluded.file_path,
          label = excluded.label, style = excluded.style, metadata_json = excluded.metadata_json, updated_at = excluded.updated_at`,
-      [item.id, item.type, filePath, item.label, item.style, JSON.stringify({ aliases: item.aliases }), now]
+      [item.id, item.type, filePath, item.label, item.style, JSON.stringify({ aliases: item.aliases, posterFile: item.posterFile, livePhoto: item.livePhoto === true }), now]
     );
     this.persist();
   }

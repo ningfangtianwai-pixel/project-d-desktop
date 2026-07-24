@@ -45,6 +45,7 @@
     "qa:packaged-smoke": "node scripts/qa-packaged-smoke.cjs",
     "qa:clean-desktop-escape": "node scripts/qa-clean-desktop-escape.cjs",
     "qa:user-reported-ui": "node scripts/qa-user-reported-ui.cjs",
+    "qa:weather-visual": "pnpm build && node scripts/qa-weather-visual.cjs",
     "qa:wallpaper-library": "pnpm build:main && electron scripts/qa-wallpaper-library.cjs",
     "verify:packaged": "node scripts/verify-packaged-runtime.cjs",
     "verify:package-budget": "node scripts/verify-package-budget.cjs",
