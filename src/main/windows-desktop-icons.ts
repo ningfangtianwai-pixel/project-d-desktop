@@ -49,7 +49,7 @@ export async function startDesktopIconRecoveryWatchdog(parentProcessId = process
     "$ErrorActionPreference = 'SilentlyContinue'",
     `Wait-Process -Id ${Math.max(0, Math.floor(parentProcessId))} -ErrorAction SilentlyContinue`,
     "Start-Sleep -Milliseconds 500",
-    buildDesktopIconSyncScript(true),
+    buildDesktopIconSyncScript(true, 12),
     buildWindowsTaskbarSyncScript(true)
   ].join("\n");
   const child = spawn("powershell.exe", powershellArguments(watchdogScript), {
@@ -83,16 +83,17 @@ export function createDesktopIconRecoveryBatch(): string {
   ].join("\r\n");
 }
 
-export function buildDesktopIconSyncScript(visible: boolean): string {
-  return buildDesktopIconScript(visible);
+export function buildDesktopIconSyncScript(visible: boolean, attempts = 1): string {
+  return buildDesktopIconScript(visible, attempts);
 }
 
 export function buildDesktopIconProbeScript(): string {
-  return buildDesktopIconScript(null);
+  return buildDesktopIconScript(null, 1);
 }
 
-function buildDesktopIconScript(visible: boolean | null): string {
+function buildDesktopIconScript(visible: boolean | null, attempts: number): string {
   const desired = visible === null ? "$null" : visible ? "$true" : "$false";
+  const boundedAttempts = Math.max(1, Math.min(12, Math.floor(attempts)));
   const registryUpdate = visible === null
     ? ""
     : `Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced' -Name HideIcons -Type DWord -Value ${visible ? 0 : 1}`;
@@ -129,30 +130,44 @@ public static class ProjectDDesktopIcons {
 }
 "@
 $desired = ${desired}
-$view = [ProjectDDesktopIcons]::FindDesktopView()
-if ($view -eq [IntPtr]::Zero) { throw 'Explorer desktop view was not found' }
-$list = [ProjectDDesktopIcons]::FindWindowEx($view, [IntPtr]::Zero, 'SysListView32', 'FolderView')
-if ($list -eq [IntPtr]::Zero) { throw 'Explorer desktop icon list was not found' }
-$before = [ProjectDDesktopIcons]::IsWindowVisible($list)
-if ($null -ne $desired -and $before -ne $desired) {
-  [void][ProjectDDesktopIcons]::SendMessageSafe($view, 0x0111, [IntPtr]0x7402, [IntPtr]::Zero)
-  Start-Sleep -Milliseconds 250
+$state = $null
+$lastError = ''
+for ($attempt = 1; $attempt -le ${boundedAttempts}; $attempt++) {
+  try {
+    $view = [ProjectDDesktopIcons]::FindDesktopView()
+    if ($view -eq [IntPtr]::Zero) { throw 'Explorer desktop view was not found' }
+    $list = [ProjectDDesktopIcons]::FindWindowEx($view, [IntPtr]::Zero, 'SysListView32', 'FolderView')
+    if ($list -eq [IntPtr]::Zero) { throw 'Explorer desktop icon list was not found' }
+    $before = [ProjectDDesktopIcons]::IsWindowVisible($list)
+    if ($null -ne $desired -and $before -ne $desired) {
+      [void][ProjectDDesktopIcons]::SendMessageSafe($view, 0x0111, [IntPtr]0x7402, [IntPtr]::Zero)
+      Start-Sleep -Milliseconds 250
+    }
+    ${registryUpdate}
+    $after = [ProjectDDesktopIcons]::IsWindowVisible($list)
+    $count = -1
+    try {
+      $count = [ProjectDDesktopIcons]::SendMessageSafe($list, 0x1004, [IntPtr]::Zero, [IntPtr]::Zero).ToInt64()
+    } catch {
+      if ($null -eq $desired) { throw }
+    }
+    $state = [pscustomobject]@{
+      visible = $after
+      iconCount = $count
+      shellViewHandle = $view.ToInt64()
+      listViewHandle = $list.ToInt64()
+    }
+    if ($null -eq $desired -or $after -eq $desired) { break }
+    $lastError = "Explorer desktop icon visibility did not change to $desired"
+  } catch {
+    $lastError = $_.Exception.Message
+  }
+  if ($attempt -lt ${boundedAttempts}) { Start-Sleep -Seconds 1 }
 }
-${registryUpdate}
-$after = [ProjectDDesktopIcons]::IsWindowVisible($list)
-$count = -1
-try {
-  $count = [ProjectDDesktopIcons]::SendMessageSafe($list, 0x1004, [IntPtr]::Zero, [IntPtr]::Zero).ToInt64()
-} catch {
-  if ($null -eq $desired) { throw }
+if ($null -eq $state -or ($null -ne $desired -and $state.visible -ne $desired)) {
+  throw "Desktop icon recovery watchdog exhausted retries: $lastError"
 }
-[pscustomobject]@{
-  visible = $after
-  iconCount = $count
-  shellViewHandle = $view.ToInt64()
-  listViewHandle = $list.ToInt64()
-} | ConvertTo-Json -Compress
-if ($null -ne $desired -and $after -ne $desired) { exit 5 }
+$state | ConvertTo-Json -Compress
 `.trim();
 }
 

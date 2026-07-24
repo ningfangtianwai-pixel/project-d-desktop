@@ -221,3 +221,8 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 3. Run physical multi-display, DPI, sleep/wake, battery, and long-soak verification with the new bitmap weather layers enabled.
 4. Profile and split the 501.70 kB renderer chunk only after runtime measurements identify the dominant modules.
 5. Define a moderated user-sticker import policy before allowing arbitrary external sticker packs in Wallpaper Studio.
+
+## After Stage 52
+
+1. Exercise the packaged installer through clean-desktop activation, forced termination, Explorer restart, and recovery on a second Windows machine before public beta distribution.
+2. Keep startup auto-activation opt-in and inspect any future recovery failure through the structured `desktop-state.log` before changing icon behavior.

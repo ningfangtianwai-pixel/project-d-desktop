@@ -1510,3 +1510,10 @@
 - Expanded Wallpaper Studio with templates, font styles, procedural sticker layers, 720p/1080p/1440p rendering, safe PNG library ingestion, export, and direct apply.
 - Commands passed: `pnpm typecheck`, `pnpm lint`, `pnpm test` (212/212), `pnpm test:component` (2/2), `pnpm build`, `pnpm verify:pet-assets`, `pnpm verify:assets:sync`, `pnpm verify:assets`, `pnpm qa:wallpaper-library`, and bitmap weather QA.
 - Vite reports one 501.70 kB minified renderer chunk; this is recorded as P2 packaging/performance debt, not a build or runtime failure.
+
+## 2026-07-24 - Stage 52 Native Desktop Icon Failsafe
+
+- Restored the actual desktop after detecting `HideIcons=1`; the files were intact and Explorer was responsive.
+- Replaced the command-line-overlong nested watchdog with a single-process, twelve-attempt Explorer recovery script.
+- Added native-desktop fallback on Explorer restart, unexpected overlay destruction, and failed startup overlay creation.
+- Verified: focused regression tests, 215/215 Node tests, typecheck, lint, main-process build, real watchdog execution, and real icon-view probe (visible, 63 icons).

@@ -827,3 +827,11 @@
 - [x] Generated wallpaper ingestion validates PNG payloads, size limits, thumbnail creation, and cleanup.
 - [ ] A live image-provider request has been verified with an approved image-capable provider key.
 - [ ] Commercial source and license evidence is recorded for the generated weather, wallpaper, and character-action assets.
+
+## Stage 52 - Native Desktop Icon Failsafe
+
+- [x] An unexpected Project D exit starts a bounded, non-nested desktop-icon recovery watchdog.
+- [x] Watchdog recovery retries transient Explorer unavailability without exceeding Windows command-line limits.
+- [x] Explorer restart while Project D is active restores the native desktop before runtime repair continues.
+- [x] Unexpected organizer-overlay closure restores native icons and taskbar.
+- [x] Real-machine verification confirms the desktop icon view is visible with 63 icon objects.

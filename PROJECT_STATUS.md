@@ -1054,3 +1054,9 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Wallpaper Studio now supports templates, font choices, procedural sticker layers, 720p/1080p/1440p canvas output, library import, PNG export, and direct desktop apply.
 - Verification passes: lint, all TypeScript targets, 212/212 Node tests, 2/2 component tests, production build, pet-asset verification, wallpaper-library QA, asset-ledger verification, and bitmap-weather screenshot QA.
 - All generated visual assets remain `pending-evidence` in the asset ledger and are not approved for commercial distribution until source and license evidence is recorded.
+
+## Stage 52 - Native Desktop Icon Failsafe (Complete)
+
+- Fixed a P0 recovery defect: the detached icon watchdog used nested encoded PowerShell and could exceed the Windows command-line limit before it ever started.
+- Recovery retries now run inside one bounded PowerShell process. Explorer restart and unexpected organizer-overlay closure both fail closed to the native desktop, restoring icons and taskbar.
+- The real Windows probe confirms the current desktop view is visible with 63 icon objects after the repair.

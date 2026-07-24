@@ -70,6 +70,7 @@ if (safeRendererMode) app.disableHardwareAcceleration();
 let mainWindow: BrowserWindow | null = null;
 let settingsWindow: BrowserWindow | null = null;
 let overlayWindow: BrowserWindow | null = null;
+let overlayCloseWasExpected = false;
 let petWindow: BrowserWindow | null = null;
 let wallpaperWindow: BrowserWindow | null = null;
 const wallpaperWindows = new Map<string, BrowserWindow>();
@@ -523,8 +524,16 @@ function createOverlayWindow(safeMode: boolean): BrowserWindow {
   });
 
   window.on("closed", () => {
+    const unexpectedCloseWhileActive = !overlayCloseWasExpected
+      && !shutdownInProgress
+      && desktopController?.getStatus().mode === "active";
+    overlayCloseWasExpected = false;
     overlayWindow = null;
     logger?.info("desktop-state", "overlay window destroyed");
+    if (unexpectedCloseWhileActive) {
+      logger?.warn("desktop-state", "overlay window closed while desktop was active; restoring native desktop");
+      void emergencyRestoreDesktop("overlay-window-closed");
+    }
   });
 
   overlayWindow = window;
@@ -958,6 +967,7 @@ function closeOverlayWindow(): void {
     return;
   }
 
+  overlayCloseWasExpected = true;
   overlayWindow.close();
   overlayWindow = null;
 }
@@ -2402,7 +2412,9 @@ async function initializeCoreServices(): Promise<void> {
   explorerMonitor = new ExplorerProcessMonitor({
     onRestart: (previousProcessId, currentProcessId) => {
       logger?.warn("desktop-state", "Explorer restart detected", { previousProcessId, currentProcessId });
-      runtimeRecovery?.request("explorer-restarted", true);
+      void emergencyRestoreDesktop("explorer-restarted").finally(() => {
+        runtimeRecovery?.request("explorer-restarted", true);
+      });
     },
     onError: (error) => logger?.warn("desktop-state", "Explorer monitor probe failed", {
       message: error instanceof Error ? error.message : String(error)
@@ -2526,10 +2538,26 @@ async function activateDesktopOnStartup(): Promise<void> {
   }
 
   desktopStatus = (await desktopController?.activate()) ?? updateDesktopStatus("safe-mode");
-  createOverlayWindow(desktopStatus.mode === "safe-mode");
-  mainWindow?.hide();
-  sendMenuCommand(MENU_COMMANDS.ACTIVATE_DESKTOP);
-  logger?.info("desktop-state", "desktop activated from startup preference", { mode: desktopStatus.mode });
+  if (desktopStatus.mode !== "active") {
+    logger?.warn("desktop-state", "startup desktop activation rejected; preserving native desktop", {
+      mode: desktopStatus.mode
+    });
+    showMainWindow();
+    return;
+  }
+
+  try {
+    const overlay = createOverlayWindow(false);
+    if (overlay.isDestroyed()) throw new Error("Desktop overlay was destroyed during startup");
+    mainWindow?.hide();
+    sendMenuCommand(MENU_COMMANDS.ACTIVATE_DESKTOP);
+    logger?.info("desktop-state", "desktop activated from startup preference", { mode: desktopStatus.mode });
+  } catch (error) {
+    logger?.error("desktop-state", "startup overlay creation failed; restoring native desktop", {
+      message: error instanceof Error ? error.message : String(error)
+    });
+    await emergencyRestoreDesktop("startup-overlay-failed");
+  }
 }
 
 async function shutdownSafely(): Promise<void> {

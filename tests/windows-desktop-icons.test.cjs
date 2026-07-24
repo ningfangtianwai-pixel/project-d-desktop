@@ -21,7 +21,7 @@ test("desktop icon synchronization verifies the real Explorer list view", () => 
   assert.match(show, /-Value 0/);
   assert.match(hide, /\$desired = \$false/);
   assert.match(hide, /-Value 1/);
-  assert.match(show, /exit 5/);
+  assert.match(show, /Desktop icon recovery watchdog exhausted retries/);
   const probe = buildDesktopIconProbeScript();
   assert.match(probe, /\$desired = \$null/);
   assert.doesNotMatch(probe, /Set-ItemProperty/);
