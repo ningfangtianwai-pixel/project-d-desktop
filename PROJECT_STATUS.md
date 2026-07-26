@@ -1068,3 +1068,11 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Wallpaper Studio adds dawn and polaroid composition templates, a display face, and constellation, paper-label, and halo procedural sticker layers.
 - Pet bubbles now resolve through one five-character/personality/moment cue model, selecting both a compatible action slot and a visual bubble tone.
 - The project is personal-use-first; the open-source asset note makes clear that code licensing never transfers separate visual-media rights.
+
+## Stage 54 - Wallpaper-First Experience Baseline (Complete)
+
+- Reviewed the existing immersive-desktop plan against the current Stage 53 implementation instead of its outdated `0.2.0-beta.1` baseline.
+- Established a seven-layer desktop model, five explicit experience states, adaptive glass tokens, wallpaper subject-safe regions, pet anchor lanes, and a single-task surface contract.
+- Resolved the open experience decisions: four primary edge actions, dynamic pet placement, organizer-as-task-state, offline wallpaper profiling, and personal-use-first open-source scope.
+- Added eight generated design references covering dark and bright quiet states, realistic rain and snow, pet interaction, spatial organization, wallpaper studio, and mixed-display adaptation.
+- Added an implementation map and measurable acceptance matrix without changing runtime code, safety behavior, test conclusions, or asset-license status.

@@ -1525,3 +1525,12 @@
 - Extended Wallpaper Studio with dawn/polaroid templates, a display font, and three traceable procedural sticker designs.
 - Unified character/personality/moment bubble cues with declared action slots and tone styling for all five selectable characters.
 - Verification passed: typecheck, lint, production build, 216/216 Node tests, Live Photo library QA, and weather visual QA.
+
+## 2026-07-24 - Stage 54 Wallpaper-First Experience Baseline
+
+- Read and evaluated `ProjectD_V4.0_沉浸式桌面层体验收敛计划.md` against the current renderer, wallpaper, weather, pet, settings, scene, recovery, and QA implementation.
+- Inspected current product screenshots and confirmed that the default virtual-container grid and command panel still visually overpower the wallpaper.
+- Created `docs/ProjectD_V5.1_壁纸主导沉浸式桌面成品计划.md` with a current baseline, experience model, visual tokens, technical mapping, phased delivery, priorities, open-source boundaries, and measurable acceptance.
+- Generated and retained eight 1672×941 visual concepts under `docs/visual-concepts/v4-ambient`.
+- Recorded the image purposes, prompt summaries, docs-only scope, and warning that MIT code licensing does not automatically cover visual assets.
+- No runtime source, build configuration, database, packaged resource, remote repository, or licensing conclusion was changed.

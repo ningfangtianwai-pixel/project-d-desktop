@@ -232,3 +232,11 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 1. Add an explicit pre-import preview sheet for Live Photo pairs, including a browser decode probe and an editable fit/loop/mute policy before file copying.
 2. Add user-managed sticker-pack import only with a local source/attribution note, checksum, and removal workflow; procedural stickers remain the default.
 3. Conduct an interactive five-character pass for every personality and action slot on real displays, then tune only from captured behavior evidence.
+
+## After Stage 54
+
+1. Implement Phase A from `docs/ProjectD_V5.1_壁纸主导沉浸式桌面成品计划.md`: freeze visual screenshots and extract glass, spacing, motion, safe-area, and experience-state tokens without changing behavior.
+2. Replace the current always-visible `App.vue` control console with the quiet desktop shell while keeping every existing action reachable through one task surface.
+3. Convert `OverlayPage.vue` into the explicit organizer task state, using spatial group markers and one bottom action strip while preserving ActionPlan preview, conflict, execution, and undo.
+4. Add pre-import Live Photo playback and browser decode probing as part of the wallpaper canvas workflow.
+5. Validate each implementation phase against dark, bright, detailed, low-contrast, left-subject, right-subject, portrait, and ultrawide wallpapers before moving to the next phase.

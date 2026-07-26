@@ -846,3 +846,14 @@
 - [x] Wallpaper Studio offers six templates, five font families, and eight procedural sticker choices.
 - [x] Five character identities, eight personalities, and four bubble moments resolve to a declared action plus visual tone.
 - [x] Open-source credits state that code licensing does not transfer visual-media rights and local user media is not committed automatically.
+
+## Stage 54 - Wallpaper-First Experience Baseline
+
+- [x] The experience plan is reconciled with the current `0.3.0-dev.0` Stage 53 implementation.
+- [x] The plan defines wallpaper, atmosphere, pet, edge-tool, task, Windows, and safety layers with pointer and fallback behavior.
+- [x] Quiet, attention, task, clean, and safe states have measurable coverage and interaction constraints.
+- [x] Wallpaper subject-safe regions, pet anchor lanes, mixed-display adaptation, and bright/dark glass behavior are specified.
+- [x] Organizer, wallpaper studio, weather, pet, AI, scene, settings, and recovery behavior map to current source ownership.
+- [x] Eight visual references cover the requested weather, wallpaper, pet, layout, editor, and multi-display directions.
+- [x] Every visual reference is retained under a docs-only directory with source-purpose and license-boundary notes.
+- [x] The plan distinguishes code-complete work from physical display, DPI, soak, and subjective visual acceptance.
