@@ -1165,4 +1165,9 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Scene save now snapshots the existing per-display wallpaper `fit_mode` mapping instead of inferring one global value from renderer state.
 - Scene apply restores every saved display mapping through the database API, including mappings for temporarily disconnected displays.
 - The scene visual profile uses the primary display's persisted fit mode when available and retains conservative fallback behavior for legacy scenes.
-- Verification: typecheck, main build, and 228/228 Node tests pass; the Stage 67 full Electron E2E and 9/9 visual matrix remain green.
+- Verification: typecheck, main build, and 229/229 Node tests pass; the Stage 67 full Electron E2E and 9/9 visual matrix remain green.
+## Stage 69 - Live Photo Draft Lifecycle Cleanup (Complete)
+
+- Shutdown now clears all temporary Live Photo preview drafts before closing wallpaper, database, and tray resources.
+- The cleanup is bounded and does not alter the confirmed wallpaper library or current wallpaper.
+- Verification: typecheck, main build, and 229/229 Node tests pass.

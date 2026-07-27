@@ -972,5 +972,11 @@
 - [x] Scene apply restores saved display fit modes through the database API.
 - [x] Disconnected display mappings remain persisted for later reconnection.
 - [x] Regression coverage passes for multiple display mappings.
-- [x] Typecheck, main build, and 228 Node tests pass.
+- [x] Typecheck, main build, and 229 Node tests pass.
 - [ ] Physical portrait, ultrawide, mixed-DPI, and hot-plug restoration evidence remains manual.
+## Stage 69 - Live Photo Draft Lifecycle Cleanup
+
+- [x] Temporary Live Photo preview drafts are cleared during guarded shutdown.
+- [x] Preview cleanup does not modify confirmed wallpaper assets.
+- [x] Lifecycle contract coverage passes with the current Node suite.
+- [ ] Real packaged Live Photo and physical display evidence remains manual.

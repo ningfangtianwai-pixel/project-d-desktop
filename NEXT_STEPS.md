@@ -328,3 +328,8 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 2. Verify scene restoration on physical portrait, ultrawide, mixed-DPI, and hot-plug display setups.
 3. Exercise real paired Live Photo media and retain the current wallpaper on malformed or undecodable input.
 4. Keep hardware, signing, artwork, and long-soak evidence separate from the local code baseline.
+## After Stage 69
+
+1. Re-run the full serial Electron E2E after the latest main-process lifecycle change.
+2. Verify real Live Photo pairs and malformed media in packaged runtime.
+3. Continue physical display, DPI, hot-plug, sleep/wake, fullscreen, and long-soak evidence.

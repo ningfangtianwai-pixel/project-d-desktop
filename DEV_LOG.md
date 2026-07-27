@@ -1627,4 +1627,9 @@
 - Corrected scene wallpaper-fit persistence to read the already persisted per-display `display_wallpaper_assignments.fit_mode` values.
 - Scene apply now restores each saved display fit mode through the existing database path; no schema migration was added.
 - Added regression coverage for saving and restoring multiple display fit mappings.
-- Verification: `pnpm typecheck`, `pnpm build:main`, and `pnpm test` (228/228) passed.
+- Verification: `pnpm typecheck`, `pnpm build:main`, and `pnpm test` (229/229) passed.
+## 2026-07-27 - Stage 69 Live Photo Draft Lifecycle Cleanup
+
+- Added explicit `livePhotoImportDrafts.clear()` to guarded shutdown so temporary preview tokens and absolute source references do not survive application exit.
+- Added a source contract test for this lifecycle invariant.
+- Verification: `pnpm typecheck`, `pnpm build:main`, and `pnpm test` (229/229) passed.

@@ -2644,6 +2644,7 @@ async function shutdownSafely(): Promise<void> {
   try {
     const result = await runWithDeadline(async () => {
       cleanDesktopEscapeGuard.disarm();
+      livePhotoImportDrafts.clear();
       stopCleanDesktopPowerBlocker();
       await restoreTaskbar("application-shutdown");
       try {

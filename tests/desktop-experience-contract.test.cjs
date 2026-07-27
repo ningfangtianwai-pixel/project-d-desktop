@@ -70,6 +70,11 @@ test("clean desktop uses a display sleep blocker and restores taskbar state", ()
   assert.doesNotMatch(source, /SendKeys|keybd_event|three.minutes/i);
 });
 
+test("shutdown drops temporary Live Photo preview drafts", () => {
+  const source = read("src/main/main.ts");
+  assert.match(source, /livePhotoImportDrafts\.clear\(\)/);
+});
+
 test("desktop icon recovery does not fail after visibility succeeds only because icon counting times out", () => {
   const source = read("src/main/windows-desktop-icons.ts");
   assert.match(source, /\$count = -1/);
