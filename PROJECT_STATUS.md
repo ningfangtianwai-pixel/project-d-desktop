@@ -1214,3 +1214,10 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - User-imported images, generated PNGs, and Live Photo assets receive a conservative default safe region so pet placement can still use the same recovery path.
 - Added regression coverage for bundled and user-safe-region defaults and for the main-process decoration contract.
 - Verification: 232/232 Node tests, typecheck, main build, and targeted wallpaper/experience tests 12/12 pass.
+
+## Stage 76 - Clean Desktop E2E Lifecycle Stabilization (Complete)
+
+- Increased only the clean-desktop E2E profile's QA auto-quit budget from 60 seconds to 180 seconds.
+- The product's strict active-mode, icon-hidden, taskbar-hidden, power-blocker, and restore assertions remain unchanged.
+- This removes a test-lifecycle race on slower Windows Explorer operations; it does not mask a product failure.
+- Verification: clean-desktop E2E 1/1 and full Electron E2E 11/11 pass.

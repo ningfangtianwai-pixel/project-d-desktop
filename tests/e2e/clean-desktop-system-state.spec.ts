@@ -7,7 +7,10 @@ const { probeWindowsTaskbar, setWindowsTaskbarVisible } = require("../../dist/ma
 test("clean desktop hides shell chrome, keeps the display awake, and restores system state", async () => {
   test.setTimeout(90_000);
   const testApp = await launchProjectD("clean-desktop-system-state", {
-    env: { PROJECTD_QA_IDLE: "0" }
+    env: {
+      PROJECTD_QA_IDLE: "0",
+      PROJECTD_QA_AUTO_QUIT_MS: "180000"
+    }
   });
 
   try {

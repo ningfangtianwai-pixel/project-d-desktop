@@ -1671,3 +1671,10 @@
 - Found that `wallpaperSafeRegion()` existed but was not attached to library items returned by `WallpaperLibraryService.list()`, so the pet's subject-avoidance prompt could never activate for normal bundled wallpapers.
 - Decorated bundled assets with their authored safe regions and user assets with the conservative default region.
 - Verification: `pnpm typecheck`, `pnpm build:main`, targeted tests 12/12, and `pnpm test` 232/232 passed.
+
+## 2026-07-27 - Stage 76 Clean Desktop E2E Lifecycle Stabilization
+
+- Full E2E once observed `safe-mode`/`idle` from the clean-desktop call while the product log showed the complete active -> hidden -> restored sequence.
+- Root cause was the isolated QA profile's 60-second auto-quit timer racing with Windows Explorer icon/taskbar operations, which can take over a minute on this machine.
+- Set the clean-desktop test profile to 180 seconds and retained all functional assertions.
+- Verification: targeted clean-desktop E2E 1/1 and full `pnpm test:e2e` 11/11 passed.

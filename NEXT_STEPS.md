@@ -369,3 +369,9 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 1. Verify safe-region prompts and pet relocation on real bundled and user wallpapers in packaged runtime.
 2. Continue real Live Photo, physical display/DPI, sleep/wake, fullscreen, and long-soak evidence.
 3. Review safe-region defaults for user-provided compositions after real visual inspection; do not infer subjects without an approved vision workflow.
+
+## After Stage 76
+
+1. Keep the clean-desktop E2E budget separate from product runtime timeouts and monitor the real Explorer operation duration.
+2. Continue real Live Photo, physical display/DPI, sleep/wake, fullscreen, and long-soak evidence.
+3. Run the visual matrix again after the next renderer/weather change, not for this test-only adjustment.

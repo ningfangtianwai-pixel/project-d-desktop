@@ -1030,3 +1030,10 @@
 - [x] Pet placement can consume the same safe-region contract for bundled and user assets.
 - [x] Targeted tests 12/12 and Node tests 232/232 pass.
 - [ ] Physical subject-avoidance and relocation evidence remains manual.
+
+## Stage 76 - Clean Desktop E2E Lifecycle Stabilization
+
+- [x] Clean-desktop E2E has a 180-second isolated QA auto-quit budget for slow Explorer operations.
+- [x] Functional assertions still require active mode, hidden icons, hidden taskbar, power blocker, and complete restoration.
+- [x] Targeted clean-desktop E2E passes 1/1.
+- [x] Full Electron E2E passes 11/11.
