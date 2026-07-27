@@ -23,6 +23,18 @@ test("closing a task surface returns to the quiet desktop", () => {
   assert.deepEqual(closeDesktopSurface(), { mode: "quiet", activeSurface: null });
 });
 
+test("renderer exposes an Escape path for clean desktop recovery", () => {
+  const source = read("src/renderer/App.vue");
+  assert.match(source, /experienceMode\.value === "clean"/);
+  assert.match(source, /window\.projectD\.exitCleanDesktop\(\)/);
+});
+
+test("ambient controls keep fixed viewport anchoring", () => {
+  const source = read("src/renderer/styles.css");
+  assert.match(source, /\.app-shell > \.ambient-edge-rail,[\s\S]*position: fixed/);
+  assert.match(source, /\.app-shell > \.ambient-status-capsule/);
+});
+
 test("desktop status maps to an experience mode", () => {
   assert.equal(modeForDesktopStatus("idle"), "quiet");
   assert.equal(modeForDesktopStatus("active"), "task");

@@ -915,3 +915,16 @@
 - [x] Shared safe-region geometry has regression coverage.
 - [x] Typecheck, lint, 223 Node tests, 2 component tests, and production build pass.
 - [ ] Physical left/right subject screenshot evidence remains outstanding.
+## Stage 61 - V5.1 Visual Matrix Capture
+
+- [x] Production-preview capture covers quiet, assistant, organizer, clean, bright-wallpaper, and wallpaper-studio states.
+- [x] Every capture verifies a visible wallpaper stage and records its experience mode.
+- [x] Machine-readable report and screenshots are stored under `artifacts/qa/v51-visual-matrix`.
+- [ ] DPI, physical monitor, GPU, fullscreen, battery, and sleep/wake evidence remains manual.
+## Stage 62 - Ambient Overlay Anchoring Fix
+
+- [x] Quiet-state screenshot confirms the edge rail is narrow and viewport anchored.
+- [x] Quiet-state screenshot confirms the status capsule is compact and top-right anchored.
+- [x] Wallpaper is not hidden behind a full-width dark ambient control panel.
+- [x] Escape exits clean mode through the guarded clean-desktop IPC path.
+- [x] Typecheck, lint, 225 Node tests, 2 component tests, production build, clean-desktop E2E, and visual matrix pass.

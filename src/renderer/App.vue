@@ -210,7 +210,15 @@ function openWallpaperPage(): void {
 }
 
 function handleExperienceKeydown(event: KeyboardEvent): void {
-  if (event.key === "Escape" && activeTaskSurface.value) {
+  if (event.key !== "Escape") return;
+  if (experienceMode.value === "clean") {
+    void window.projectD.exitCleanDesktop().finally(() => {
+      experienceMode.value = "quiet";
+      activeTaskSurface.value = null;
+    });
+    return;
+  }
+  if (activeTaskSurface.value) {
     closeDesktopSurface();
   }
 }

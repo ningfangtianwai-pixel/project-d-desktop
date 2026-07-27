@@ -1119,3 +1119,14 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Confirming uses the existing guarded reset IPC and the wallpaper-aware anchor logic. Dismissing preserves the user's position for that wallpaper.
 - Added a shared safe-region geometry helper and regression coverage for safe versus obstructing positions.
 - Verification: typecheck, lint, 223/223 Node tests, 2/2 component tests, and production build pass.
+## Stage 61 - V5.1 Visual Matrix Capture (Complete)
+
+- Added a repeatable browser visual matrix for quiet, assistant, organizer, clean, bright-wallpaper, and wallpaper-studio states.
+- The matrix uses the production build and records screenshots plus a machine-readable report under `artifacts/qa/v51-visual-matrix`.
+- Every captured state asserts that the wallpaper stage remains visible; physical DPI, monitor, and GPU variants remain separate acceptance evidence.
+## Stage 62 - Ambient Overlay Anchoring Fix (Complete)
+
+- Fixed a real visual regression found by the V5.1 screenshot matrix: the global child-layout rule overrode the edge rail and status capsule `position: fixed`, stretching both into a full-width dark panel.
+- Restored viewport anchoring so quiet and clean states show only the intended narrow rail and compact status capsule while the wallpaper remains unobstructed.
+- Added an Escape exit path for browser/renderer clean state, delegating to the existing guarded clean-desktop IPC.
+- Verification: typecheck, lint, 225/225 Node tests, 2/2 component tests, production build, clean-desktop E2E 1/1, and six-state visual matrix passed.

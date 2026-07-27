@@ -132,6 +132,12 @@ button {
   z-index: 1;
 }
 
+/* The ambient controls are viewport-anchored overlays, not part of the task-flow layout. */
+.app-shell > .ambient-edge-rail,
+.app-shell > .ambient-status-capsule {
+  position: fixed;
+}
+
 .wallpaper-stage {
   position: fixed;
   inset: 0;

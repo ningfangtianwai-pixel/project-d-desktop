@@ -1581,3 +1581,14 @@
 - `移到安全区` delegates to the existing `resetPetWindow` IPC; `保持原位` leaves the saved/manual bounds untouched.
 - Verification: `pnpm typecheck`, `pnpm lint`, `pnpm test` (223/223), `pnpm test:component` (2/2), and `pnpm build` passed.
 - No desktop files, wallpaper assets, credentials, or remote settings were changed.
+## 2026-07-27 - Stage 61 V5.1 Visual Matrix Capture
+
+- Added `scripts/qa-v51-visual-matrix.cjs` and `pnpm qa:v51-visual-matrix`.
+- Captures six production-preview states: quiet dark, assistant task, organizer task, clean wallpaper, bright wallpaper task, and wallpaper studio.
+- Each capture records the active experience mode and verifies the wallpaper stage is visible.
+## 2026-07-27 - Stage 62 Ambient Overlay Anchoring Fix
+
+- Visual inspection of `artifacts/qa/v51-visual-matrix/01-quiet-dark.png` found the edge rail and status capsule stretched across the viewport because `.app-shell > :not(.wallpaper-stage)` overrode their fixed positioning.
+- Added a higher-specificity fixed-position rule for both ambient overlays. The regenerated quiet screenshot shows the wallpaper unobstructed, a 50px rail at the left edge, and the status capsule at the top right.
+- Added renderer Escape handling for clean mode and source-contract coverage for both fixes.
+- Verification: `pnpm typecheck`, `pnpm lint`, `pnpm test` (225/225), `pnpm test:component` (2/2), `pnpm build`, clean-desktop E2E, and `node scripts/qa-v51-visual-matrix.cjs` passed.

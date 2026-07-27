@@ -283,3 +283,14 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 2. Run physical mixed-DPI, portrait/landscape, multi-display hot-plug, fullscreen pause, sleep/wake, and 4/24-hour stability checks.
 3. Verify the reposition prompt on an actual left-subject and right-subject wallpaper, including a user dismissal and a confirmed move.
 4. Add a compact pet task surface only if the existing settings and context menu do not cover character, personality, talk frequency, and action preview ergonomically.
+## After Stage 61
+
+1. Review the six captured images visually and tune only evidence-backed contrast or spacing issues.
+2. Repeat the matrix at 125%, 150%, and 200% browser/DPI emulation after the physical display pass is available.
+3. Add full-screen and battery-profile captures to the weather matrix.
+## After Stage 62
+
+1. Keep the corrected six-image matrix as the visual baseline for future changes.
+2. Add 125%, 150%, and 200% DPI emulation captures, then repeat on physical portrait and external displays.
+3. Run the matrix with rain, snow, fog, and battery-saver profiles and compare the resulting atmosphere rather than only DOM visibility.
+4. Continue manual acceptance for multi-display hot-plug, sleep/wake, fullscreen pause, and long soak.
