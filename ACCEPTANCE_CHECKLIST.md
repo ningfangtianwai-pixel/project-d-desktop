@@ -1057,6 +1057,13 @@
 - [x] Full Electron E2E passes 11/11 and V5.1 visual matrix passes 9/9.
 - [ ] Physical Explorer, sleep/wake, and multi-display evidence remains manual.
 
+## Stage 80 - Real Live Photo QA Fixture
+
+- [x] Wallpaper-library QA imports a real repository H.264 video instead of a header-only placeholder.
+- [x] Real-media import writes and verifies the original, cover, thumbnail, and metadata paths.
+- [x] Invalid video containers are rejected without a successful import.
+- [ ] Packaged Chromium decode evidence with real MP4, MOV, and WebM user pairs remains manual/runtime-specific.
+
 - [x] Older user wallpaper records receive a conservative safe-region fallback during listing.
 - [x] No schema migration or destructive asset rewrite is required.
 - [x] Targeted tests 12/12 and Node tests 232/232 pass.

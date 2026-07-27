@@ -1241,3 +1241,9 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Taskbar synchronization now uses a bounded eight-attempt retry window; probing remains single-shot and the recovery watchdog remains bounded.
 - No Explorer process termination or taskbar ownership change was introduced.
 - Verification: 234/234 Node tests, clean-desktop E2E 1/1, full Electron E2E 11/11, V5.1 visual matrix 9/9, typecheck, component tests 2/2, and production build pass.
+
+## Stage 80 - Real Live Photo QA Fixture (Complete)
+
+- Replaced the wallpaper-library QA script's synthetic 32-byte MP4 with the repository's real H.264 4K sample, so import, copy, cover, thumbnail, metadata, and cleanup are exercised against actual media.
+- Kept a separate malformed MP4 header-only fixture to verify rejected media remains non-destructive.
+- This improves automated evidence but does not replace packaged Chromium decode confirmation with a user-supplied Live Photo pair.

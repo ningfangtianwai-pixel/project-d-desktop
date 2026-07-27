@@ -395,3 +395,9 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 2. Verify packaged style-only wallpaper restore, per-display assignment, and legacy profile fallback.
 3. Continue physical display/DPI, Live Photo, sleep/wake, fullscreen, battery, and 4/24-hour soak evidence.
 4. Keep the 523.90 kB renderer entry warning as a measured code-splitting follow-up.
+
+## After Stage 80
+
+1. Run the wallpaper-library QA script against the real H.264 fixture and retain its output.
+2. Exercise real MP4, MOV, and WebM Live Photo pairs in the packaged renderer; Chromium decode evidence remains manual/runtime-specific.
+3. Continue physical display/DPI, sleep/wake, fullscreen, battery, and 4/24-hour soak evidence.

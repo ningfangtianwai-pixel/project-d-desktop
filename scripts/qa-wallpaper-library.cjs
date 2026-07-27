@@ -22,12 +22,9 @@ async function main() {
     assert.ok(service.list().some((asset) => asset.id === imported.id));
     assert.ok(fs.existsSync(service.resolveAssetPath(imported.id, "original")));
 
-    const pairedVideo = path.join(root, "fixture.mp4");
-    const mp4Fixture = Buffer.alloc(32);
-    mp4Fixture.writeUInt32BE(32, 0);
-    mp4Fixture.write("ftyp", 4, "ascii");
-    mp4Fixture.write("isom", 8, "ascii");
-    fs.writeFileSync(pairedVideo, mp4Fixture);
+    const pairedVideo = path.join(__dirname, "..", "assets", "wallpapers", "user", "cloud-light.mp4");
+    assert.ok(fs.existsSync(pairedVideo), `real Live Photo QA video is missing: ${pairedVideo}`);
+    assert.ok(fs.statSync(pairedVideo).size > 100_000, "real Live Photo QA video is unexpectedly small");
     const livePhoto = await service.importLivePhoto(source, pairedVideo);
     assert.equal(livePhoto.type, "video");
     assert.equal(livePhoto.livePhoto, true);
@@ -56,6 +53,10 @@ async function main() {
     service.delete(generated.id);
     assert.equal(database.getDisplayWallpaperAssignments()["qa-display"], undefined);
     assert.equal(service.list().some((asset) => asset.id === imported.id), false);
+
+    const malformedVideo = path.join(root, "malformed.mp4");
+    fs.writeFileSync(malformedVideo, Buffer.from("not-a-video-container", "ascii"));
+    await assert.rejects(() => service.importLivePhoto(source, malformedVideo), /invalid|unsupported/i);
     database.close();
     process.stdout.write(JSON.stringify({ passed: true, importedId: imported.id }) + "\n");
   } finally {

@@ -1700,3 +1700,9 @@
 - The failure was reproduced from the isolated log, fixed, then re-run rather than being ignored.
 - Commands and results: targeted clean-desktop E2E 1/1; `pnpm test` 234/234; full `pnpm test:e2e` 11/11; `pnpm qa:v51-visual-matrix` 9/9; typecheck, component tests 2/2, and production build pass.
 - Existing warning remains: Vite renderer entry is 523.90 kB after minification.
+
+## 2026-07-27 - Stage 80 Real Live Photo QA Fixture
+
+- Audited `scripts/qa-wallpaper-library.cjs` and found its MP4 fixture was only a valid-looking 32-byte `ftyp` header.
+- Switched the success path to `assets/wallpapers/user/cloud-light.mp4`, a real 4K H.264 file already present in the repository, and retained a malformed header-only file for the rejection path.
+- The automated check now validates real-media import and cleanup without treating a container header as decodability proof.
