@@ -108,6 +108,27 @@ export const WALLPAPER_LIBRARY: WallpaperLibraryItem[] = [
   }
 ];
 
+/** Resolve the media that the wallpaper stage should show for a display. */
+export function resolveWallpaperForDisplay(
+  library: WallpaperLibraryItem[],
+  style: string,
+  currentIndex: number,
+  preferredId?: string | null
+): WallpaperLibraryItem | null {
+  if (preferredId) {
+    const preferred = library.find((item) => item.id === preferredId);
+    if (preferred) return preferred;
+  }
+  if (style === "user") return null;
+
+  const bundled = library.filter((item) => item.source !== "user");
+  const matches = bundled.filter((item) => item.style === style);
+  const candidates = matches.length > 0 ? matches : bundled;
+  if (candidates.length === 0) return null;
+  const safeIndex = Number.isFinite(currentIndex) ? Math.max(0, Math.trunc(currentIndex)) : 0;
+  return candidates[safeIndex % candidates.length] ?? null;
+}
+
 const DEFAULT_SAFE_REGION: WallpaperSafeRegion = {
   left: 0.08,
   top: 0.12,

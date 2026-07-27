@@ -11,6 +11,7 @@ import {
 } from "@shared/wallpaper-player";
 import type { EffectivePerformanceProfile, RuntimePauseSnapshot } from "@shared/runtime";
 import { wallpaperRenderProfile, wallpaperRenderScale, type WallpaperRenderProfile } from "@shared/wallpaper-render-scale";
+import { resolveWallpaperForDisplay } from "@shared/wallpaper-library";
 
 const host = ref<HTMLDivElement | null>(null);
 let app: Application | null = null;
@@ -444,10 +445,14 @@ async function refreshRuntime(): Promise<void> {
   const displayId = new URLSearchParams(window.location.search).get("displayId");
   const assignedId = nextDisplays.find((display) => display.id === displayId)?.wallpaperId ?? null;
   displayFitMode.value = nextDisplays.find((display) => display.id === displayId)?.fitMode ?? "cover";
-  const dynamicId = assignedId ?? settings?.wallpaper.dynamicId ?? "";
-  const userWallpaper = wallpaperLibrary.find((item) => item.id === dynamicId);
-  if ((assignedId || styleId === "user") && userWallpaper) {
-    await selectWallpaper(userWallpaper);
+  const wallpaper = resolveWallpaperForDisplay(
+    wallpaperLibrary,
+    styleId,
+    settings?.wallpaper.currentIndex ?? 0,
+    assignedId ?? settings?.wallpaper.dynamicId
+  );
+  if (wallpaper) {
+    await selectWallpaper(wallpaper);
   } else {
     wallpaperLayers.value = [];
   }

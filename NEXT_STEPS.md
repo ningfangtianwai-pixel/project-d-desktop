@@ -381,3 +381,17 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 1. Verify safe-region prompts and pet relocation for legacy user wallpapers after upgrading a real profile.
 2. Continue real Live Photo, physical display/DPI, sleep/wake, fullscreen, and long-soak evidence.
 3. Keep user asset metadata migration non-destructive unless a future explicit repair tool is added.
+
+## After Stage 78
+
+1. Run packaged Electron E2E and the V5.1 visual matrix after the style-only wallpaper resolver change.
+2. Verify style-only scene restore on a real packaged wallpaper host, including per-display assignments and a legacy profile with no `dynamicId`.
+3. Continue physical display/DPI, Live Photo, sleep/wake, fullscreen, battery, and 4/24-hour soak evidence.
+4. Keep the 523.90 kB renderer entry warning as a measured code-splitting follow-up.
+
+## After Stage 79
+
+1. Repeat clean-desktop recovery on a second real Explorer state and retain the taskbar timing log.
+2. Verify packaged style-only wallpaper restore, per-display assignment, and legacy profile fallback.
+3. Continue physical display/DPI, Live Photo, sleep/wake, fullscreen, battery, and 4/24-hour soak evidence.
+4. Keep the 523.90 kB renderer entry warning as a measured code-splitting follow-up.

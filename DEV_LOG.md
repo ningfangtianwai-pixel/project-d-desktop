@@ -1684,3 +1684,19 @@
 - Added a listing-time fallback for older database user-wallpaper records that predate safe-region metadata.
 - The fallback is in-memory and conservative; it does not rewrite or alter the user's stored asset record.
 - Verification: targeted tests 12/12, Node tests 232/232, typecheck, and main build passed.
+
+## 2026-07-27 - Stage 78 Style-Only Wallpaper Runtime Resolution
+
+- Audited `WallpaperStage` and found that style-only settings could render a generated palette while the wallpaper host was expected to show a real local asset.
+- Added `resolveWallpaperForDisplay()` in the shared wallpaper catalog and wired the renderer to resolve display assignment, selected asset, matching bundled style, and bounded fallback in that order.
+- Added a regression test for style-only anime resolution, index rotation, explicit asset precedence, and safe `user` fallback.
+- Commands and results: `pnpm build:main` pass; targeted wallpaper tests pass; `pnpm test` 233/233; `pnpm typecheck` pass; `pnpm test:component` 2/2; `pnpm build` pass.
+- Existing warning remains: Vite renderer entry is 523.90 kB after minification; this is a performance follow-up, not a build failure.
+
+## 2026-07-27 - Stage 79 Taskbar Restore Race Recovery
+
+- The first post-wallpaper change full E2E run exceeded its test timeout in clean-desktop recovery. Product logs showed icon restoration and clean-mode exit succeeded, but one taskbar restore PowerShell call returned exit code 5 before the later shutdown restore.
+- Added bounded retry handling to `buildWindowsTaskbarSyncScript`; normal set operations use eight attempts with short waits, while probes remain non-mutating and single-shot.
+- The failure was reproduced from the isolated log, fixed, then re-run rather than being ignored.
+- Commands and results: targeted clean-desktop E2E 1/1; `pnpm test` 234/234; full `pnpm test:e2e` 11/11; `pnpm qa:v51-visual-matrix` 9/9; typecheck, component tests 2/2, and production build pass.
+- Existing warning remains: Vite renderer entry is 523.90 kB after minification.

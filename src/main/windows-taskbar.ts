@@ -11,7 +11,7 @@ export interface WindowsTaskbarState {
 
 export async function setWindowsTaskbarVisible(visible: boolean): Promise<WindowsTaskbarState> {
   if (process.platform !== "win32") return { visible: true, taskbarCount: 0 };
-  const { stdout } = await execFileAsync("powershell.exe", powershellArguments(buildWindowsTaskbarSyncScript(visible)), {
+  const { stdout } = await execFileAsync("powershell.exe", powershellArguments(buildWindowsTaskbarSyncScript(visible, 8)), {
     encoding: "utf8",
     windowsHide: true,
     timeout: POWERSHELL_TIMEOUT_MS,
@@ -35,8 +35,9 @@ export async function probeWindowsTaskbar(): Promise<WindowsTaskbarState> {
   return parseTaskbarState(stdout);
 }
 
-export function buildWindowsTaskbarSyncScript(visible: boolean | null): string {
+export function buildWindowsTaskbarSyncScript(visible: boolean | null, attempts = 1): string {
   const desired = visible === null ? "$null" : visible ? "$true" : "$false";
+  const boundedAttempts = Math.max(1, Math.min(12, Math.floor(attempts)));
   return `
 $ErrorActionPreference = 'Stop'
 Add-Type @"
@@ -63,17 +64,31 @@ public static class ProjectDTaskbar {
 }
 "@
 $desired = ${desired}
-$bars = [ProjectDTaskbar]::FindTaskbars()
-if ($bars.Count -eq 0) { throw 'Windows taskbar windows were not found' }
-if ($null -ne $desired) {
-  $command = if ($desired) { 5 } else { 0 }
-  foreach ($bar in $bars) { [void][ProjectDTaskbar]::ShowWindowAsync($bar, $command) }
-  Start-Sleep -Milliseconds 180
+$state = $null
+$lastError = ''
+for ($attempt = 1; $attempt -le ${boundedAttempts}; $attempt++) {
+  try {
+    $bars = [ProjectDTaskbar]::FindTaskbars()
+    if ($bars.Count -eq 0) { throw 'Windows taskbar windows were not found' }
+    if ($null -ne $desired) {
+      $command = if ($desired) { 5 } else { 0 }
+      foreach ($bar in $bars) { [void][ProjectDTaskbar]::ShowWindowAsync($bar, $command) }
+      Start-Sleep -Milliseconds 250
+    }
+    $primary = [ProjectDTaskbar]::FindWindow('Shell_TrayWnd', $null)
+    $isVisible = $primary -ne [IntPtr]::Zero -and [ProjectDTaskbar]::IsWindowVisible($primary)
+    $state = [pscustomobject]@{ visible = $isVisible; taskbarCount = $bars.Count }
+    if ($null -eq $desired -or $isVisible -eq $desired) { break }
+    $lastError = "Windows taskbar visibility did not change to $desired"
+  } catch {
+    $lastError = $_.Exception.Message
+  }
+  if ($attempt -lt ${boundedAttempts}) { Start-Sleep -Milliseconds 500 }
 }
-$primary = [ProjectDTaskbar]::FindWindow('Shell_TrayWnd', $null)
-$isVisible = $primary -ne [IntPtr]::Zero -and [ProjectDTaskbar]::IsWindowVisible($primary)
-[pscustomobject]@{ visible = $isVisible; taskbarCount = $bars.Count } | ConvertTo-Json -Compress
-if ($null -ne $desired -and $isVisible -ne $desired) { exit 5 }
+if ($null -eq $state -or ($null -ne $desired -and $state.visible -ne $desired)) {
+  throw "Windows taskbar recovery exhausted retries: $lastError"
+}
+$state | ConvertTo-Json -Compress
 `.trim();
 }
 

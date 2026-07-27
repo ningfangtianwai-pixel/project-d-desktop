@@ -1040,6 +1040,23 @@
 
 ## Stage 77 - Legacy User Wallpaper Safe-Region Recovery
 
+- [x] Existing user wallpaper records without safe-region metadata receive a conservative in-memory fallback during library listing.
+
+## Stage 78 - Style-Only Wallpaper Runtime Resolution
+
+- [x] Wallpaper stage resolves a real bundled asset when style/index are saved without a `dynamicId`.
+- [x] Per-display assignment and explicit selected asset take precedence over style fallback.
+- [x] User-library mode without an asset remains a safe empty state rather than selecting an unrelated wallpaper.
+- [x] Resolver regression coverage passes with the full Node suite at 233/233.
+
+## Stage 79 - Taskbar Restore Race Recovery
+
+- [x] Taskbar visibility synchronization retries slow Explorer/Shell transitions within a bounded budget.
+- [x] The retry path does not restart or terminate Explorer.
+- [x] Clean-desktop E2E passes 1/1 after reproducing and fixing the restore race.
+- [x] Full Electron E2E passes 11/11 and V5.1 visual matrix passes 9/9.
+- [ ] Physical Explorer, sleep/wake, and multi-display evidence remains manual.
+
 - [x] Older user wallpaper records receive a conservative safe-region fallback during listing.
 - [x] No schema migration or destructive asset rewrite is required.
 - [x] Targeted tests 12/12 and Node tests 232/232 pass.

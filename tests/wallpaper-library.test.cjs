@@ -3,7 +3,13 @@ const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
 
-const { WALLPAPER_LIBRARY, WALLPAPER_STYLES, wallpaperDisplayLabel, wallpaperSafeRegion } = require("../dist/shared/wallpaper-library.js");
+const {
+  WALLPAPER_LIBRARY,
+  WALLPAPER_STYLES,
+  wallpaperDisplayLabel,
+  wallpaperSafeRegion,
+  resolveWallpaperForDisplay
+} = require("../dist/shared/wallpaper-library.js");
 
 test("wallpaper library has at least two real local assets for every required style", () => {
   assert.equal(WALLPAPER_STYLES.length, 6);
@@ -39,4 +45,14 @@ test("wallpaper safe regions provide a stable pet anchor for bundled and user as
     bottom: 0.94,
     petAnchor: "right"
   });
+});
+
+test("wallpaper stage resolves a real bundled asset when only a style is saved", () => {
+  const anime = resolveWallpaperForDisplay(WALLPAPER_LIBRARY, "anime", 0, null);
+  assert.equal(anime?.id, "anime-lakeside-station");
+  const second = resolveWallpaperForDisplay(WALLPAPER_LIBRARY, "anime", 1, null);
+  assert.equal(second?.id, "anime-seaside-town");
+  const explicit = resolveWallpaperForDisplay(WALLPAPER_LIBRARY, "anime", 0, "landscape-coastal-cliffs");
+  assert.equal(explicit?.id, "landscape-coastal-cliffs");
+  assert.equal(resolveWallpaperForDisplay(WALLPAPER_LIBRARY, "user", 0, null), null);
 });

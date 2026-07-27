@@ -1227,3 +1227,17 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Existing database wallpaper records without a safe region now receive the same conservative default during library listing.
 - This closes the upgrade path for older user assets without a schema migration or destructive rewrite.
 - Verification: 232/232 Node tests, typecheck, main build, and targeted wallpaper/experience tests 12/12 pass.
+
+## Stage 78 - Style-Only Wallpaper Runtime Resolution (Complete)
+
+- Fixed the wallpaper stage path where a saved style and index without a `dynamicId` fell back to a generated gradient instead of a real local wallpaper.
+- Added a shared resolver with explicit precedence: per-display assignment, selected asset, matching bundled style, then bounded bundled fallback; `user` with no asset remains an intentional empty-state fallback.
+- Added regression coverage for style-only selection, rotation index, explicit display asset precedence, and the user-library empty state.
+- Verification: 233/233 Node tests, 2/2 component tests, typecheck, production build, and existing renderer bundle warning only.
+
+## Stage 79 - Taskbar Restore Race Recovery (Complete)
+
+- Fixed a real clean-desktop recovery race where Windows taskbar restoration could fail while Explorer was still applying the shell visibility transition.
+- Taskbar synchronization now uses a bounded eight-attempt retry window; probing remains single-shot and the recovery watchdog remains bounded.
+- No Explorer process termination or taskbar ownership change was introduced.
+- Verification: 234/234 Node tests, clean-desktop E2E 1/1, full Electron E2E 11/11, V5.1 visual matrix 9/9, typecheck, component tests 2/2, and production build pass.
