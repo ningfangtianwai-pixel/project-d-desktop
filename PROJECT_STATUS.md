@@ -1221,3 +1221,9 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - The product's strict active-mode, icon-hidden, taskbar-hidden, power-blocker, and restore assertions remain unchanged.
 - This removes a test-lifecycle race on slower Windows Explorer operations; it does not mask a product failure.
 - Verification: clean-desktop E2E 1/1 and full Electron E2E 11/11 pass.
+
+## Stage 77 - Legacy User Wallpaper Safe-Region Recovery (Complete)
+
+- Existing database wallpaper records without a safe region now receive the same conservative default during library listing.
+- This closes the upgrade path for older user assets without a schema migration or destructive rewrite.
+- Verification: 232/232 Node tests, typecheck, main build, and targeted wallpaper/experience tests 12/12 pass.

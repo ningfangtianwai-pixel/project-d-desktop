@@ -83,5 +83,6 @@ test("wallpaper library attaches safe regions before pet placement can use them"
   const source = read("src/main/wallpaper-library-service.ts");
   assert.match(source, /WALLPAPER_LIBRARY, wallpaperSafeRegion/);
   assert.match(source, /safeRegion: wallpaperSafeRegion\(item\.id\)/);
+  assert.match(source, /item\.safeRegion \?\? wallpaperSafeRegion\(null\)/);
   assert.match(source, /safeRegion: wallpaperSafeRegion\(null\)/);
 });

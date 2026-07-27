@@ -1678,3 +1678,9 @@
 - Root cause was the isolated QA profile's 60-second auto-quit timer racing with Windows Explorer icon/taskbar operations, which can take over a minute on this machine.
 - Set the clean-desktop test profile to 180 seconds and retained all functional assertions.
 - Verification: targeted clean-desktop E2E 1/1 and full `pnpm test:e2e` 11/11 passed.
+
+## 2026-07-27 - Stage 77 Legacy User Wallpaper Safe-Region Recovery
+
+- Added a listing-time fallback for older database user-wallpaper records that predate safe-region metadata.
+- The fallback is in-memory and conservative; it does not rewrite or alter the user's stored asset record.
+- Verification: targeted tests 12/12, Node tests 232/232, typecheck, and main build passed.

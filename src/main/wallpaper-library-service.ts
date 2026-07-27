@@ -39,7 +39,11 @@ export class WallpaperLibraryService {
 
   list(): WallpaperLibraryItem[] {
     const bundled = WALLPAPER_LIBRARY.map((item) => ({ ...item, safeRegion: wallpaperSafeRegion(item.id) }));
-    return [...bundled, ...this.database.getUserMediaAssets()];
+    const userAssets = this.database.getUserMediaAssets().map((item) => ({
+      ...item,
+      safeRegion: item.safeRegion ?? wallpaperSafeRegion(null)
+    }));
+    return [...bundled, ...userAssets];
   }
 
   async importImage(sourcePath: string): Promise<WallpaperLibraryItem> {

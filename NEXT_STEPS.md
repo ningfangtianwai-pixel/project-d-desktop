@@ -375,3 +375,9 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 1. Keep the clean-desktop E2E budget separate from product runtime timeouts and monitor the real Explorer operation duration.
 2. Continue real Live Photo, physical display/DPI, sleep/wake, fullscreen, and long-soak evidence.
 3. Run the visual matrix again after the next renderer/weather change, not for this test-only adjustment.
+
+## After Stage 77
+
+1. Verify safe-region prompts and pet relocation for legacy user wallpapers after upgrading a real profile.
+2. Continue real Live Photo, physical display/DPI, sleep/wake, fullscreen, and long-soak evidence.
+3. Keep user asset metadata migration non-destructive unless a future explicit repair tool is added.

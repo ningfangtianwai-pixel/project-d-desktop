@@ -1037,3 +1037,10 @@
 - [x] Functional assertions still require active mode, hidden icons, hidden taskbar, power blocker, and complete restoration.
 - [x] Targeted clean-desktop E2E passes 1/1.
 - [x] Full Electron E2E passes 11/11.
+
+## Stage 77 - Legacy User Wallpaper Safe-Region Recovery
+
+- [x] Older user wallpaper records receive a conservative safe-region fallback during listing.
+- [x] No schema migration or destructive asset rewrite is required.
+- [x] Targeted tests 12/12 and Node tests 232/232 pass.
+- [ ] Upgrade-profile visual evidence remains manual.
