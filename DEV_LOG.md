@@ -1553,3 +1553,11 @@
 - Updated `scripts/qa-user-reported-ui.cjs` to open the AI task surface before chat checks. Resolved duplicate button-title regressions by giving bottom actions unique accessible labels.
 - Verification: typecheck, lint, Node tests 220/220, component tests 2/2, production build, `pnpm qa:user-reported-ui`, first-launch/AI-fallback/settings-persistence E2E (3/3), and organizer-safe-restore E2E passed.
 - Renderer bundle remains below 510 kB with the existing Vite warning; no new runtime dependency was introduced.
+
+## 2026-07-27 - Stage 57 Wallpaper Studio Task Canvas
+
+- Replaced the route-only `WallpaperPage.vue` with a wallpaper-first studio workbench: preview canvas, video controls, filmstrip, current asset inspector, display assignment, apply, export, delete, and import actions.
+- Added a renderer-side video decode probe after the privileged Live Photo import. Invalid playback removes only the newly imported asset and leaves the active wallpaper untouched.
+- Kept all file selection and storage operations behind existing Settings-only IPC; no renderer filesystem access was added.
+- Verification: `pnpm typecheck`, `pnpm lint`, `pnpm test` (221/221), `pnpm test:component` (2/2), `pnpm build`, and `pnpm qa:wallpaper-library` passed.
+- Vite reports a 518.90 kB renderer chunk after the studio UI; this remains a performance follow-up, not a build failure.

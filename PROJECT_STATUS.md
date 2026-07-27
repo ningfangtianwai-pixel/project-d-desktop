@@ -1091,3 +1091,11 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - UI regression scripts were updated to enter the assistant task surface before testing chat history and to use unique action labels.
 - Verification passes: typecheck, lint, 220/220 Node tests, 2/2 component tests, production build, user-reported UI QA, three critical Electron E2E scenarios, and organizer safe-restore E2E.
 - The known host-level `clean-desktop-system-state` PowerShell probe timeout remains separate from this renderer work.
+
+## Stage 57 - Wallpaper Studio Task Canvas (Complete)
+
+- Replaced the wallpaper route placeholder with a wallpaper-first studio: large preview canvas, filmstrip library, current-asset inspector, media type badges, and direct desktop apply.
+- Added user/bundled library separation, original export, user-asset deletion, multi-display wallpaper assignment, and compact safe-media notes.
+- Live Photo import now combines main-process size/container/cover validation with a renderer video decode probe. A failed probe deletes the newly imported asset and keeps the previous wallpaper.
+- Verification passes: typecheck, lint, 221/221 Node tests, 2/2 component tests, production build, and wallpaper-library import QA.
+- The remaining Phase D gap is a true pre-copy chooser preview; current selection happens in the privileged dialog, then decode is verified before application.

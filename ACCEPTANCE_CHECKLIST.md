@@ -879,3 +879,13 @@
 - [x] Typecheck, lint, 220 Node tests, 2 component tests, production build, browser UI QA, and critical Electron E2E pass.
 - [ ] Full Electron E2E remains blocked only by the Windows taskbar/icon PowerShell probe timeout.
 - [ ] Wallpaper task canvas, Live Photo decode probe, and visual profiles remain for Phase D.
+
+## Stage 57 - Wallpaper Studio Task Canvas
+
+- [x] Wallpaper route provides a large wallpaper preview canvas rather than a stage-only placeholder.
+- [x] Filmstrip selection identifies the current asset and applied asset.
+- [x] Inspector supports direct apply, original export, user-asset deletion, and multi-display assignment.
+- [x] Live Photo import validates metadata/container, probes browser decoding, and preserves the previous wallpaper on failure.
+- [x] Wallpaper-library import QA passes with cleanup of the temporary user asset.
+- [x] Typecheck, lint, 221 Node tests, 2 component tests, and production build pass.
+- [ ] Pre-copy chooser preview and crop/safe-region visual profiles remain open.

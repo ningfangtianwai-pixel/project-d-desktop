@@ -44,3 +44,14 @@ test("renderer keeps task surfaces explicit and preserves the wallpaper stage", 
   assert.match(styles, /data-task-surface="assistant"/);
   assert.match(styles, /wallpaper-task-card/);
 });
+
+test("wallpaper studio keeps the current asset safe during media probing", () => {
+  const source = read("src/renderer/views/WallpaperPage.vue");
+  assert.match(source, /wallpaper-filmstrip/);
+  assert.match(source, /wallpaper-inspector/);
+  assert.match(source, /importLivePhotoWallpaper/);
+  assert.match(source, /probeVideo/);
+  assert.match(source, /deleteWallpaper\(imported\.id\)/);
+  assert.match(source, /保留原壁纸/);
+  assert.match(source, /assignWallpaperToDisplay/);
+});

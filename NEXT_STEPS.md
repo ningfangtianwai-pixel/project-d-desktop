@@ -256,3 +256,11 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 3. Add wallpaper visual profiles for subject-safe regions, crop mode, display assignment, and bright/dark contrast checks.
 4. Run the full Electron suite again after the wallpaper task surface lands; separately stabilize the Windows taskbar/icon PowerShell probe.
 5. Continue to Phase E only after the wallpaper task surface passes damaged-media, portrait, ultrawide, and mixed-DPI checks.
+
+## After Stage 57
+
+1. Add a real pre-copy Live Photo chooser preview or a bounded temporary staging path so cover/video playback can be confirmed before permanent library writes.
+2. Add wallpaper crop/fit controls and subject-safe region metadata for portrait, ultrawide, and mixed-DPI displays.
+3. Add screenshot checks for quiet, bright, high-detail, low-contrast, and video-poster studio states.
+4. Split the renderer chunk only after measuring the studio and Pixi contributions; preserve startup and recovery timing.
+5. Begin Phase E with dynamic pet anchor lanes and verify pet placement against the selected wallpaper safe region.

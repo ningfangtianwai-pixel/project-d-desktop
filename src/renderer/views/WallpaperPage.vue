@@ -1,9 +1,184 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
+import { ArrowLeft, Check, Download, Film, Image as ImageIcon, Monitor, Pause, Play, Plus, RefreshCcw, Trash2, Upload } from "lucide-vue-next";
 import WallpaperStage from "../components/WallpaperStage.vue";
+import { wallpaperDisplayLabel } from "@shared/wallpaper-library";
+import type { SettingsSnapshot, WallpaperDisplayInfo, WallpaperLibraryItem } from "@shared/types";
 
-onMounted(() => {
+const wallpaperLibrary = ref<WallpaperLibraryItem[]>([]);
+const displays = ref<WallpaperDisplayInfo[]>([]);
+const settings = ref<SettingsSnapshot | null>(null);
+const selectedId = ref<string | null>(null);
+const statusMessage = ref("");
+const busy = ref(false);
+const previewPlaying = ref(false);
+const previewVideo = ref<HTMLVideoElement | null>(null);
+
+const selectedWallpaper = computed(() => wallpaperLibrary.value.find((item) => item.id === selectedId.value) ?? null);
+const userWallpapers = computed(() => wallpaperLibrary.value.filter((item) => item.source === "user"));
+const bundledWallpapers = computed(() => wallpaperLibrary.value.filter((item) => item.source !== "user"));
+
+function assetUrl(item: WallpaperLibraryItem, variant: "original" | "thumbnail" | "cover" = "thumbnail"): string {
+  if (item.source === "user") {
+    return `projectd-media://wallpaper/${encodeURIComponent(item.id)}${variant === "original" ? "" : `?variant=${variant}`}`;
+  }
+  const file = variant === "cover" ? item.posterFile ?? item.file : item.file;
+  return `${window.location.protocol === "file:" ? "./wallpapers/" : "/wallpapers/"}${file}`;
+}
+
+function selectWallpaper(item: WallpaperLibraryItem): void {
+  selectedId.value = item.id;
+  previewPlaying.value = false;
+}
+
+function setStatus(message: string): void {
+  statusMessage.value = message;
+  window.setTimeout(() => {
+    if (statusMessage.value === message) statusMessage.value = "";
+  }, 4200);
+}
+
+async function refreshLibrary(): Promise<void> {
+  const [nextLibrary, nextSettings, nextDisplays] = await Promise.all([
+    window.projectD.getWallpaperLibrary(),
+    window.projectD.getSettings(),
+    window.projectD.getWallpaperDisplays()
+  ]);
+  wallpaperLibrary.value = nextLibrary;
+  settings.value = nextSettings;
+  displays.value = nextDisplays;
+  selectedId.value = nextSettings.wallpaper.dynamicId ?? nextLibrary[0]?.id ?? null;
+}
+
+async function applySelected(): Promise<void> {
+  if (!selectedWallpaper.value || busy.value) return;
+  busy.value = true;
+  try {
+    settings.value = await window.projectD.applyWallpaper(selectedWallpaper.value.id);
+    await refreshLibrary();
+    setStatus(`已应用：${wallpaperDisplayLabel(selectedWallpaper.value)}`);
+  } catch (error) {
+    setStatus(`应用失败，已保留当前壁纸：${error instanceof Error ? error.message : String(error)}`);
+  } finally {
+    busy.value = false;
+  }
+}
+
+async function importWallpaper(): Promise<void> {
+  if (busy.value) return;
+  busy.value = true;
+  try {
+    const imported = await window.projectD.importWallpaper();
+    if (!imported) return;
+    await refreshLibrary();
+    selectedId.value = imported.id;
+    setStatus(`已加入壁纸库：${imported.label}`);
+  } catch (error) {
+    setStatus(`导入失败：${error instanceof Error ? error.message : String(error)}`);
+  } finally {
+    busy.value = false;
+  }
+}
+
+async function probeVideo(item: WallpaperLibraryItem): Promise<boolean> {
+  if (item.type !== "video") return true;
+  const video = document.createElement("video");
+  video.muted = true;
+  video.preload = "metadata";
+  video.src = assetUrl(item, "original");
+  const loaded = new Promise<boolean>((resolve) => {
+    const finish = (result: boolean) => {
+      video.onloadeddata = null;
+      video.onerror = null;
+      resolve(result);
+    };
+    video.onloadeddata = () => finish(video.videoWidth > 0 && video.videoHeight > 0);
+    video.onerror = () => finish(false);
+    window.setTimeout(() => finish(false), 8000);
+  });
+  video.load();
+  const result = await loaded;
+  video.removeAttribute("src");
+  video.load();
+  return result;
+}
+
+async function importLivePhoto(): Promise<void> {
+  if (busy.value) return;
+  busy.value = true;
+  try {
+    const imported = await window.projectD.importLivePhotoWallpaper();
+    if (!imported) return;
+    const decodes = await probeVideo(imported);
+    if (!decodes) {
+      await window.projectD.deleteWallpaper(imported.id).catch(() => undefined);
+      setStatus("Live Photo 视频无法解码，已保留原壁纸并清理失败导入");
+      return;
+    }
+    await refreshLibrary();
+    selectedId.value = imported.id;
+    setStatus(`Live Photo 已通过解码探测：${imported.label}`);
+  } catch (error) {
+    setStatus(`Live Photo 导入失败：${error instanceof Error ? error.message : String(error)}`);
+  } finally {
+    busy.value = false;
+  }
+}
+
+async function deleteSelected(): Promise<void> {
+  const item = selectedWallpaper.value;
+  if (!item || item.source !== "user" || busy.value) return;
+  if (!window.confirm(`从壁纸库删除“${item.label}”？不会删除原始桌面文件。`)) return;
+  busy.value = true;
+  try {
+    await window.projectD.deleteWallpaper(item.id);
+    await refreshLibrary();
+    setStatus(`已删除：${item.label}`);
+  } catch (error) {
+    setStatus(`删除失败：${error instanceof Error ? error.message : String(error)}`);
+  } finally {
+    busy.value = false;
+  }
+}
+
+async function exportSelected(): Promise<void> {
+  if (!selectedWallpaper.value || busy.value) return;
+  const result = await window.projectD.exportWallpaperOriginal(selectedWallpaper.value.id);
+  if (!result.cancelled) setStatus(`已导出：${result.filename ?? selectedWallpaper.value.label}`);
+}
+
+async function assignDisplay(display: WallpaperDisplayInfo, wallpaperId: string): Promise<void> {
+  try {
+    displays.value = await window.projectD.assignWallpaperToDisplay(display.id, wallpaperId || null);
+    setStatus(`${display.label} 已更新壁纸分配`);
+  } catch (error) {
+    setStatus(`显示器分配失败：${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+async function togglePreview(): Promise<void> {
+  const video = previewVideo.value;
+  if (!video) return;
+  if (video.paused) {
+    await video.play().catch(() => undefined);
+    previewPlaying.value = !video.paused;
+  } else {
+    video.pause();
+    previewPlaying.value = false;
+  }
+}
+
+function goBack(): void {
+  window.location.hash = "";
+}
+
+onMounted(async () => {
   document.body.classList.add("wallpaper-window-body");
+  try {
+    await refreshLibrary();
+  } catch (error) {
+    setStatus(`壁纸库暂时不可用：${error instanceof Error ? error.message : String(error)}`);
+  }
 });
 
 onUnmounted(() => {
@@ -12,7 +187,88 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="wallpaper-page">
+  <main class="wallpaper-page wallpaper-studio-page">
     <WallpaperStage />
+    <header class="wallpaper-studio-header">
+      <button type="button" class="wallpaper-back-button" title="返回桌面" @click="goBack"><ArrowLeft :size="17" /><span>返回桌面</span></button>
+      <div class="wallpaper-studio-title"><span>Project D / Wallpaper Studio</span><strong>壁纸工作台</strong></div>
+      <div class="wallpaper-studio-actions">
+        <button type="button" title="导入图片壁纸" :disabled="busy" @click="importWallpaper"><Upload :size="16" /><span>导入图片</span></button>
+        <button type="button" title="导入 Live Photo" :disabled="busy" @click="importLivePhoto"><Film :size="16" /><span>Live Photo</span></button>
+        <button type="button" title="刷新壁纸库" :disabled="busy" @click="refreshLibrary"><RefreshCcw :size="16" /></button>
+      </div>
+    </header>
+
+    <section class="wallpaper-studio-layout">
+      <div class="wallpaper-canvas-column">
+        <section class="wallpaper-canvas-frame" aria-label="壁纸预览">
+          <div v-if="selectedWallpaper" class="wallpaper-canvas-media">
+            <video
+              v-if="selectedWallpaper.type === 'video'"
+              ref="previewVideo"
+              :src="assetUrl(selectedWallpaper, 'original')"
+              :poster="assetUrl(selectedWallpaper, 'cover')"
+              muted
+              loop
+              playsinline
+              preload="metadata"
+              @pause="previewPlaying = false"
+              @playing="previewPlaying = true"
+            ></video>
+            <img v-else :src="assetUrl(selectedWallpaper, 'original')" :alt="selectedWallpaper.label" />
+          </div>
+          <div v-else class="wallpaper-canvas-empty"><ImageIcon :size="28" /><span>选择一张壁纸开始</span></div>
+          <div class="wallpaper-canvas-overlay">
+            <span>{{ selectedWallpaper?.label || "未选择壁纸" }}</span>
+            <button v-if="selectedWallpaper?.type === 'video'" type="button" :title="previewPlaying ? '暂停预览' : '播放预览'" @click="togglePreview">
+              <Pause v-if="previewPlaying" :size="16" /><Play v-else :size="16" />
+            </button>
+          </div>
+        </section>
+        <div class="wallpaper-filmstrip" aria-label="壁纸胶片带">
+          <button
+            v-for="item in wallpaperLibrary"
+            :key="item.id"
+            type="button"
+            class="wallpaper-filmstrip-item"
+            :class="{ selected: selectedId === item.id, applied: settings?.wallpaper.dynamicId === item.id }"
+            :title="wallpaperDisplayLabel(item)"
+            @click="selectWallpaper(item)"
+          >
+            <img :src="assetUrl(item, item.type === 'video' ? 'cover' : 'thumbnail')" :alt="item.label" />
+            <span>{{ item.label }}</span>
+            <Check v-if="settings?.wallpaper.dynamicId === item.id" :size="12" />
+          </button>
+        </div>
+      </div>
+
+      <aside class="wallpaper-inspector">
+        <div class="wallpaper-inspector-heading"><div><span>当前资产</span><strong>{{ selectedWallpaper?.label || "未选择" }}</strong></div><span v-if="selectedWallpaper" class="wallpaper-asset-badge">{{ selectedWallpaper.type === 'video' ? '动态' : '静态' }}</span></div>
+        <p v-if="selectedWallpaper" class="wallpaper-asset-meta">{{ selectedWallpaper.style }} · {{ selectedWallpaper.source === 'user' ? '个人库' : '内置库' }}<span v-if="selectedWallpaper.livePhoto"> · Live Photo</span></p>
+        <div class="wallpaper-inspector-actions">
+          <button type="button" class="wallpaper-apply-primary" :disabled="!selectedWallpaper || busy" @click="applySelected"><Check :size="16" />应用到桌面</button>
+          <button type="button" :disabled="!selectedWallpaper || busy" title="导出原图" @click="exportSelected"><Download :size="16" /></button>
+          <button v-if="selectedWallpaper?.source === 'user'" type="button" :disabled="busy" title="删除个人壁纸" @click="deleteSelected"><Trash2 :size="16" /></button>
+        </div>
+        <div class="wallpaper-inspector-section">
+          <div class="wallpaper-inspector-section-title"><Monitor :size="15" /><strong>显示器分配</strong></div>
+          <label v-for="display in displays" :key="display.id" class="wallpaper-display-row">
+            <span>{{ display.label }}<small>{{ display.bounds.width }}×{{ display.bounds.height }} · {{ display.scaleFactor }}x</small></span>
+            <select :value="display.wallpaperId ?? ''" @change="assignDisplay(display, ($event.target as HTMLSelectElement).value)">
+              <option value="">跟随主壁纸</option>
+              <option v-for="item in wallpaperLibrary" :key="item.id" :value="item.id">{{ item.label }}</option>
+            </select>
+          </label>
+          <p v-if="displays.length === 0" class="wallpaper-inspector-empty">显示器信息暂不可用，将使用系统主屏。</p>
+        </div>
+        <div class="wallpaper-inspector-section wallpaper-asset-notes">
+          <span>安全提示</span>
+          <p>媒体导入先验证封面和视频容器；动态视频解码失败时保留上一张壁纸，不切换到黑屏。</p>
+        </div>
+      </aside>
+    </section>
+
+    <div v-if="statusMessage" class="wallpaper-studio-toast" role="status">{{ statusMessage }}</div>
+    <div class="wallpaper-library-count"><Plus :size="13" />{{ bundledWallpapers.length }} 内置 · {{ userWallpapers.length }} 个人</div>
   </main>
 </template>
