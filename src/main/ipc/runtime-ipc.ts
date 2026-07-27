@@ -31,7 +31,7 @@ export function registerRuntimeIpcHandlers(deps: RuntimeIpcDependencies): void {
   });
 
   deps.ipc.handle(IPC_CHANNELS.RUNTIME_REPORT_FPS, (event, fps: unknown) => {
-    deps.assertTrustedSender(event, ["#/wallpaper"]);
+    deps.assertTrustedSender(event, ["", "#/wallpaper"]);
     if (typeof fps !== "number" || !Number.isFinite(fps) || fps < 0 || fps > 240) throw new Error("Invalid renderer frame rate");
     deps.recordRendererFps(fps);
   });

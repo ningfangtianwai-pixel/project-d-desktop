@@ -1081,3 +1081,12 @@
 - [x] No schema migration or destructive asset rewrite is required.
 - [x] Targeted tests 12/12 and Node tests 232/232 pass.
 - [ ] Upgrade-profile visual evidence remains manual.
+
+## Stage 83 - Packaged FPS IPC Route Repair
+
+- [x] Main-window FPS reporting is accepted by the trusted IPC route.
+- [x] Dedicated wallpaper-window FPS reporting remains accepted.
+- [x] Other renderer routes are not added to the allowlist.
+- [x] Source-contract test protects the route boundary.
+- [x] Fresh packaged smoke reports no error-log entries.
+- [ ] Installer, physical hardware, and long-duration soak evidence remains manual.

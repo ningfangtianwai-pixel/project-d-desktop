@@ -1259,3 +1259,11 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Verified the existing unpacked release runtime imports 38 diagnostic modules without missing packaged dependencies.
 - Started the packaged executable in an isolated user-data directory and verified core readiness, clean exit, completed shutdown, and an empty error log.
 - This is a packaged smoke gate; installer upgrade/uninstall and physical hardware evidence remain separate.
+
+## Stage 83 - Packaged FPS IPC Route Repair (Complete)
+
+- Fixed the renderer FPS reporting route used by both the main desktop surface and the dedicated wallpaper surface.
+- The trusted sender allowlist is now limited to the main window (`""`) and wallpaper window (`"#/wallpaper"`); settings, pet, overlay, and arbitrary windows remain rejected.
+- Added a source-contract regression test for the allowlist.
+- Verification: 235/235 Node tests, lint, typecheck, fresh `pnpm dist`, packaged runtime verification, and packaged smoke with `noErrorLogEntries: true`.
+- Installer and physical hardware gates remain open: install/upgrade/uninstall, multi-display/DPI, sleep/wake, fullscreen, battery, and long soak evidence.

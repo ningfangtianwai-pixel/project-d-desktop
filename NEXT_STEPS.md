@@ -402,6 +402,13 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 2. Exercise real MP4, MOV, and WebM Live Photo pairs in the packaged renderer; Chromium decode evidence remains manual/runtime-specific.
 3. Continue physical display/DPI, sleep/wake, fullscreen, battery, and 4/24-hour soak evidence.
 
+## After Stage 83 Route Repair
+
+1. Run the full Electron E2E suite and V5.1 visual matrix again from the repaired source baseline.
+2. Exercise the actual installer: fresh install, cover upgrade, uninstall, offline launch, Chinese path, and residual-process checks.
+3. Continue manual display/DPI, sleep/wake, fullscreen, battery, Live Photo format, and 4/24-hour soak evidence.
+4. Keep the 523.90 kB renderer entry warning as a measured code-splitting follow-up.
+
 ## After Stage 81
 
 1. Run `pnpm qa:live-photo-decode` in the clean packaged build path.

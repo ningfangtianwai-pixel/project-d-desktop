@@ -1725,3 +1725,11 @@
 - Fresh packaged smoke passed startup, core readiness, clean exit, and shutdown, but failed the no-warning gate because the renderer logged repeated `blocked IPC route` entries.
 - Added diagnostic fields to the blocked-route record. The reproduced case has `senderId=1`, `hash=""`, `allowedHashes=["#/wallpaper"]`, and `expectedWindowIds=[1]`; this points to packaged URL-fragment handling around the wallpaper FPS reporting route.
 - No security relaxation was made. The issue remains open for the next round and must be fixed by preserving trustworthy window identity/route semantics, not by allowing all routes.
+
+## 2026-07-27 - Stage 83 Packaged FPS IPC Route Repair
+
+- Root cause: `WallpaperStage` is mounted in both the main window and the dedicated wallpaper window, but `RUNTIME_REPORT_FPS` accepted only the wallpaper hash. The main window therefore emitted repeated blocked-route warnings during normal FPS sampling.
+- Fix: allow only the empty-hash main window and `#/wallpaper`; no wildcard or additional privileged renderer route was added.
+- Added `tests/runtime-ipc-contract.test.cjs` to lock the allowlist boundary.
+- Commands and results: `pnpm test` 235/235; `pnpm lint` pass; `pnpm typecheck` pass; fresh `pnpm dist` pass; `pnpm verify:packaged` pass; `pnpm qa:packaged-smoke` pass with `noErrorLogEntries: true`.
+- This closes the reproduced packaged IPC warning. It does not replace physical hardware, installer, or 4/24-hour soak evidence.
