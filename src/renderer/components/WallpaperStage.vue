@@ -34,6 +34,7 @@ const weatherIntensity = ref(0.55);
 const performanceProfile = ref("auto");
 const runtimePaused = ref(false);
 const playbackState = ref<WallpaperPlaybackState>("idle");
+const displayFitMode = ref<"cover" | "contain">("cover");
 
 function activeRenderProfile(): WallpaperRenderProfile {
   return wallpaperRenderProfile(performanceMode);
@@ -442,6 +443,7 @@ async function refreshRuntime(): Promise<void> {
 
   const displayId = new URLSearchParams(window.location.search).get("displayId");
   const assignedId = nextDisplays.find((display) => display.id === displayId)?.wallpaperId ?? null;
+  displayFitMode.value = nextDisplays.find((display) => display.id === displayId)?.fitMode ?? "cover";
   const dynamicId = assignedId ?? settings?.wallpaper.dynamicId ?? "";
   const userWallpaper = wallpaperLibrary.find((item) => item.id === dynamicId);
   if ((assignedId || styleId === "user") && userWallpaper) {
@@ -713,6 +715,7 @@ function startCanvasFallback(container: HTMLDivElement): void {
     :data-style="currentStyleId()"
     :data-runtime-paused="String(runtimePaused)"
     :data-playback-state="playbackState"
+    :data-fit-mode="displayFitMode"
     aria-hidden="true"
   >
     <template v-for="layer in wallpaperLayers" :key="layer.id">

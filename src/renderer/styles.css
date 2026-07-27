@@ -3257,6 +3257,7 @@ h1 {
   transform: none;
 }
 .desktop-band { transition: opacity 180ms ease, transform 220ms ease; }
+.wallpaper-stage[data-fit-mode="contain"] .wallpaper-bg-media { background-size: contain; background-repeat: no-repeat; background-position: center; object-fit: contain; }
 
 @media (max-width: 760px) {
   .ambient-edge-rail {

@@ -948,3 +948,10 @@
 - [x] Live Photo confirm/cancel IPC is settings-only and validates opaque UUID tokens.
 - [x] Typecheck, lint, 226 Node tests, 2 component tests, production build, and 9-state visual matrix pass.
 - [ ] Real paired Live Photo files across MP4/MOV/WebM and malformed media remain manual evidence.
+## Stage 66 - Per-Display Wallpaper Fit Mode
+
+- [x] Existing per-display `fit_mode` storage is exposed without changing the database schema.
+- [x] Wallpaper Studio can select crop-to-fill or full-image display per monitor.
+- [x] Wallpaper stage applies the selected fit mode per display and defaults old data to `cover`.
+- [x] IPC validation and 227 Node tests pass.
+- [ ] Physical portrait, ultrawide, mixed-DPI, and hot-plug evidence remains manual.

@@ -77,6 +77,7 @@ const api: ProjectDApi = {
   exportWallpaperOriginal: (wallpaperId) => ipcRenderer.invoke(IPC_CHANNELS.WALLPAPER_EXPORT_ORIGINAL, wallpaperId),
   getWallpaperDisplays: () => ipcRenderer.invoke(IPC_CHANNELS.WALLPAPER_DISPLAYS_GET),
   assignWallpaperToDisplay: (displayId, wallpaperId) => ipcRenderer.invoke(IPC_CHANNELS.WALLPAPER_DISPLAY_ASSIGN, displayId, wallpaperId),
+  setWallpaperDisplayFitMode: (displayId, fitMode) => ipcRenderer.invoke(IPC_CHANNELS.WALLPAPER_DISPLAY_FIT, displayId, fitMode),
   getCurrentWeather: () => ipcRenderer.invoke(IPC_CHANNELS.WEATHER_GET_CURRENT),
   sendChatMessage: (content) => ipcRenderer.invoke(IPC_CHANNELS.AI_CHAT_SEND, content),
   testAiConnection: () => ipcRenderer.invoke(IPC_CHANNELS.AI_TEST_CONNECTION),

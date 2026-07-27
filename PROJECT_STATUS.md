@@ -1147,3 +1147,9 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Wallpaper Studio now plays the selected video before enabling confirmation; cancel, decode failure, expiry, and unmount clean up the draft without changing the current wallpaper.
 - Verification: typecheck, lint, 226/226 Node tests, 2/2 component tests, production build, and V5.1 visual matrix 9/9 passed.
 - Physical validation with a real paired Live Photo remains a manual acceptance item.
+## Stage 66 - Per-Display Wallpaper Fit Mode (Complete)
+
+- Connected the existing persisted `display_wallpaper_assignments.fit_mode` field to the display API and Wallpaper Studio.
+- Each display can now choose `cover` (crop to fill) or `contain` (preserve the full image), and the wallpaper stage applies the selected mode on that display.
+- The default remains `cover`; old databases and old assignments continue to work without migration changes.
+- Verification: typecheck, lint, 227/227 Node tests, production build, and IPC fit-mode validation pass.

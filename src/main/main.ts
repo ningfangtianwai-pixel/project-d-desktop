@@ -577,6 +577,7 @@ function createWallpaperWindow(): BrowserWindow {
 function getWallpaperDisplays(): WallpaperDisplayInfo[] {
   const primaryId = String(screen.getPrimaryDisplay().id);
   const assignments = database?.getDisplayWallpaperAssignments() ?? {};
+  const fitModes = database?.getDisplayWallpaperFitModes() ?? {};
   return screen.getAllDisplays().map((display, index) => {
     const id = String(display.id);
     return {
@@ -585,9 +586,18 @@ function getWallpaperDisplays(): WallpaperDisplayInfo[] {
       isPrimary: id === primaryId,
       bounds: { ...display.bounds },
       scaleFactor: display.scaleFactor,
-      wallpaperId: assignments[id] ?? null
+      wallpaperId: assignments[id] ?? null,
+      fitMode: fitModes[id] ?? "cover"
     };
   });
+}
+
+function setWallpaperDisplayFitMode(displayId: string, fitMode: "cover" | "contain"): WallpaperDisplayInfo[] {
+  if (!database) throw new Error("Database is not initialized");
+  if (!screen.getAllDisplays().some((display) => String(display.id) === displayId)) throw new Error("Display is not available");
+  database.setDisplayWallpaperFitMode(displayId, fitMode);
+  broadcastSettingsUpdated();
+  return getWallpaperDisplays();
 }
 
 function getWallpaperLibrary(): WallpaperLibraryItem[] {
@@ -2317,7 +2327,8 @@ function buildIpcDeps(): ServiceDeps {
     },
     wallpaper: {
       getDisplays: getWallpaperDisplays,
-      assignDisplay: assignWallpaperToDisplay
+      assignDisplay: assignWallpaperToDisplay,
+      setDisplayFitMode: setWallpaperDisplayFitMode
     }
   };
 }

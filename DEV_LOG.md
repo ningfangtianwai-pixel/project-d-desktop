@@ -1609,3 +1609,9 @@
 - Added main-process header/image validation, renderer `loadeddata`/`canplay` decode gating, explicit cancel, and current-wallpaper preservation on failure.
 - Added IPC contract coverage for explicit confirmation and UUID token validation.
 - Verification: `pnpm test` (226/226), component tests (2/2), typecheck, lint, build, and `pnpm qa:v51-visual-matrix` (9/9) passed.
+## 2026-07-27 - Stage 66 Per-Display Wallpaper Fit Mode
+
+- Reused the existing database `fit_mode` column instead of adding a second crop schema.
+- Exposed per-display `cover`/`contain` through wallpaper IPC and rendered the mode on the corresponding wallpaper stage.
+- Added display fit-mode UI and IPC validation coverage.
+- Verification: `pnpm test` (227/227), typecheck, lint, and production build passed.

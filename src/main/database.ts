@@ -647,12 +647,29 @@ export class DatabaseService {
     );
   }
 
+  getDisplayWallpaperFitModes(): Record<string, "cover" | "contain"> {
+    return Object.fromEntries(
+      this.selectRows("SELECT display_key, fit_mode FROM display_wallpaper_assignments")
+        .map((row) => [String(row.display_key), row.fit_mode === "contain" ? "contain" : "cover"])
+    );
+  }
+
   setDisplayWallpaperAssignment(displayKey: string, wallpaperId: string | null): void {
     this.getDb().run(
       `INSERT INTO display_wallpaper_assignments(display_key, wallpaper_id, fit_mode, updated_at)
        VALUES (?, ?, 'cover', ?)
        ON CONFLICT(display_key) DO UPDATE SET wallpaper_id = excluded.wallpaper_id, updated_at = excluded.updated_at`,
       [displayKey, wallpaperId, new Date().toISOString()]
+    );
+    this.persist();
+  }
+
+  setDisplayWallpaperFitMode(displayKey: string, fitMode: "cover" | "contain"): void {
+    this.getDb().run(
+      `INSERT INTO display_wallpaper_assignments(display_key, wallpaper_id, fit_mode, updated_at)
+       VALUES (?, NULL, ?, ?)
+       ON CONFLICT(display_key) DO UPDATE SET fit_mode = excluded.fit_mode, updated_at = excluded.updated_at`,
+      [displayKey, fitMode, new Date().toISOString()]
     );
     this.persist();
   }

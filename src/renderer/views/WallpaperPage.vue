@@ -172,6 +172,15 @@ async function assignDisplay(display: WallpaperDisplayInfo, wallpaperId: string)
   }
 }
 
+async function setDisplayFitMode(display: WallpaperDisplayInfo, fitMode: "cover" | "contain"): Promise<void> {
+  try {
+    displays.value = await window.projectD.setWallpaperDisplayFitMode(display.id, fitMode);
+    setStatus(`${display.label} 已更新裁剪方式`);
+  } catch (error) {
+    setStatus(`裁剪方式更新失败：${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
 async function togglePreview(): Promise<void> {
   const video = previewVideo.value;
   if (!video) return;
@@ -274,6 +283,10 @@ onUnmounted(() => {
             <select :value="display.wallpaperId ?? ''" @change="assignDisplay(display, ($event.target as HTMLSelectElement).value)">
               <option value="">跟随主壁纸</option>
               <option v-for="item in wallpaperLibrary" :key="item.id" :value="item.id">{{ item.label }}</option>
+            </select>
+            <select :value="display.fitMode" title="每屏壁纸适配方式" @change="setDisplayFitMode(display, ($event.target as HTMLSelectElement).value as 'cover' | 'contain')">
+              <option value="cover">裁切填满</option>
+              <option value="contain">完整显示</option>
             </select>
           </label>
           <p v-if="displays.length === 0" class="wallpaper-inspector-empty">显示器信息暂不可用，将使用系统主屏。</p>

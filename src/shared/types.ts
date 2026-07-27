@@ -194,6 +194,7 @@ export interface WallpaperDisplayInfo {
   bounds: { x: number; y: number; width: number; height: number };
   scaleFactor: number;
   wallpaperId: string | null;
+  fitMode: "cover" | "contain";
 }
 
 export interface CurrentWeather {
@@ -581,6 +582,7 @@ export interface ProjectDApi {
   exportWallpaperOriginal: (wallpaperId: string) => Promise<{ cancelled: boolean; filename: string | null }>;
   getWallpaperDisplays: () => Promise<WallpaperDisplayInfo[]>;
   assignWallpaperToDisplay: (displayId: string, wallpaperId: string | null) => Promise<WallpaperDisplayInfo[]>;
+  setWallpaperDisplayFitMode: (displayId: string, fitMode: "cover" | "contain") => Promise<WallpaperDisplayInfo[]>;
   getCurrentWeather: () => Promise<CurrentWeather>;
   sendChatMessage: (content: string) => Promise<ChatResponse>;
   testAiConnection: () => Promise<AiConnectionTestResult>;

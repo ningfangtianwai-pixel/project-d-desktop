@@ -437,7 +437,8 @@ if (!window.projectD) {
       isPrimary: true,
       bounds: { x: 0, y: 0, width: window.innerWidth, height: window.innerHeight },
       scaleFactor: window.devicePixelRatio,
-      wallpaperId: mockDisplayWallpaperId
+      wallpaperId: mockDisplayWallpaperId,
+      fitMode: "cover"
     }],
     assignWallpaperToDisplay: async (_displayId, wallpaperId) => {
       mockDisplayWallpaperId = wallpaperId;
@@ -448,9 +449,19 @@ if (!window.projectD) {
         isPrimary: true,
         bounds: { x: 0, y: 0, width: window.innerWidth, height: window.innerHeight },
         scaleFactor: window.devicePixelRatio,
-        wallpaperId: mockDisplayWallpaperId
+        wallpaperId: mockDisplayWallpaperId,
+        fitMode: "cover"
       }];
     },
+    setWallpaperDisplayFitMode: async () => [{
+      id: "preview-display",
+      label: "预览显示器",
+      isPrimary: true,
+      bounds: { x: 0, y: 0, width: window.innerWidth, height: window.innerHeight },
+      scaleFactor: window.devicePixelRatio,
+      wallpaperId: mockDisplayWallpaperId,
+      fitMode: "cover"
+    }],
     getCurrentWeather: async () => ({
       mode: mockSettings.weather.mode,
       condition: mockSettings.weather.mode === "manual" ? mockSettings.weather.manualWeather : "clear",

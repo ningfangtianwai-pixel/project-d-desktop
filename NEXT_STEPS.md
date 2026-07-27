@@ -309,3 +309,8 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 1. Exercise the Live Photo prepare/preview/confirm flow with real MP4, MOV, and WebM pairs, including malformed headers and decode failure.
 2. Add user-editable crop/fit and safe-region controls only after the real preview flow is validated on representative wallpapers.
 3. Continue physical Windows acceptance: mixed DPI, portrait/external displays, hot-plug, sleep/wake, fullscreen pause, and long soak.
+## After Stage 66
+
+1. Verify cover/contain independently on real portrait, ultrawide, and mixed-DPI displays.
+2. Add editable normalized safe-region controls only if bundled safe-region metadata is insufficient during real wallpaper review.
+3. Continue Live Photo real-media validation and the remaining physical V5.1 matrix.

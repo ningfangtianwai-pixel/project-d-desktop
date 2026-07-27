@@ -9,6 +9,7 @@ export interface WallpaperIpcDependencies {
   assertTrustedSender: TrustedSenderGuard;
   getDisplays: () => WallpaperDisplayInfo[];
   assignDisplay: (displayId: string, wallpaperId: string | null) => WallpaperDisplayInfo[];
+  setDisplayFitMode: (displayId: string, fitMode: "cover" | "contain") => WallpaperDisplayInfo[];
 }
 
 export function registerWallpaperIpcHandlers(deps: WallpaperIpcDependencies): void {
@@ -25,5 +26,11 @@ export function registerWallpaperIpcHandlers(deps: WallpaperIpcDependencies): vo
     }
     return deps.assignDisplay(displayId, wallpaperId as string | null);
   });
-}
 
+  deps.ipc.handle(IPC_CHANNELS.WALLPAPER_DISPLAY_FIT, (event, displayId: unknown, fitMode: unknown) => {
+    deps.assertTrustedSender(event, ["", "#/settings", "#/overlay", "#/wallpaper"]);
+    if (typeof displayId !== "string" || displayId.length > 80) throw new Error("Invalid display id");
+    if (fitMode !== "cover" && fitMode !== "contain") throw new Error("Invalid wallpaper fit mode");
+    return deps.setDisplayFitMode(displayId, fitMode);
+  });
+}

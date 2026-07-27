@@ -77,6 +77,7 @@ export const IPC_CHANNELS = {
   WALLPAPER_EXPORT_ORIGINAL: "wallpaper:export-original",
   WALLPAPER_DISPLAYS_GET: "wallpaper:get-displays",
   WALLPAPER_DISPLAY_ASSIGN: "wallpaper:assign-display",
+  WALLPAPER_DISPLAY_FIT: "wallpaper:display-fit",
   WEATHER_GET_CURRENT: "weather:get-current",
   AI_CHAT_SEND: "ai:chat-send",
   AI_TEST_CONNECTION: "ai:test-connection",
