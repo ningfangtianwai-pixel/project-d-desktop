@@ -401,3 +401,9 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 1. Run the wallpaper-library QA script against the real H.264 fixture and retain its output.
 2. Exercise real MP4, MOV, and WebM Live Photo pairs in the packaged renderer; Chromium decode evidence remains manual/runtime-specific.
 3. Continue physical display/DPI, sleep/wake, fullscreen, battery, and 4/24-hour soak evidence.
+
+## After Stage 81
+
+1. Run `pnpm qa:live-photo-decode` in the clean packaged build path.
+2. Exercise real MP4, MOV, and WebM pairs through the visible pre-import preview and retain decode/cancel/expiry evidence.
+3. Continue physical display/DPI, sleep/wake, fullscreen, battery, and 4/24-hour soak evidence.

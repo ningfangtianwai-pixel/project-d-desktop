@@ -48,6 +48,7 @@
     "qa:weather-visual": "pnpm build && node scripts/qa-weather-visual.cjs",
     "qa:v51-visual-matrix": "pnpm build && node scripts/qa-v51-visual-matrix.cjs",
     "qa:wallpaper-library": "pnpm build:main && electron scripts/qa-wallpaper-library.cjs",
+    "qa:live-photo-decode": "pnpm build:main && electron scripts/qa-live-photo-decode.cjs",
     "verify:packaged": "node scripts/verify-packaged-runtime.cjs",
     "verify:package-budget": "node scripts/verify-package-budget.cjs",
     "verify:release-ready": "node scripts/verify-release-readiness.cjs",

@@ -1706,3 +1706,9 @@
 - Audited `scripts/qa-wallpaper-library.cjs` and found its MP4 fixture was only a valid-looking 32-byte `ftyp` header.
 - Switched the success path to `assets/wallpapers/user/cloud-light.mp4`, a real 4K H.264 file already present in the repository, and retained a malformed header-only file for the rejection path.
 - The automated check now validates real-media import and cleanup without treating a container header as decodability proof.
+
+## 2026-07-27 - Stage 81 Packaged Chromium Live Photo Decode Probe
+
+- Added `scripts/qa-live-photo-decode.cjs` and `pnpm qa:live-photo-decode`.
+- The hidden Electron window loads the real H.264 fixture, waits for Chromium `loadeddata`, and asserts decoded dimensions and `readyState >= 2`.
+- This is stronger than a file-header check but intentionally does not claim MOV/WebM or a user's paired Live Photo have been physically tested.

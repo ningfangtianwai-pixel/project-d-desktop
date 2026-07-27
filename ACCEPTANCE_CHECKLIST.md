@@ -1064,6 +1064,12 @@
 - [x] Invalid video containers are rejected without a successful import.
 - [ ] Packaged Chromium decode evidence with real MP4, MOV, and WebM user pairs remains manual/runtime-specific.
 
+## Stage 81 - Packaged Chromium Live Photo Decode Probe
+
+- [x] Hidden Electron probe loads the real MP4 fixture through Chromium.
+- [x] Probe requires `loadeddata`, non-zero video dimensions, and a playable ready state.
+- [ ] MOV/WebM and user-provided paired Live Photo decode evidence remains manual.
+
 - [x] Older user wallpaper records receive a conservative safe-region fallback during listing.
 - [x] No schema migration or destructive asset rewrite is required.
 - [x] Targeted tests 12/12 and Node tests 232/232 pass.

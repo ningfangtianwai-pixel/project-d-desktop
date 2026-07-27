@@ -1247,3 +1247,9 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Replaced the wallpaper-library QA script's synthetic 32-byte MP4 with the repository's real H.264 4K sample, so import, copy, cover, thumbnail, metadata, and cleanup are exercised against actual media.
 - Kept a separate malformed MP4 header-only fixture to verify rejected media remains non-destructive.
 - This improves automated evidence but does not replace packaged Chromium decode confirmation with a user-supplied Live Photo pair.
+
+## Stage 81 - Packaged Chromium Live Photo Decode Probe (Complete)
+
+- Added a hidden Electron probe that loads the real H.264 fixture through Chromium's video element and asserts `loadeddata`, non-zero dimensions, and a ready state suitable for playback.
+- The probe is separate from library import validation, so container acceptance and renderer decode evidence cannot be confused.
+- MOV/WebM codec coverage and a user-supplied paired Live Photo remain manual gates.
