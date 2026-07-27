@@ -1130,3 +1130,7 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Restored viewport anchoring so quiet and clean states show only the intended narrow rail and compact status capsule while the wallpaper remains unobstructed.
 - Added an Escape exit path for browser/renderer clean state, delegating to the existing guarded clean-desktop IPC.
 - Verification: typecheck, lint, 225/225 Node tests, 2/2 component tests, production build, clean-desktop E2E 1/1, and six-state visual matrix passed.
+## Stage 63 - DPI-Emulated Visual Matrix (Complete)
+
+- Extended the V5.1 visual matrix with 125%, 150%, and 200% browser device-pixel-ratio captures.
+- Each emulated-DPI capture uses the production preview and verifies the wallpaper stage remains visible; this is early layout evidence, not a substitute for physical Windows scaling.

@@ -928,3 +928,8 @@
 - [x] Wallpaper is not hidden behind a full-width dark ambient control panel.
 - [x] Escape exits clean mode through the guarded clean-desktop IPC path.
 - [x] Typecheck, lint, 225 Node tests, 2 component tests, production build, clean-desktop E2E, and visual matrix pass.
+## Stage 63 - DPI-Emulated Visual Matrix
+
+- [x] Matrix captures 125%, 150%, and 200% browser device-pixel-ratio quiet states.
+- [x] Each emulated-DPI capture verifies a visible wallpaper stage.
+- [ ] Physical Windows DPI and monitor evidence remains outstanding.

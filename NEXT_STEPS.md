@@ -294,3 +294,8 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 2. Add 125%, 150%, and 200% DPI emulation captures, then repeat on physical portrait and external displays.
 3. Run the matrix with rain, snow, fog, and battery-saver profiles and compare the resulting atmosphere rather than only DOM visibility.
 4. Continue manual acceptance for multi-display hot-plug, sleep/wake, fullscreen pause, and long soak.
+## After Stage 63
+
+1. Compare the three emulated-DPI screenshots for text, rail, status capsule, pet, and wallpaper-studio overflow.
+2. Repeat the same states on physical 100%, 125%, 150%, and 200% Windows scaling.
+3. Add weather-quality captures for balanced and battery-saver modes after confirming the runtime profile can be set deterministically in preview.

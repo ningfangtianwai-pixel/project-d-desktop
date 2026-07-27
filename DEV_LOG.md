@@ -1592,3 +1592,7 @@
 - Added a higher-specificity fixed-position rule for both ambient overlays. The regenerated quiet screenshot shows the wallpaper unobstructed, a 50px rail at the left edge, and the status capsule at the top right.
 - Added renderer Escape handling for clean mode and source-contract coverage for both fixes.
 - Verification: `pnpm typecheck`, `pnpm lint`, `pnpm test` (225/225), `pnpm test:component` (2/2), `pnpm build`, clean-desktop E2E, and `node scripts/qa-v51-visual-matrix.cjs` passed.
+## 2026-07-27 - Stage 63 DPI-Emulated Visual Matrix
+
+- Added 1.25x, 1.5x, and 2x device-pixel-ratio quiet-state captures to `qa-v51-visual-matrix`.
+- Kept the report explicit that browser emulation cannot certify physical Windows DPI, monitor hot-plug, or GPU behavior.

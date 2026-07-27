@@ -68,6 +68,22 @@ async function run() {
     await page.locator(".wallpaper-studio-page").waitFor();
     captures.push(await capture(page, "06-wallpaper-studio"));
 
+    for (const scale of [1.25, 1.5, 2]) {
+      const context = await browser.newContext({ viewport: { width: 1536, height: 864 }, deviceScaleFactor: scale });
+      const dpiPage = await context.newPage();
+      try {
+        await dpiPage.addInitScript(() => globalThis.localStorage.setItem("projectd:onboarding:v1", JSON.stringify({
+          version: 1, currentStep: 5, status: "completed", updatedAt: new Date().toISOString()
+        })));
+        await dpiPage.goto(`http://127.0.0.1:${port}/`, { waitUntil: "networkidle" });
+        await dpiPage.locator(".wallpaper-stage").waitFor();
+        await setWallpaper(dpiPage, "anime-lakeside-station");
+        captures.push({ ...(await capture(dpiPage, `dpi-${String(scale).replace(".", "_")}-quiet`)), deviceScaleFactor: scale });
+      } finally {
+        await context.close();
+      }
+    }
+
     const report = { generatedAt: new Date().toISOString(), viewport: { width: 1536, height: 864 }, passed: captures.every((item) => item.wallpaperVisible), captures };
     fs.writeFileSync(path.join(output, "report.json"), `${JSON.stringify(report, null, 2)}\n`, "utf8");
     console.log(JSON.stringify({ ...report, output }, null, 2));
