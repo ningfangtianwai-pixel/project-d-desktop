@@ -1207,3 +1207,10 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Scene apply restores these values without changing the existing dynamic-wallpaper enable/disable semantics.
 - Older scenes without style or index fields continue to restore their wallpaper ID safely.
 - Verification: typecheck, main build, targeted scene tests 6/6, and full Node tests 230/230 pass.
+
+## Stage 75 - Wallpaper Safe-Region Delivery (Complete)
+
+- Built-in wallpapers now receive their declared safe regions when the main process returns the wallpaper library.
+- User-imported images, generated PNGs, and Live Photo assets receive a conservative default safe region so pet placement can still use the same recovery path.
+- Added regression coverage for bundled and user-safe-region defaults and for the main-process decoration contract.
+- Verification: 232/232 Node tests, typecheck, main build, and targeted wallpaper/experience tests 12/12 pass.

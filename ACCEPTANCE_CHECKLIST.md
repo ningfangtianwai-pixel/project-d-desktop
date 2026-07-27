@@ -1022,3 +1022,11 @@
 - [x] Legacy scenes without style/index fields remain compatible.
 - [x] Typecheck, main build, targeted scene tests 6/6, and Node tests 230/230 pass.
 - [ ] Packaged renderer and physical multi-display visual confirmation remain manual.
+
+## Stage 75 - Wallpaper Safe-Region Delivery
+
+- [x] Bundled wallpaper safe regions are attached to main-process library results.
+- [x] User image, generated PNG, and Live Photo assets receive a conservative default safe region.
+- [x] Pet placement can consume the same safe-region contract for bundled and user assets.
+- [x] Targeted tests 12/12 and Node tests 232/232 pass.
+- [ ] Physical subject-avoidance and relocation evidence remains manual.

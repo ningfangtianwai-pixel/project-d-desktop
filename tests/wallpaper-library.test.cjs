@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
 
-const { WALLPAPER_LIBRARY, WALLPAPER_STYLES, wallpaperDisplayLabel } = require("../dist/shared/wallpaper-library.js");
+const { WALLPAPER_LIBRARY, WALLPAPER_STYLES, wallpaperDisplayLabel, wallpaperSafeRegion } = require("../dist/shared/wallpaper-library.js");
 
 test("wallpaper library has at least two real local assets for every required style", () => {
   assert.equal(WALLPAPER_STYLES.length, 6);
@@ -26,4 +26,17 @@ test("wallpaper controls identify both the asset and its style", () => {
   const lakeside = WALLPAPER_LIBRARY.find((wallpaper) => wallpaper.id === "anime-lakeside-station");
   assert.equal(wallpaperDisplayLabel(lakeside), "湖畔车站 · 动漫");
   assert.equal(wallpaperDisplayLabel(null), "选择壁纸");
+});
+
+test("wallpaper safe regions provide a stable pet anchor for bundled and user assets", () => {
+  const anime = wallpaperSafeRegion("anime-lakeside-station");
+  assert.equal(anime.petAnchor, "left");
+  assert.ok(anime.right < 1);
+  assert.deepEqual(wallpaperSafeRegion("user-random"), {
+    left: 0.08,
+    top: 0.12,
+    right: 0.92,
+    bottom: 0.94,
+    petAnchor: "right"
+  });
 });

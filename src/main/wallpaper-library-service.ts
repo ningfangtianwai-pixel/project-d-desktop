@@ -5,7 +5,7 @@ import path from "node:path";
 import type { DatabaseService } from "./database.js";
 import type { AppLogger } from "./logger.js";
 import type { WallpaperLibraryItem } from "../shared/types.js";
-import { WALLPAPER_LIBRARY } from "../shared/wallpaper-library.js";
+import { WALLPAPER_LIBRARY, wallpaperSafeRegion } from "../shared/wallpaper-library.js";
 
 const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp", ".bmp", ".avif"]);
 const VIDEO_EXTENSIONS = new Set([".mp4", ".webm", ".mov"]);
@@ -38,7 +38,8 @@ export class WallpaperLibraryService {
   }
 
   list(): WallpaperLibraryItem[] {
-    return [...WALLPAPER_LIBRARY, ...this.database.getUserMediaAssets()];
+    const bundled = WALLPAPER_LIBRARY.map((item) => ({ ...item, safeRegion: wallpaperSafeRegion(item.id) }));
+    return [...bundled, ...this.database.getUserMediaAssets()];
   }
 
   async importImage(sourcePath: string): Promise<WallpaperLibraryItem> {
@@ -65,7 +66,8 @@ export class WallpaperLibraryService {
       type: "image",
       file: storedFile,
       aliases: ["user", "local", path.basename(resolvedSource, extension).slice(0, 80)],
-      source: "user"
+      source: "user",
+      safeRegion: wallpaperSafeRegion(null)
     };
 
     try {
@@ -106,7 +108,8 @@ export class WallpaperLibraryService {
       type: "image",
       file: storedFile,
       aliases: ["user", "created", "创作", label],
-      source: "user"
+      source: "user",
+      safeRegion: wallpaperSafeRegion(null)
     };
 
     try {
@@ -152,7 +155,8 @@ export class WallpaperLibraryService {
         importedAt: new Date().toISOString()
       },
       aliases: ["user", "local", "live photo", "动态照片", path.basename(resolvedCover, coverExtension).slice(0, 80)],
-      source: "user"
+      source: "user",
+      safeRegion: wallpaperSafeRegion(null)
     };
 
     try {

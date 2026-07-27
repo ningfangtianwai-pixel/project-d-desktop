@@ -1665,3 +1665,9 @@
 - Found that scene restore kept the selected resource ID but not the current wallpaper style and rotation index.
 - Added additive `wallpaperStyle` and `wallpaperIndex` fields and restored them through the existing settings patch; old scene payloads remain valid.
 - Verification: `pnpm build:main`, targeted scene tests 6/6, and `pnpm test` 230/230 passed.
+
+## 2026-07-27 - Stage 75 Wallpaper Safe-Region Delivery
+
+- Found that `wallpaperSafeRegion()` existed but was not attached to library items returned by `WallpaperLibraryService.list()`, so the pet's subject-avoidance prompt could never activate for normal bundled wallpapers.
+- Decorated bundled assets with their authored safe regions and user assets with the conservative default region.
+- Verification: `pnpm typecheck`, `pnpm build:main`, targeted tests 12/12, and `pnpm test` 232/232 passed.
