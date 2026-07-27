@@ -28,7 +28,7 @@ function createStore() {
     getSettings: () => ({
       wallpaper: { dynamicId: "anime-lake", isDynamic: true },
       weather: { mode: "manual", manualWeather: "rain", particleIntensity: 72, enableBorderInteraction: true },
-      pet: { isVisible: true, currentOutfit: "raincoat", scale: 1.1, personality: "gentle", autoOutfit: true, actionInterval: 15, talkFrequency: "normal" }
+      pet: { isVisible: true, positionX: 420, positionY: 760, currentOutfit: "raincoat", scale: 1.1, personality: "gentle", autoOutfit: true, actionInterval: 15, talkFrequency: "normal" }
     }),
     getAppState: (key) => ({
       current_layout_id: "4",
@@ -67,6 +67,7 @@ test("workspace scene saves and restores real container geometry and appearance 
   assert.equal(scene.wallpaperDynamic, true);
   assert.equal(scene.performanceMode, "balanced");
   assert.equal(scene.petVisible, true);
+  assert.deepEqual(scene.petAnchor, { positionX: 420, positionY: 760 });
   assert.deepEqual(scene.portalIds, ["portal-a"]);
   assert.deepEqual(scene.weatherState, { particleIntensity: 72, enableBorderInteraction: true });
   assert.deepEqual(scene.weatherProfile, { mode: "manual", manualWeather: "rain" });
@@ -92,7 +93,7 @@ test("workspace scene saves and restores real container geometry and appearance 
   assert.deepEqual(store.settingsPatches, [{
     wallpaper: { dynamicId: "anime-lake", isDynamic: true },
     weather: { particleIntensity: 72, enableBorderInteraction: true, mode: "manual", manualWeather: "rain" },
-    pet: { isVisible: true, currentOutfit: "raincoat", scale: 1.1, personality: "gentle", autoOutfit: true, actionInterval: 15, talkFrequency: "normal" },
+    pet: { isVisible: true, positionX: 420, positionY: 760, currentOutfit: "raincoat", scale: 1.1, personality: "gentle", autoOutfit: true, actionInterval: 15, talkFrequency: "normal" },
     appState: {
       performance_mode: "balanced",
       "suggestion:delivery-controls": JSON.stringify({ disabled: false, snoozedUntil: null }),

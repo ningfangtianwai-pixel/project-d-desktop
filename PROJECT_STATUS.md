@@ -1193,3 +1193,10 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Scene apply restores the expanded weather profile while retaining the older `weatherState` shape for backward-compatible scene payloads.
 - Existing scenes without the new profile continue to apply their legacy weather fields without migration or failure.
 - Verification: typecheck, main build, targeted scene tests 6/6, and full Node tests 230/230 pass.
+
+## Stage 73 - Scene Pet Anchor Persistence (Complete)
+
+- Workspace scenes now capture the desktop pet's virtual-desktop position in an additive `petAnchor` field.
+- Applying a scene restores the saved position together with the existing pet personality, outfit, scale, and activity settings.
+- Older scenes without an anchor continue to restore all previously supported pet settings without failure.
+- Verification: typecheck, main build, and targeted scene tests 6/6 pass.

@@ -376,6 +376,7 @@ export interface WorkspaceScene {
   containerLayout: SceneContainerRect[];
   portalIds?: string[];
   weatherProfile?: Pick<SettingsSnapshot["weather"], "mode" | "manualWeather">;
+  petAnchor?: Pick<SettingsSnapshot["pet"], "positionX" | "positionY">;
   weatherState?: Pick<SettingsSnapshot["weather"], "particleIntensity" | "enableBorderInteraction">;
   petState?: Pick<SettingsSnapshot["pet"], "currentOutfit" | "scale" | "personality" | "autoOutfit" | "actionInterval" | "talkFrequency">;
   suggestionControls?: SuggestionDeliveryControls | null;

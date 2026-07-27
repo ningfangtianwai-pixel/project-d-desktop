@@ -67,6 +67,10 @@ export class SceneService {
         actionInterval: settings.pet.actionInterval,
         talkFrequency: settings.pet.talkFrequency
       },
+      petAnchor: {
+        positionX: settings.pet.positionX,
+        positionY: settings.pet.positionY
+      },
       suggestionControls: this.parseSuggestionControls(this.store.getAppState("suggestion:delivery-controls")),
       pinnedResources: [],
       displayAssignments: snapshotDisplays(id, displays),
@@ -128,7 +132,7 @@ export class SceneService {
         isDynamic: scene.wallpaperDynamic ?? Boolean(scene.wallpaperId)
       },
       weather: { ...scene.weatherState, ...scene.weatherProfile },
-      pet: { isVisible: scene.petVisible, ...scene.petState },
+      pet: { isVisible: scene.petVisible, ...scene.petState, ...scene.petAnchor },
       appState: {
         performance_mode: scene.performanceMode,
         ...(scene.suggestionControls ? { "suggestion:delivery-controls": JSON.stringify(scene.suggestionControls) } : {}),

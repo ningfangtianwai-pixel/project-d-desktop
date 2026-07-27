@@ -1653,3 +1653,9 @@
 - Found that scenes saved only particle intensity and border interaction, so restoring a scene could leave the manual/automatic weather type from a different session.
 - Added an additive `weatherProfile` field for `mode` and `manualWeather`; apply merges it with the legacy `weatherState` fields and remains compatible with older scene JSON.
 - Verification: `pnpm typecheck`, `pnpm build:main`, targeted scene tests 6/6, and `pnpm test` 230/230 passed.
+
+## 2026-07-27 - Stage 73 Scene Pet Anchor Persistence
+
+- Found that scene restore kept pet appearance and personality but not its virtual-desktop position.
+- Added an additive `petAnchor` with bounded settings-backed `positionX` / `positionY` values and merged it during scene apply; legacy scenes remain valid.
+- Verification: `pnpm typecheck`, `pnpm build:main`, and targeted scene tests 6/6 passed.

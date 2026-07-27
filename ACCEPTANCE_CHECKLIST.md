@@ -1006,3 +1006,11 @@
 - [x] Scene apply merges the expanded profile with legacy scene payloads safely.
 - [x] Typecheck, main build, targeted scene tests 6/6, and Node tests 230/230 pass.
 - [ ] Packaged visual confirmation for all weather types remains manual.
+
+## Stage 73 - Scene Pet Anchor Persistence
+
+- [x] Scenes persist the pet's virtual-desktop `positionX` / `positionY` anchor.
+- [x] Scene apply restores the anchor with the existing pet settings.
+- [x] Legacy scenes without an anchor remain compatible.
+- [x] Typecheck, main build, and targeted scene tests 6/6 pass.
+- [ ] Physical negative-origin, portrait-display, and hot-plug position evidence remains manual.

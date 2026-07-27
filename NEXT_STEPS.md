@@ -351,3 +351,9 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 1. Verify a saved rain, snow, fog, leaves, and light scene restores its visual weather on the packaged renderer.
 2. Continue real Live Photo, physical display/DPI, sleep/wake, fullscreen, and long-soak evidence.
 3. Add scene-level wallpaper safe-region and weather quality controls only after confirming the current profile on real displays.
+
+## After Stage 73
+
+1. Verify scene switching restores the pet position on the real virtual desktop, including negative-origin and portrait displays.
+2. Continue real Live Photo, physical display/DPI, sleep/wake, fullscreen, and long-soak evidence.
+3. Keep scene anchor values bounded by the existing pet-window layout and safe-region recovery path.
