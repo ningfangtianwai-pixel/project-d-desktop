@@ -64,6 +64,12 @@ test("workspace scene saves and restores real container geometry and appearance 
   assert.equal(scene.petVisible, true);
   assert.deepEqual(scene.portalIds, ["portal-a"]);
   assert.deepEqual(scene.weatherState, { particleIntensity: 72, enableBorderInteraction: true });
+  assert.deepEqual(scene.visualProfile, {
+    edgeRailPlacement: "left",
+    glassPreset: "quiet",
+    audioPolicy: "muted",
+    displayFitMode: "cover"
+  });
   assert.equal(scene.petState.currentOutfit, "raincoat");
   assert.equal(scene.suggestionControls.disabled, false);
   assert.equal(scene.containerLayout.length, 2);
@@ -82,10 +88,45 @@ test("workspace scene saves and restores real container geometry and appearance 
     appState: {
       performance_mode: "balanced",
       "suggestion:delivery-controls": JSON.stringify({ disabled: false, snoozedUntil: null }),
-      current_layout_id: "4"
+      current_layout_id: "4",
+      edge_rail_placement: "left",
+      glass_preset: "quiet",
+      audio_policy: "muted",
+      display_fit_mode: "cover"
     }
   }]);
   assert.deepEqual(store.portalWrites, []);
+});
+
+test("workspace scene preserves bounded visual profile values", () => {
+  const store = createStore();
+  const baseGetAppState = store.getAppState;
+  store.getAppState = (key) => ({
+    edge_rail_placement: "right",
+    glass_preset: "frosted",
+    audio_policy: "ambient",
+    display_fit_mode: "contain"
+  })[key] ?? baseGetAppState(key);
+  const service = new SceneService(store);
+  const scene = service.save("视觉场景");
+
+  assert.deepEqual(scene.visualProfile, {
+    edgeRailPlacement: "right",
+    glassPreset: "frosted",
+    audioPolicy: "ambient",
+    displayFitMode: "contain"
+  });
+  store.scenes.set(scene.id, structuredClone(scene));
+  service.apply(scene.id);
+  assert.deepEqual(store.settingsPatches.at(-1).appState, {
+    performance_mode: "balanced",
+    "suggestion:delivery-controls": JSON.stringify({ disabled: false, snoozedUntil: null }),
+    current_layout_id: "4",
+    edge_rail_placement: "right",
+    glass_preset: "frosted",
+    audio_policy: "ambient",
+    display_fit_mode: "contain"
+  });
 });
 
 test("workspace scene persists pinned search resources without duplicating them", () => {

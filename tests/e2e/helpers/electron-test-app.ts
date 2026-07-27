@@ -189,8 +189,40 @@ export async function assertDesktopRemainsUntouched(window: Page): Promise<void>
 }
 
 export async function closeProjectD(testApp: ProjectDTestApp, removeUserData = true): Promise<void> {
+  let process: ReturnType<ElectronApplication["process"]> | undefined;
+  try {
+    process = testApp.app.process();
+  } catch {
+    process = undefined;
+  }
   await testApp.app.close().catch(() => undefined);
-  if (removeUserData) await fs.rm(testApp.userDataDir, { recursive: true, force: true });
+  if (process) await waitForProcessExit(process);
+  if (removeUserData) await removeUserDataWithRetry(testApp.userDataDir);
+}
+
+async function waitForProcessExit(process: ReturnType<ElectronApplication["process"]>, timeoutMs = 8_000): Promise<void> {
+  if (process.exitCode !== null) return;
+  await new Promise<void>((resolve) => {
+    const timer = setTimeout(resolve, timeoutMs);
+    process.once("exit", () => {
+      clearTimeout(timer);
+      resolve();
+    });
+  });
+}
+
+async function removeUserDataWithRetry(userDataDir: string, attempts = 8): Promise<void> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      await fs.rm(userDataDir, { recursive: true, force: true });
+      return;
+    } catch (error) {
+      lastError = error;
+      await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
+    }
+  }
+  throw lastError;
 }
 
 export async function forceKillProjectD(testApp: ProjectDTestApp): Promise<void> {

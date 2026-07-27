@@ -955,3 +955,14 @@
 - [x] Wallpaper stage applies the selected fit mode per display and defaults old data to `cover`.
 - [x] IPC validation and 227 Node tests pass.
 - [ ] Physical portrait, ultrawide, mixed-DPI, and hot-plug evidence remains manual.
+## Stage 67 - Workspace Scene Visual Profile
+
+- [x] Scene data has a bounded visual profile for rail placement, glass preset, audio policy, and display fit mode.
+- [x] Scene save captures the current visual profile without introducing a database migration.
+- [x] Scene apply restores the visual profile through the existing settings transaction.
+- [x] Invalid or missing profile values fall back to `left` / `quiet` / `muted` / `cover`.
+- [x] Typecheck, lint, 228 Node tests, 2 component tests, and production build pass.
+- [x] Electron isolated-profile cleanup waits for process exit and retries transient Windows file locks.
+- [x] Full Electron E2E passes serially with 11/11 scenarios, including tray exit.
+- [x] V5.1 visual matrix passes 9/9 captures, including emulated 125%, 150%, and 200% scale states.
+- [ ] Physical renderer verification confirms visual profile restoration across real displays and DPI settings.

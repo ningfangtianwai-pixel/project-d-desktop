@@ -314,3 +314,11 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 1. Verify cover/contain independently on real portrait, ultrawide, and mixed-DPI displays.
 2. Add editable normalized safe-region controls only if bundled safe-region metadata is insufficient during real wallpaper review.
 3. Continue Live Photo real-media validation and the remaining physical V5.1 matrix.
+## After Stage 67
+
+1. Verify saved scenes restore the visual profile on the real renderer, including display fit mode and future shell controls.
+2. Exercise cover/contain independently on real portrait, ultrawide, and mixed-DPI displays.
+3. Exercise the Live Photo prepare/preview/confirm flow with real MP4, MOV, and WebM pairs.
+4. Continue physical V5.1 acceptance: hot-plug, sleep/wake, fullscreen pause, GPU/battery profiles, and 4/24-hour soak.
+
+5. Run the complete Electron E2E suite serially after the cleanup hardening; retain any Windows file-lock failures as test infrastructure defects until reproduced against the product lifecycle.

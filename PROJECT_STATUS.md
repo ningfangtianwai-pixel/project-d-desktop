@@ -1153,3 +1153,10 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Each display can now choose `cover` (crop to fill) or `contain` (preserve the full image), and the wallpaper stage applies the selected mode on that display.
 - The default remains `cover`; old databases and old assignments continue to work without migration changes.
 - Verification: typecheck, lint, 227/227 Node tests, production build, and IPC fit-mode validation pass.
+## Stage 67 - Workspace Scene Visual Profile (Complete)
+
+- Added a bounded `WorkspaceSceneVisualProfile` for edge-rail placement, glass preset, audio policy, and wallpaper fit mode.
+- Scene save captures these visual-layer preferences from app state; scene apply restores them through the existing settings transaction.
+- Unknown or missing values fall back to conservative defaults (`left`, `quiet`, `muted`, `cover`) so older scenes remain safe to apply.
+- Hardened Electron E2E temporary-profile cleanup to wait for process exit and retry transient Windows file locks.
+- Verification: typecheck, lint, 228/228 Node tests, 2/2 component tests, production build, full Electron E2E 11/11, and V5.1 visual matrix 9/9 pass.

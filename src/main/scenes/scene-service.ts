@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { ContainerRecord, DesktopResourceRef, PortalConfig, SettingsPatch, SettingsSnapshot, SuggestionDeliveryControls, WorkspaceScene } from "../../shared/types.js";
+import type { ContainerRecord, DesktopResourceRef, PortalConfig, SettingsPatch, SettingsSnapshot, SuggestionDeliveryControls, WorkspaceScene, WorkspaceSceneVisualProfile } from "../../shared/types.js";
 import type { ContainerAccent } from "../../shared/container-accents.js";
 import { restoreContainerRect, snapshotDisplays, type RuntimeDisplay } from "./display-layout.js";
 
@@ -63,6 +63,7 @@ export class SceneService {
       suggestionControls: this.parseSuggestionControls(this.store.getAppState("suggestion:delivery-controls")),
       pinnedResources: [],
       displayAssignments: snapshotDisplays(id, displays),
+      visualProfile: this.readVisualProfile(),
       todoSummary: { total: 0, active: 0 },
       containerLayout: this.store.getContainers().map((container) => ({
         id: container.id,
@@ -120,7 +121,8 @@ export class SceneService {
       appState: {
         performance_mode: scene.performanceMode,
         ...(scene.suggestionControls ? { "suggestion:delivery-controls": JSON.stringify(scene.suggestionControls) } : {}),
-        ...(scene.layoutId ? { current_layout_id: String(scene.layoutId) } : {})
+        ...(scene.layoutId ? { current_layout_id: String(scene.layoutId) } : {}),
+        ...(scene.visualProfile ? this.writeVisualProfile(scene.visualProfile) : {})
       }
     });
     return scene;
@@ -155,5 +157,27 @@ export class SceneService {
     } catch {
       return null;
     }
+  }
+
+  private readVisualProfile(): WorkspaceSceneVisualProfile {
+    return {
+      edgeRailPlacement: this.readEnum(this.store.getAppState("edge_rail_placement"), ["left", "right"], "left"),
+      glassPreset: this.readEnum(this.store.getAppState("glass_preset"), ["quiet", "frosted", "clear"], "quiet"),
+      audioPolicy: this.readEnum(this.store.getAppState("audio_policy"), ["muted", "ambient"], "muted"),
+      displayFitMode: this.readEnum(this.store.getAppState("display_fit_mode"), ["cover", "contain"], "cover")
+    };
+  }
+
+  private writeVisualProfile(profile: WorkspaceSceneVisualProfile): Record<string, string> {
+    return {
+      edge_rail_placement: profile.edgeRailPlacement,
+      glass_preset: profile.glassPreset,
+      audio_policy: profile.audioPolicy,
+      display_fit_mode: profile.displayFitMode
+    };
+  }
+
+  private readEnum<T extends string>(value: string | null, allowed: readonly T[], fallback: T): T {
+    return value && (allowed as readonly string[]).includes(value) ? value as T : fallback;
   }
 }

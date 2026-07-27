@@ -1615,3 +1615,10 @@
 - Exposed per-display `cover`/`contain` through wallpaper IPC and rendered the mode on the corresponding wallpaper stage.
 - Added display fit-mode UI and IPC validation coverage.
 - Verification: `pnpm test` (227/227), typecheck, lint, and production build passed.
+## 2026-07-27 - Stage 67 Workspace Scene Visual Profile
+
+- Added `WorkspaceSceneVisualProfile` with bounded values for edge rail placement, glass preset, audio policy, and display fit mode.
+- Scene save reads these values from persisted app state and scene apply restores them in the existing settings patch; missing or invalid values use safe defaults.
+- Extended `tests/scene-service.test.cjs` for default and non-default visual profiles.
+- Hardened the Electron E2E helper so close waits for the child process and retries transient Windows Chromium profile locks before removing isolated user data.
+- Verification: `pnpm typecheck`, `pnpm lint`, `pnpm test` (228/228), `pnpm test:component` (2/2), `pnpm build`, `pnpm test:e2e` (11/11), and `pnpm qa:v51-visual-matrix` (9/9) passed.

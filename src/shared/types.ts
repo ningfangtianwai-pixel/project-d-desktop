@@ -356,6 +356,13 @@ export type SceneContainerRect = Pick<ContainerRecord, "id" | "positionX" | "pos
   workAreaHeight?: number;
 };
 
+export interface WorkspaceSceneVisualProfile {
+  edgeRailPlacement: "left" | "right";
+  glassPreset: "quiet" | "frosted" | "clear";
+  audioPolicy: "muted" | "ambient";
+  displayFitMode: "cover" | "contain";
+}
+
 export interface WorkspaceScene {
   id: string;
   name: string;
@@ -373,6 +380,7 @@ export interface WorkspaceScene {
   suggestionControls?: SuggestionDeliveryControls | null;
   pinnedResources?: DesktopResourceRef[];
   displayAssignments?: DisplayWorkAreaSnapshot[];
+  visualProfile?: WorkspaceSceneVisualProfile;
   todoSummary?: { total: number; active: number };
 }
 
