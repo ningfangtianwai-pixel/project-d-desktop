@@ -1178,3 +1178,11 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - `pnpm verify:pet-assets` now validates all five supplied characters, six action slots each, non-empty files, and native image dimensions.
 - This closes the runtime manifest parse failure that previously caused Luna to silently fall back to the legacy single-image path.
 - Verification after the repair: 229/229 Node tests, 2/2 component tests, typecheck, lint, build, Electron E2E 11/11, and V5.1 visual matrix 9/9 pass.
+
+## Stage 71 - Live Photo Import Path Closure (Complete)
+
+- Removed the legacy `wallpaper:import-live-photo` IPC channel, preload exposure, shared API field, and settings IPC dependency.
+- The only active Live Photo import path is now prepare -> inspect/decode preview -> explicit confirm, with cancel and expiry cleanup.
+- The legacy settings action no longer copies files or updates wallpaper state; users must use Wallpaper Studio's preview flow.
+- Added a source contract test that prevents the removed direct-copy channel from returning.
+- Verification: 230/230 Node tests, 2/2 component tests, typecheck, lint, `pnpm verify:pet-assets`, production build, Electron E2E 11/11, and V5.1 visual matrix 9/9 pass.

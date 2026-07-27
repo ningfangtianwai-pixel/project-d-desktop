@@ -67,7 +67,6 @@ const api: ProjectDApi = {
   updateSettings: (patch) => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_UPDATE, patch),
   getWallpaperLibrary: () => ipcRenderer.invoke(IPC_CHANNELS.WALLPAPER_LIBRARY_GET),
   importWallpaper: () => ipcRenderer.invoke(IPC_CHANNELS.WALLPAPER_IMPORT),
-  importLivePhotoWallpaper: () => ipcRenderer.invoke(IPC_CHANNELS.WALLPAPER_IMPORT_LIVE_PHOTO),
   prepareLivePhotoImport: () => ipcRenderer.invoke(IPC_CHANNELS.WALLPAPER_PREPARE_LIVE_PHOTO),
   confirmLivePhotoImport: (token) => ipcRenderer.invoke(IPC_CHANNELS.WALLPAPER_CONFIRM_LIVE_PHOTO, token),
   cancelLivePhotoImport: (token) => ipcRenderer.invoke(IPC_CHANNELS.WALLPAPER_CANCEL_LIVE_PHOTO, token),

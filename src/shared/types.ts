@@ -581,7 +581,6 @@ export interface ProjectDApi {
   updateSettings: (patch: SettingsPatch) => Promise<SettingsSnapshot>;
   getWallpaperLibrary: () => Promise<WallpaperLibraryItem[]>;
   importWallpaper: () => Promise<WallpaperLibraryItem | null>;
-  importLivePhotoWallpaper: () => Promise<WallpaperLibraryItem | null>;
   prepareLivePhotoImport: () => Promise<LivePhotoImportPreview | null>;
   confirmLivePhotoImport: (token: string) => Promise<WallpaperLibraryItem>;
   cancelLivePhotoImport: (token: string) => Promise<void>;

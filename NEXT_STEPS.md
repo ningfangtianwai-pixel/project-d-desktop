@@ -338,3 +338,10 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 1. Verify the five character manifests in packaged runtime and record any real-device crop issues separately.
 2. Continue physical V5.1 display, Live Photo, sleep/wake, fullscreen, and long-soak evidence.
 3. Keep the renderer chunk-splitting warning as a measured performance follow-up.
+
+## After Stage 71
+
+1. Exercise real paired Live Photo files across MP4, MOV, and WebM in the packaged runtime; include malformed headers, decode failure, cancel, expiry, and restart recovery.
+2. Continue physical V5.1 evidence for mixed DPI, portrait/ultrawide displays, hot-plug, sleep/wake, fullscreen, GPU/battery profiles, and 4/24-hour soak.
+3. Verify all five character manifests and crop quality in the packaged runtime on the real desktop.
+4. Keep the renderer chunk-splitting warning as a measured performance follow-up.

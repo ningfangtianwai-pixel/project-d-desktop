@@ -1639,3 +1639,11 @@
 - Rebuilt the manifest as the strict six-slot schema already used by the other characters; existing action images and dimensions are unchanged.
 - Verification: `pnpm verify:pet-assets` passed for `luna-q`, `luna-spring`, `starlight`, `floral-star`, and `lin-yuxi`; all six action slots passed native image checks.
 - Full regression after the repair: `pnpm test` 229/229, component tests 2/2, typecheck, lint, build, `pnpm test:e2e` 11/11, and `pnpm qa:v51-visual-matrix` 9/9.
+
+## 2026-07-27 - Stage 71 Live Photo Import Path Closure
+
+- Audited the old Live Photo settings import path and removed its IPC channel, preload method, shared API contract, settings dependency, and browser mock entry.
+- Kept the Wallpaper Studio prepare/preview/confirm/cancel flow as the sole active import path; no file is permanently copied before explicit confirmation.
+- Added a regression contract test for the removed channel and confirmed the settings legacy action is inert rather than a second importer.
+- Commands and results: `pnpm typecheck` pass, `pnpm lint` pass, `pnpm test` 230/230, `pnpm test:component` 2/2, `pnpm verify:pet-assets` pass, `pnpm build` pass, `pnpm test:e2e` 11/11, `pnpm qa:v51-visual-matrix` 9/9.
+- Known warning: Vite reports the existing renderer bundle above 500 kB; no new build failure was introduced.

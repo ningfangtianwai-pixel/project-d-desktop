@@ -91,7 +91,6 @@ test("Live Photo preview is confirmed explicitly and never accepts an arbitrary 
     getWeather: async () => ({}),
     getWallpaperLibrary: () => [],
     importWallpaper: async () => null,
-    importLivePhotoWallpaper: async () => null,
     prepareLivePhotoImport: async () => ({ token: "11111111-1111-4111-8111-111111111111", label: "rain", coverUrl: "projectd-media://live-photo-preview/x?kind=cover", videoUrl: "projectd-media://live-photo-preview/x?kind=video", coverWidth: 1920, coverHeight: 1080, videoBytes: 10, videoExtension: ".mp4", expiresAt: new Date(Date.now() + 60_000).toISOString() }),
     confirmLivePhotoImport: async (token) => { calls.push(["confirm", token]); return { id: "user-1" }; },
     cancelLivePhotoImport: (token) => { calls.push(["cancel", token]); },

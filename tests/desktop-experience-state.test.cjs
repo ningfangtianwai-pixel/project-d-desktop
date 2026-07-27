@@ -67,3 +67,14 @@ test("wallpaper studio previews Live Photo before committing the import", () => 
   assert.match(source, /loadeddata/);
   assert.match(source, /assignWallpaperToDisplay/);
 });
+
+test("Live Photo has no direct-copy IPC bypass", () => {
+  const main = read("src/main/main.ts");
+  const ipc = read("src/main/ipc/settings-ipc.ts");
+  const preload = read("src/preload/preload.ts");
+  assert.doesNotMatch(main, /WALLPAPER_IMPORT_LIVE_PHOTO/);
+  assert.doesNotMatch(ipc, /WALLPAPER_IMPORT_LIVE_PHOTO/);
+  assert.doesNotMatch(preload, /WALLPAPER_IMPORT_LIVE_PHOTO/);
+  assert.match(main, /prepareLivePhotoImportFromDialogs/);
+  assert.match(main, /confirmLivePhotoImport/);
+});

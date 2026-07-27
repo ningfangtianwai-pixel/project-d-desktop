@@ -1922,7 +1922,7 @@ async function importWallpaperFromDialog(): Promise<WallpaperLibraryItem | null>
   return imported;
 }
 
-async function importLivePhotoFromDialogs(): Promise<WallpaperLibraryItem | null> {
+export async function _legacyImportLivePhotoFromDialogs(): Promise<WallpaperLibraryItem | null> {
   if (!wallpaperLibraryService) throw new Error("Wallpaper library is not initialized");
   const owner = settingsWindow && !settingsWindow.isDestroyed() ? settingsWindow : mainWindow ?? undefined;
   const showOpen = (options: OpenDialogOptions) => owner && !owner.isDestroyed() ? dialog.showOpenDialog(owner, options) : dialog.showOpenDialog(options);
@@ -2147,7 +2147,6 @@ function buildIpcDeps(): ServiceDeps {
       getWeather: () => weatherService?.getCurrentWeather() ?? Promise.reject(new Error("Weather not initialized")),
       getWallpaperLibrary,
       importWallpaper: importWallpaperFromDialog,
-      importLivePhotoWallpaper: importLivePhotoFromDialogs,
       prepareLivePhotoImport: prepareLivePhotoImportFromDialogs,
       confirmLivePhotoImport,
       cancelLivePhotoImport,

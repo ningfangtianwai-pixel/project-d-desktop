@@ -29,7 +29,6 @@ export interface SettingsIpcDependencies {
   getWeather: () => Promise<CurrentWeather>;
   getWallpaperLibrary: () => WallpaperLibraryItem[];
   importWallpaper: () => Promise<WallpaperLibraryItem | null>;
-  importLivePhotoWallpaper: () => Promise<WallpaperLibraryItem | null>;
   prepareLivePhotoImport: () => Promise<LivePhotoImportPreview | null>;
   confirmLivePhotoImport: (token: string) => Promise<WallpaperLibraryItem>;
   cancelLivePhotoImport: (token: string) => void;
@@ -84,11 +83,6 @@ export function registerSettingsIpcHandlers(deps: SettingsIpcDependencies): void
   ipc.handle(IPC_CHANNELS.WALLPAPER_IMPORT, async (event): Promise<WallpaperLibraryItem | null> => {
     assertTrustedSender(event, ["#/settings"]);
     return deps.importWallpaper();
-  });
-
-  ipc.handle(IPC_CHANNELS.WALLPAPER_IMPORT_LIVE_PHOTO, async (event): Promise<WallpaperLibraryItem | null> => {
-    assertTrustedSender(event, ["#/settings"]);
-    return deps.importLivePhotoWallpaper();
   });
 
   ipc.handle(IPC_CHANNELS.WALLPAPER_PREPARE_LIVE_PHOTO, async (event): Promise<LivePhotoImportPreview | null> => {

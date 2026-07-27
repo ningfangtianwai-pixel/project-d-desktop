@@ -852,14 +852,12 @@ async function exportSelectedWallpaper(): Promise<void> {
 async function importWallpaper(): Promise<void> {
   const imported = await window.projectD.importWallpaper();
   if (!imported) return;
-  wallpaperLibrary.value = await window.projectD.getWallpaperLibrary();
-  selectedWallpaperId.value = imported.id;
-  wallpaperStyle.value = "user";
   saveStatus.value = `已导入本地壁纸：${imported.label}`;
 }
 
 async function importLivePhotoWallpaper(): Promise<void> {
-  const imported = await window.projectD.importLivePhotoWallpaper();
+  const imported = await Promise.resolve<WallpaperLibraryItem | null>(null);
+  saveStatus.value = "请在壁纸工作台导入 Live Photo，以便先预览并确认解码";
   if (!imported) return;
   wallpaperLibrary.value = await window.projectD.getWallpaperLibrary();
   selectedWallpaperId.value = imported.id;

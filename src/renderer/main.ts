@@ -408,7 +408,6 @@ if (!window.projectD) {
     },
     getWallpaperLibrary: async () => WALLPAPER_LIBRARY,
     importWallpaper: async () => null,
-    importLivePhotoWallpaper: async () => null,
     prepareLivePhotoImport: async () => null,
     confirmLivePhotoImport: async () => { throw new Error("Live Photo import is unavailable in browser preview"); },
     cancelLivePhotoImport: async () => undefined,

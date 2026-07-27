@@ -989,3 +989,12 @@
 - [x] `pnpm verify:pet-assets` passes.
 - [x] Full regression passes: Node 229/229, component 2/2, Electron E2E 11/11, and visual matrix 9/9.
 - [ ] Physical crop and visual quality evidence for each character remains manual.
+
+## Stage 71 - Live Photo Import Path Closure
+
+- [x] Removed the obsolete direct-copy Live Photo IPC channel and preload API.
+- [x] Settings IPC and browser preview no longer expose a second Live Photo importer.
+- [x] Wallpaper Studio remains the only active prepare / preview / confirm / cancel path.
+- [x] Added regression coverage preventing the removed channel from returning.
+- [x] Node 230/230, component 2/2, typecheck, lint, pet asset verification, production build, Electron E2E 11/11, and visual matrix 9/9 pass.
+- [ ] Real paired Live Photo files and malformed media in packaged runtime remain manual evidence.
