@@ -1186,3 +1186,10 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - The legacy settings action no longer copies files or updates wallpaper state; users must use Wallpaper Studio's preview flow.
 - Added a source contract test that prevents the removed direct-copy channel from returning.
 - Verification: 230/230 Node tests, 2/2 component tests, typecheck, lint, `pnpm verify:pet-assets`, production build, Electron E2E 11/11, and V5.1 visual matrix 9/9 pass.
+
+## Stage 72 - Scene Weather Profile Persistence (Complete)
+
+- Workspace scenes now persist the weather mode and manual weather type alongside particle intensity and border interaction.
+- Scene apply restores the expanded weather profile while retaining the older `weatherState` shape for backward-compatible scene payloads.
+- Existing scenes without the new profile continue to apply their legacy weather fields without migration or failure.
+- Verification: typecheck, main build, targeted scene tests 6/6, and full Node tests 230/230 pass.

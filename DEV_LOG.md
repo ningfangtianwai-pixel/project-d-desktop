@@ -1647,3 +1647,9 @@
 - Added a regression contract test for the removed channel and confirmed the settings legacy action is inert rather than a second importer.
 - Commands and results: `pnpm typecheck` pass, `pnpm lint` pass, `pnpm test` 230/230, `pnpm test:component` 2/2, `pnpm verify:pet-assets` pass, `pnpm build` pass, `pnpm test:e2e` 11/11, `pnpm qa:v51-visual-matrix` 9/9.
 - Known warning: Vite reports the existing renderer bundle above 500 kB; no new build failure was introduced.
+
+## 2026-07-27 - Stage 72 Scene Weather Profile Persistence
+
+- Found that scenes saved only particle intensity and border interaction, so restoring a scene could leave the manual/automatic weather type from a different session.
+- Added an additive `weatherProfile` field for `mode` and `manualWeather`; apply merges it with the legacy `weatherState` fields and remains compatible with older scene JSON.
+- Verification: `pnpm typecheck`, `pnpm build:main`, targeted scene tests 6/6, and `pnpm test` 230/230 passed.

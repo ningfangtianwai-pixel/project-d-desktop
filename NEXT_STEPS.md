@@ -345,3 +345,9 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 2. Continue physical V5.1 evidence for mixed DPI, portrait/ultrawide displays, hot-plug, sleep/wake, fullscreen, GPU/battery profiles, and 4/24-hour soak.
 3. Verify all five character manifests and crop quality in the packaged runtime on the real desktop.
 4. Keep the renderer chunk-splitting warning as a measured performance follow-up.
+
+## After Stage 72
+
+1. Verify a saved rain, snow, fog, leaves, and light scene restores its visual weather on the packaged renderer.
+2. Continue real Live Photo, physical display/DPI, sleep/wake, fullscreen, and long-soak evidence.
+3. Add scene-level wallpaper safe-region and weather quality controls only after confirming the current profile on real displays.

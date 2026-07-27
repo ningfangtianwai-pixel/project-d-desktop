@@ -998,3 +998,11 @@
 - [x] Added regression coverage preventing the removed channel from returning.
 - [x] Node 230/230, component 2/2, typecheck, lint, pet asset verification, production build, Electron E2E 11/11, and visual matrix 9/9 pass.
 - [ ] Real paired Live Photo files and malformed media in packaged runtime remain manual evidence.
+
+## Stage 72 - Scene Weather Profile Persistence
+
+- [x] Scenes persist automatic/manual weather mode and manual weather type.
+- [x] Existing particle intensity and border interaction state remain persisted.
+- [x] Scene apply merges the expanded profile with legacy scene payloads safely.
+- [x] Typecheck, main build, targeted scene tests 6/6, and Node tests 230/230 pass.
+- [ ] Packaged visual confirmation for all weather types remains manual.

@@ -55,6 +55,10 @@ export class SceneService {
         particleIntensity: settings.weather.particleIntensity,
         enableBorderInteraction: settings.weather.enableBorderInteraction
       },
+      weatherProfile: {
+        mode: settings.weather.mode,
+        manualWeather: settings.weather.manualWeather
+      },
       petState: {
         currentOutfit: settings.pet.currentOutfit,
         scale: settings.pet.scale,
@@ -123,7 +127,7 @@ export class SceneService {
         dynamicId: scene.wallpaperId,
         isDynamic: scene.wallpaperDynamic ?? Boolean(scene.wallpaperId)
       },
-      weather: scene.weatherState,
+      weather: { ...scene.weatherState, ...scene.weatherProfile },
       pet: { isVisible: scene.petVisible, ...scene.petState },
       appState: {
         performance_mode: scene.performanceMode,
