@@ -1596,3 +1596,9 @@
 
 - Added 1.25x, 1.5x, and 2x device-pixel-ratio quiet-state captures to `qa-v51-visual-matrix`.
 - Kept the report explicit that browser emulation cannot certify physical Windows DPI, monitor hot-plug, or GPU behavior.
+## 2026-07-27 - Stage 64 Shutdown Recovery Hardening
+
+- Full Electron E2E exposed an intermittent tray-quit failure: Windows taskbar restore and the 8-second global shutdown deadline could expire at the same boundary.
+- Changed the guarded shutdown deadline to 20 seconds while retaining the 8-second child-process timeout and emergency exit fallback.
+- Started the tray E2E log wait before invoking quit and retained the strict `shutdown completed` assertion.
+- Verification: `pnpm typecheck`, `pnpm lint`, `pnpm test` (225/225), tray quit repeated 5/5, and `pnpm test:e2e` (11/11) passed.

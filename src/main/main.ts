@@ -116,6 +116,7 @@ let rendererRestartScheduled = false;
 let onboardingActive = false;
 let cleanDesktopExitPromise: Promise<DesktopStatus> | null = null;
 let cleanDesktopPowerBlockerId: number | null = null;
+const SHUTDOWN_DEADLINE_MS = 20_000;
 const fileIconCache = new Map<string, string | null>();
 const diagnosticsService = new DiagnosticsService();
 const systemPresenceMonitor = new SystemPresenceMonitor(undefined, 1_800);
@@ -2619,9 +2620,9 @@ async function shutdownSafely(): Promise<void> {
       database?.close();
       trayManager?.destroy();
       trayManager = null;
-    }, 8_000, () => {
-      writeBootstrapLog("shutdown deadline exceeded", { timeoutMs: 8_000 });
-      logger?.error("error", "shutdown deadline exceeded; forcing process exit", { timeoutMs: 8_000 });
+    }, SHUTDOWN_DEADLINE_MS, () => {
+      writeBootstrapLog("shutdown deadline exceeded", { timeoutMs: SHUTDOWN_DEADLINE_MS });
+      logger?.error("error", "shutdown deadline exceeded; forcing process exit", { timeoutMs: SHUTDOWN_DEADLINE_MS });
       process.exit(1);
     });
 

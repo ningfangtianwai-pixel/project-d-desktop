@@ -299,3 +299,8 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 1. Compare the three emulated-DPI screenshots for text, rail, status capsule, pet, and wallpaper-studio overflow.
 2. Repeat the same states on physical 100%, 125%, 150%, and 200% Windows scaling.
 3. Add weather-quality captures for balanced and battery-saver modes after confirming the runtime profile can be set deterministically in preview.
+## After Stage 64
+
+1. Keep the 20-second guarded shutdown deadline and verify it on a real clean-desktop exit after taskbar hiding.
+2. Run the physical Windows matrix: DPI, portrait/external displays, hot-plug, sleep/wake, fullscreen pause, and 4/24-hour soak.
+3. Decide whether to implement pre-copy Live Photo preview and user-editable wallpaper safe-region controls; both remain intentionally outside this hardening patch.

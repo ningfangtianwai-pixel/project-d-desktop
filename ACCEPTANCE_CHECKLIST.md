@@ -898,7 +898,7 @@
 - [x] Pet size and DPI clamps remain active for small, portrait, and negative-origin displays.
 - [x] All five characters retain six verified action slots.
 - [x] Typecheck, lint, 222 Node tests, production build, and pet asset verification pass.
-- [ ] Runtime consented reposition prompt after wallpaper changes remains open.
+- [x] Runtime consented reposition prompt after wallpaper changes is implemented; physical left/right subject evidence remains open.
 ## Stage 59 - Weather Visual QA And Runtime Tiers
 
 - [x] Clear, rain, snow, fog, leaves, and light states have independent visual QA coverage.
@@ -933,3 +933,10 @@
 - [x] Matrix captures 125%, 150%, and 200% browser device-pixel-ratio quiet states.
 - [x] Each emulated-DPI capture verifies a visible wallpaper stage.
 - [ ] Physical Windows DPI and monitor evidence remains outstanding.
+## Stage 64 - Shutdown Recovery Hardening
+
+- [x] Windows taskbar restore cannot consume the entire normal shutdown deadline.
+- [x] Emergency shutdown timeout remains explicit and logged.
+- [x] Tray quit waits for completed cleanup evidence.
+- [x] Tray quit repeated 5/5 and full Electron E2E 11/11 pass.
+- [ ] Physical taskbar, Explorer, sleep/wake, multi-display, and long-soak evidence remains outstanding.

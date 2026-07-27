@@ -1134,3 +1134,9 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 
 - Extended the V5.1 visual matrix with 125%, 150%, and 200% browser device-pixel-ratio captures.
 - Each emulated-DPI capture uses the production preview and verifies the wallpaper stage remains visible; this is early layout evidence, not a substitute for physical Windows scaling.
+## Stage 64 - Shutdown Recovery Hardening (Complete)
+
+- Increased the guarded shutdown deadline to 20 seconds so the Windows taskbar restore operation's own bounded PowerShell timeout cannot consume the entire process deadline.
+- Kept the emergency `process.exit(1)` path and the explicit `shutdown deadline exceeded` bootstrap record for genuinely hung cleanup.
+- Stabilized tray-quit E2E observation so it waits for the completed cleanup record before asserting the Electron window closes.
+- Verification: typecheck, lint, 225/225 Node tests, tray-quit E2E repeated 5/5, and full Electron E2E 11/11 passed.

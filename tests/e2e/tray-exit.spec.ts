@@ -8,6 +8,7 @@ test("the tray quit command performs the guarded shutdown", async () => {
   try {
     await assertDesktopRemainsUntouched(testApp.window);
     const closeEvent = testApp.app.waitForEvent("close");
+    const shutdownLog = waitForLog(testApp.userDataDir, "bootstrap.log", "shutdown completed", 30_000);
     const invoked = await testApp.app.evaluate(() => {
       const invoke = (globalThis as typeof globalThis & { __PROJECTD_E2E_INVOKE_TRAY_QUIT__?: () => void })
         .__PROJECTD_E2E_INVOKE_TRAY_QUIT__;
@@ -16,8 +17,8 @@ test("the tray quit command performs the guarded shutdown", async () => {
       return true;
     });
     expect(invoked).toBe(true);
+    const log = await shutdownLog;
     await closeEvent;
-    const log = await waitForLog(testApp.userDataDir, "bootstrap.log", "shutdown completed");
     expect(log).toContain("shutdown completed");
   } finally {
     await closeProjectD(testApp);
