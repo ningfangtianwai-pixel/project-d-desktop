@@ -124,18 +124,8 @@ export class WallpaperLibraryService {
   async importLivePhoto(coverPath: string, videoPath: string): Promise<WallpaperLibraryItem> {
     const resolvedCover = path.resolve(coverPath);
     const resolvedVideo = path.resolve(videoPath);
-    const coverExtension = path.extname(resolvedCover).toLowerCase();
-    const videoExtension = path.extname(resolvedVideo).toLowerCase();
-    if (!IMAGE_EXTENSIONS.has(coverExtension)) throw new Error("Live Photo cover must be a supported image");
-    if (!VIDEO_EXTENSIONS.has(videoExtension)) throw new Error("Live Photo video must be MP4, WebM, or MOV");
-
-    const [coverStat, videoStat] = await Promise.all([fs.promises.stat(resolvedCover), fs.promises.stat(resolvedVideo)]);
-    if (!coverStat.isFile() || coverStat.size <= 0 || coverStat.size > MAX_IMPORT_BYTES) throw new Error("Live Photo cover must be a valid image no larger than 30 MB");
-    if (!videoStat.isFile() || videoStat.size <= 0 || videoStat.size > MAX_VIDEO_IMPORT_BYTES) throw new Error("Live Photo video must be no larger than 300 MB");
-    await this.assertSupportedVideoContainer(resolvedVideo, videoExtension);
-    const coverImage = nativeImage.createFromPath(resolvedCover);
-    if (coverImage.isEmpty()) throw new Error("The selected Live Photo cover could not be decoded");
-    const coverSize = coverImage.getSize();
+    const inspection = await this.inspectLivePhoto(resolvedCover, resolvedVideo);
+    const { coverExtension, videoExtension, coverStat, videoStat, coverImage, coverSize } = inspection;
 
     const id = `user-${randomUUID()}`;
     const storedVideoFile = `${id}${videoExtension}`;
@@ -180,6 +170,30 @@ export class WallpaperLibraryService {
       await Promise.allSettled([fs.promises.rm(storedVideoPath, { force: true }), fs.promises.rm(coverPathInLibrary, { force: true }), fs.promises.rm(thumbnailPath, { force: true })]);
       throw error;
     }
+  }
+
+  async inspectLivePhoto(coverPath: string, videoPath: string): Promise<{
+    coverExtension: string;
+    videoExtension: string;
+    coverStat: fs.Stats;
+    videoStat: fs.Stats;
+    coverImage: Electron.NativeImage;
+    coverSize: { width: number; height: number };
+  }> {
+    const resolvedCover = path.resolve(coverPath);
+    const resolvedVideo = path.resolve(videoPath);
+    const coverExtension = path.extname(resolvedCover).toLowerCase();
+    const videoExtension = path.extname(resolvedVideo).toLowerCase();
+    if (!IMAGE_EXTENSIONS.has(coverExtension)) throw new Error("Live Photo cover must be a supported image");
+    if (!VIDEO_EXTENSIONS.has(videoExtension)) throw new Error("Live Photo video must be MP4, WebM, or MOV");
+
+    const [coverStat, videoStat] = await Promise.all([fs.promises.stat(resolvedCover), fs.promises.stat(resolvedVideo)]);
+    if (!coverStat.isFile() || coverStat.size <= 0 || coverStat.size > MAX_IMPORT_BYTES) throw new Error("Live Photo cover must be a valid image no larger than 30 MB");
+    if (!videoStat.isFile() || videoStat.size <= 0 || videoStat.size > MAX_VIDEO_IMPORT_BYTES) throw new Error("Live Photo video must be no larger than 300 MB");
+    await this.assertSupportedVideoContainer(resolvedVideo, videoExtension);
+    const coverImage = nativeImage.createFromPath(resolvedCover);
+    if (coverImage.isEmpty()) throw new Error("The selected Live Photo cover could not be decoded");
+    return { coverExtension, videoExtension, coverStat, videoStat, coverImage, coverSize: coverImage.getSize() };
   }
 
   delete(id: string): void {

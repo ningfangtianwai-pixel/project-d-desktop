@@ -1602,3 +1602,10 @@
 - Changed the guarded shutdown deadline to 20 seconds while retaining the 8-second child-process timeout and emergency exit fallback.
 - Started the tray E2E log wait before invoking quit and retained the strict `shutdown completed` assertion.
 - Verification: `pnpm typecheck`, `pnpm lint`, `pnpm test` (225/225), tray quit repeated 5/5, and `pnpm test:e2e` (11/11) passed.
+## 2026-07-27 - Stage 65 Live Photo Pre-Import Preview
+
+- Replaced the Wallpaper Studio flow that copied a Live Photo and probed it afterward with a prepare/preview/confirm flow.
+- Added an opaque, expiring `projectd-media://live-photo-preview` token route; absolute source paths never enter renderer state.
+- Added main-process header/image validation, renderer `loadeddata`/`canplay` decode gating, explicit cancel, and current-wallpaper preservation on failure.
+- Added IPC contract coverage for explicit confirmation and UUID token validation.
+- Verification: `pnpm test` (226/226), component tests (2/2), typecheck, lint, build, and `pnpm qa:v51-visual-matrix` (9/9) passed.

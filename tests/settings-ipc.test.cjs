@@ -81,6 +81,37 @@ test("wallpaper import and deletion remain settings-only privileged actions", as
   assert.equal(deleted, "user-1");
 });
 
+test("Live Photo preview is confirmed explicitly and never accepts an arbitrary token", async () => {
+  const handlers = new Map();
+  const calls = [];
+  registerSettingsIpcHandlers({
+    ipc: { handle: (channel, handler) => handlers.set(channel, handler) },
+    assertTrustedSender: () => {},
+    getDatabase: () => null,
+    getWeather: async () => ({}),
+    getWallpaperLibrary: () => [],
+    importWallpaper: async () => null,
+    importLivePhotoWallpaper: async () => null,
+    prepareLivePhotoImport: async () => ({ token: "11111111-1111-4111-8111-111111111111", label: "rain", coverUrl: "projectd-media://live-photo-preview/x?kind=cover", videoUrl: "projectd-media://live-photo-preview/x?kind=video", coverWidth: 1920, coverHeight: 1080, videoBytes: 10, videoExtension: ".mp4", expiresAt: new Date(Date.now() + 60_000).toISOString() }),
+    confirmLivePhotoImport: async (token) => { calls.push(["confirm", token]); return { id: "user-1" }; },
+    cancelLivePhotoImport: (token) => { calls.push(["cancel", token]); },
+    deleteWallpaper: () => {},
+    applyWallpaper: () => ({}),
+    broadcastSettings: () => {},
+    syncWindows: () => {},
+    validateSettingsPatch: (patch) => patch,
+    sendChatMessage: async () => ({}),
+    testAiConnection: async () => ({ provider: "local", mode: "local", message: "ok" })
+  });
+
+  const draft = await handlers.get(IPC_CHANNELS.WALLPAPER_PREPARE_LIVE_PHOTO)({});
+  assert.equal(draft.label, "rain");
+  await assert.rejects(handlers.get(IPC_CHANNELS.WALLPAPER_CONFIRM_LIVE_PHOTO)({}, "not-a-token"), /token/);
+  assert.deepEqual(await handlers.get(IPC_CHANNELS.WALLPAPER_CONFIRM_LIVE_PHOTO)({}, draft.token), { id: "user-1" });
+  handlers.get(IPC_CHANNELS.WALLPAPER_CANCEL_LIVE_PHOTO)({}, draft.token);
+  assert.deepEqual(calls, [["confirm", draft.token], ["cancel", draft.token]]);
+});
+
 test("visual profile IPC requires consent, remains settings-only, and persists only confirmed profiles", async () => {
   const handlers = new Map();
   const routes = [];

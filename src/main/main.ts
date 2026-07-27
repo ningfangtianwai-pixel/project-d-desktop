@@ -1,5 +1,6 @@
 import { app, BrowserWindow, dialog, globalShortcut, Menu, net, powerMonitor, powerSaveBlocker, protocol, screen, session, shell } from "electron";
 import type { IpcMainInvokeEvent, OpenDialogOptions } from "electron";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -48,7 +49,7 @@ import { IPC_CHANNELS, MENU_COMMANDS, type MenuCommand } from "../shared/ipc.js"
 import { registerAllIpcHandlers, type ServiceDeps } from "./ipc/register-all.js";
 import { wallpaperSafeRegion, WALLPAPER_LIBRARY } from "../shared/wallpaper-library.js";
 import { WallpaperLibraryService } from "./wallpaper-library-service.js";
-import type { ActionExecution, DesktopStatus, FilePreviewData, InterruptedActionRecovery, PetWindowBounds, PrivacyNetworkState, RecoveryHealthCode, RecoverySystemStatus, SettingsPatch, SettingsSnapshot, SuggestionDeliveryControls, SuggestionPolicy, SuggestionRecord, SuggestionSuppressionHistoryEntry, SupportDiagnosticsReport, WallpaperDisplayInfo, WallpaperLibraryItem, WorkspaceSearchResult } from "../shared/types.js";
+import type { ActionExecution, DesktopStatus, FilePreviewData, InterruptedActionRecovery, LivePhotoImportPreview, PetWindowBounds, PrivacyNetworkState, RecoveryHealthCode, RecoverySystemStatus, SettingsPatch, SettingsSnapshot, SuggestionDeliveryControls, SuggestionPolicy, SuggestionRecord, SuggestionSuppressionHistoryEntry, SupportDiagnosticsReport, WallpaperDisplayInfo, WallpaperLibraryItem, WorkspaceSearchResult } from "../shared/types.js";
 import type { UpdateStatus } from "../shared/update.js";
 import type { PerformanceMode, RuntimePauseSnapshot } from "../shared/runtime.js";
 
@@ -61,6 +62,7 @@ const startHidden = process.argv.includes(START_HIDDEN_ARG);
 const GITHUB_RELEASES_URL = "https://github.com/ningfangtianwai-pixel/project-d-desktop/releases";
 const SUGGESTION_SUPPRESSION_HISTORY_KEY = "suggestion:suppression-history";
 const USER_MEDIA_SCHEME = "projectd-media";
+const LIVE_PHOTO_PREVIEW_TTL_MS = 5 * 60_000;
 protocol.registerSchemesAsPrivileged([{
   scheme: USER_MEDIA_SCHEME,
   privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true }
@@ -87,6 +89,7 @@ let shortcutManager: ShortcutManager | null = null;
 let logger: AppLogger | null = null;
 let database: DatabaseService | null = null;
 let wallpaperLibraryService: WallpaperLibraryService | null = null;
+const livePhotoImportDrafts = new Map<string, { coverPath: string; videoPath: string; expiresAt: number }>();
 let fileScanner: FileScanner | null = null;
 let desktopController: DesktopController | null = null;
 let wallpaperHost: WallpaperHost | null = null;
@@ -595,6 +598,16 @@ function registerUserWallpaperProtocol(): void {
   protocol.handle(USER_MEDIA_SCHEME, async (request) => {
     try {
       const url = new URL(request.url);
+      if (url.hostname === "live-photo-preview") {
+        const token = decodeURIComponent(url.pathname.replace(/^\//, ""));
+        const draft = livePhotoImportDrafts.get(token);
+        if (!draft || draft.expiresAt <= Date.now()) {
+          livePhotoImportDrafts.delete(token);
+          return new Response(null, { status: 404 });
+        }
+        const sourcePath = url.searchParams.get("kind") === "cover" ? draft.coverPath : draft.videoPath;
+        return net.fetch(pathToFileURL(sourcePath).toString());
+      }
       if (url.hostname !== "wallpaper") return new Response(null, { status: 404 });
       const id = decodeURIComponent(url.pathname.replace(/^\//, ""));
       if (!/^user-[0-9a-f-]{36}$/i.test(id)) return new Response(null, { status: 400 });
@@ -607,6 +620,13 @@ function registerUserWallpaperProtocol(): void {
       return new Response(null, { status: 404 });
     }
   });
+}
+
+function removeExpiredLivePhotoDrafts(): void {
+  const now = Date.now();
+  for (const [token, draft] of livePhotoImportDrafts) {
+    if (draft.expiresAt <= now) livePhotoImportDrafts.delete(token);
+  }
 }
 
 function assignWallpaperToDisplay(displayId: string, wallpaperId: string | null): WallpaperDisplayInfo[] {
@@ -1905,6 +1925,51 @@ async function importLivePhotoFromDialogs(): Promise<WallpaperLibraryItem | null
   return imported;
 }
 
+async function prepareLivePhotoImportFromDialogs(): Promise<LivePhotoImportPreview | null> {
+  if (!wallpaperLibraryService) throw new Error("Wallpaper library is not initialized");
+  removeExpiredLivePhotoDrafts();
+  const owner = settingsWindow && !settingsWindow.isDestroyed() ? settingsWindow : mainWindow ?? undefined;
+  const showOpen = (options: OpenDialogOptions) => owner && !owner.isDestroyed() ? dialog.showOpenDialog(owner, options) : dialog.showOpenDialog(options);
+  const cover = await showOpen({ title: "选择 Live Photo 静态封面", properties: ["openFile"], filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "webp", "bmp", "avif"] }] });
+  if (cover.canceled || !cover.filePaths[0]) return null;
+  const video = await showOpen({ title: "选择与封面配对的视频", properties: ["openFile"], filters: [{ name: "Video", extensions: ["mp4", "webm", "mov"] }] });
+  if (video.canceled || !video.filePaths[0]) return null;
+  const inspection = await wallpaperLibraryService.inspectLivePhoto(cover.filePaths[0], video.filePaths[0]);
+  const token = randomUUID();
+  const expiresAt = Date.now() + LIVE_PHOTO_PREVIEW_TTL_MS;
+  livePhotoImportDrafts.set(token, { coverPath: path.resolve(cover.filePaths[0]), videoPath: path.resolve(video.filePaths[0]), expiresAt });
+  const timer = setTimeout(() => livePhotoImportDrafts.delete(token), LIVE_PHOTO_PREVIEW_TTL_MS);
+  timer.unref?.();
+  return {
+    token,
+    label: path.basename(cover.filePaths[0], inspection.coverExtension).slice(0, 80) || "My Live Photo",
+    coverUrl: `${USER_MEDIA_SCHEME}://live-photo-preview/${token}?kind=cover`,
+    videoUrl: `${USER_MEDIA_SCHEME}://live-photo-preview/${token}?kind=video`,
+    coverWidth: inspection.coverSize.width,
+    coverHeight: inspection.coverSize.height,
+    videoBytes: inspection.videoStat.size,
+    videoExtension: inspection.videoExtension,
+    expiresAt: new Date(expiresAt).toISOString()
+  };
+}
+
+async function confirmLivePhotoImport(token: string): Promise<WallpaperLibraryItem> {
+  if (!wallpaperLibraryService || !/^[0-9a-f-]{36}$/i.test(token)) throw new Error("Invalid Live Photo preview token");
+  const draft = livePhotoImportDrafts.get(token);
+  if (!draft || draft.expiresAt <= Date.now()) {
+    livePhotoImportDrafts.delete(token);
+    throw new Error("Live Photo preview expired; please choose the files again");
+  }
+  livePhotoImportDrafts.delete(token);
+  const imported = await wallpaperLibraryService.importLivePhoto(draft.coverPath, draft.videoPath);
+  broadcastSettingsUpdated();
+  return imported;
+}
+
+function cancelLivePhotoImport(token: string): void {
+  if (typeof token === "string") livePhotoImportDrafts.delete(token);
+}
+
 async function importGeneratedWallpaper(dataUrl: string, label: string): Promise<WallpaperLibraryItem> {
   if (!wallpaperLibraryService) throw new Error("Wallpaper library is not initialized");
   const imported = await wallpaperLibraryService.importGeneratedPng(dataUrl, label);
@@ -2073,6 +2138,9 @@ function buildIpcDeps(): ServiceDeps {
       getWallpaperLibrary,
       importWallpaper: importWallpaperFromDialog,
       importLivePhotoWallpaper: importLivePhotoFromDialogs,
+      prepareLivePhotoImport: prepareLivePhotoImportFromDialogs,
+      confirmLivePhotoImport,
+      cancelLivePhotoImport,
       importGeneratedWallpaper,
       deleteWallpaper: deleteUserWallpaper,
       applyWallpaper: applyWallpaperById,

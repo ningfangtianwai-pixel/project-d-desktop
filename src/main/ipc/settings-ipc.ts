@@ -1,6 +1,6 @@
 import type { IpcMain, IpcMainInvokeEvent } from "electron";
 import { IPC_CHANNELS } from "../../shared/ipc.js";
-import type { AiConnectionTestResult, ChatResponse, CurrentWeather, PetVisualDraftRequest, SettingsPatch, SettingsSnapshot, WallpaperLibraryItem } from "../../shared/types.js";
+import type { AiConnectionTestResult, ChatResponse, CurrentWeather, LivePhotoImportPreview, PetVisualDraftRequest, SettingsPatch, SettingsSnapshot, WallpaperLibraryItem } from "../../shared/types.js";
 import { validatePetVisualProfile } from "../../shared/pet-visual-profile.js";
 
 type TrustedSenderGuard = (event: IpcMainInvokeEvent, routes?: string[]) => void;
@@ -30,6 +30,9 @@ export interface SettingsIpcDependencies {
   getWallpaperLibrary: () => WallpaperLibraryItem[];
   importWallpaper: () => Promise<WallpaperLibraryItem | null>;
   importLivePhotoWallpaper: () => Promise<WallpaperLibraryItem | null>;
+  prepareLivePhotoImport: () => Promise<LivePhotoImportPreview | null>;
+  confirmLivePhotoImport: (token: string) => Promise<WallpaperLibraryItem>;
+  cancelLivePhotoImport: (token: string) => void;
   importGeneratedWallpaper: (dataUrl: string, label: string) => Promise<WallpaperLibraryItem>;
   deleteWallpaper: (id: string) => void;
   applyWallpaper: (id: string) => SettingsSnapshot;
@@ -86,6 +89,23 @@ export function registerSettingsIpcHandlers(deps: SettingsIpcDependencies): void
   ipc.handle(IPC_CHANNELS.WALLPAPER_IMPORT_LIVE_PHOTO, async (event): Promise<WallpaperLibraryItem | null> => {
     assertTrustedSender(event, ["#/settings"]);
     return deps.importLivePhotoWallpaper();
+  });
+
+  ipc.handle(IPC_CHANNELS.WALLPAPER_PREPARE_LIVE_PHOTO, async (event): Promise<LivePhotoImportPreview | null> => {
+    assertTrustedSender(event, ["#/settings"]);
+    return deps.prepareLivePhotoImport();
+  });
+
+  ipc.handle(IPC_CHANNELS.WALLPAPER_CONFIRM_LIVE_PHOTO, async (event, token: unknown): Promise<WallpaperLibraryItem> => {
+    assertTrustedSender(event, ["#/settings"]);
+    if (typeof token !== "string" || !/^[0-9a-f-]{36}$/i.test(token)) throw new Error("Invalid Live Photo preview token");
+    return deps.confirmLivePhotoImport(token);
+  });
+
+  ipc.handle(IPC_CHANNELS.WALLPAPER_CANCEL_LIVE_PHOTO, (event, token: unknown): void => {
+    assertTrustedSender(event, ["#/settings"]);
+    if (typeof token !== "string" || !/^[0-9a-f-]{36}$/i.test(token)) throw new Error("Invalid Live Photo preview token");
+    deps.cancelLivePhotoImport(token);
   });
 
   ipc.handle(IPC_CHANNELS.WALLPAPER_IMPORT_GENERATED, async (event, dataUrl: unknown, label: unknown): Promise<WallpaperLibraryItem> => {

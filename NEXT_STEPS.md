@@ -304,3 +304,8 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 1. Keep the 20-second guarded shutdown deadline and verify it on a real clean-desktop exit after taskbar hiding.
 2. Run the physical Windows matrix: DPI, portrait/external displays, hot-plug, sleep/wake, fullscreen pause, and 4/24-hour soak.
 3. Decide whether to implement pre-copy Live Photo preview and user-editable wallpaper safe-region controls; both remain intentionally outside this hardening patch.
+## After Stage 65
+
+1. Exercise the Live Photo prepare/preview/confirm flow with real MP4, MOV, and WebM pairs, including malformed headers and decode failure.
+2. Add user-editable crop/fit and safe-region controls only after the real preview flow is validated on representative wallpapers.
+3. Continue physical Windows acceptance: mixed DPI, portrait/external displays, hot-plug, sleep/wake, fullscreen pause, and long soak.

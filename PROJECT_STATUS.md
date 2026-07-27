@@ -1140,3 +1140,10 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Kept the emergency `process.exit(1)` path and the explicit `shutdown deadline exceeded` bootstrap record for genuinely hung cleanup.
 - Stabilized tray-quit E2E observation so it waits for the completed cleanup record before asserting the Electron window closes.
 - Verification: typecheck, lint, 225/225 Node tests, tray-quit E2E repeated 5/5, and full Electron E2E 11/11 passed.
+## Stage 65 - Live Photo Pre-Import Preview (Complete)
+
+- Added a settings-only prepare/confirm/cancel IPC flow for Live Photo imports.
+- The main process validates the cover and video before copying, exposes only a short-lived opaque preview token, and serves both files through the controlled media protocol.
+- Wallpaper Studio now plays the selected video before enabling confirmation; cancel, decode failure, expiry, and unmount clean up the draft without changing the current wallpaper.
+- Verification: typecheck, lint, 226/226 Node tests, 2/2 component tests, production build, and V5.1 visual matrix 9/9 passed.
+- Physical validation with a real paired Live Photo remains a manual acceptance item.

@@ -409,6 +409,9 @@ if (!window.projectD) {
     getWallpaperLibrary: async () => WALLPAPER_LIBRARY,
     importWallpaper: async () => null,
     importLivePhotoWallpaper: async () => null,
+    prepareLivePhotoImport: async () => null,
+    confirmLivePhotoImport: async () => { throw new Error("Live Photo import is unavailable in browser preview"); },
+    cancelLivePhotoImport: async () => undefined,
     importGeneratedWallpaper: async (_dataUrl, label) => ({ id: `preview-${Date.now()}`, label, style: "minimalist", type: "image", file: "", aliases: ["preview"], source: "user" }),
     deleteWallpaper: async () => undefined,
     applyWallpaper: async (wallpaperId) => {

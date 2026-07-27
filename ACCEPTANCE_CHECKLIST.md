@@ -940,3 +940,11 @@
 - [x] Tray quit waits for completed cleanup evidence.
 - [x] Tray quit repeated 5/5 and full Electron E2E 11/11 pass.
 - [ ] Physical taskbar, Explorer, sleep/wake, multi-display, and long-soak evidence remains outstanding.
+## Stage 65 - Live Photo Pre-Import Preview
+
+- [x] Live Photo cover and video are validated before library copy.
+- [x] The video must pass real renderer decode before confirmation is enabled.
+- [x] Cancel, expiry, decode failure, and component unmount leave the current wallpaper unchanged.
+- [x] Live Photo confirm/cancel IPC is settings-only and validates opaque UUID tokens.
+- [x] Typecheck, lint, 226 Node tests, 2 component tests, production build, and 9-state visual matrix pass.
+- [ ] Real paired Live Photo files across MP4/MOV/WebM and malformed media remain manual evidence.

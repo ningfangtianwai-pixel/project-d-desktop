@@ -3,7 +3,7 @@ import { computed, onMounted, onUnmounted, ref } from "vue";
 import { ArrowLeft, Check, Download, Film, Image as ImageIcon, Monitor, Pause, Play, Plus, RefreshCcw, Trash2, Upload } from "lucide-vue-next";
 import WallpaperStage from "../components/WallpaperStage.vue";
 import { wallpaperDisplayLabel } from "@shared/wallpaper-library";
-import type { SettingsSnapshot, WallpaperDisplayInfo, WallpaperLibraryItem } from "@shared/types";
+import type { LivePhotoImportPreview, SettingsSnapshot, WallpaperDisplayInfo, WallpaperLibraryItem } from "@shared/types";
 
 const wallpaperLibrary = ref<WallpaperLibraryItem[]>([]);
 const displays = ref<WallpaperDisplayInfo[]>([]);
@@ -13,6 +13,10 @@ const statusMessage = ref("");
 const busy = ref(false);
 const previewPlaying = ref(false);
 const previewVideo = ref<HTMLVideoElement | null>(null);
+const livePhotoDraft = ref<LivePhotoImportPreview | null>(null);
+const livePhotoPreviewVideo = ref<HTMLVideoElement | null>(null);
+const livePhotoDecodeState = ref<"waiting" | "ready" | "failed">("waiting");
+let livePhotoDecodeTimer: number | null = null;
 
 const selectedWallpaper = computed(() => wallpaperLibrary.value.find((item) => item.id === selectedId.value) ?? null);
 const userWallpapers = computed(() => wallpaperLibrary.value.filter((item) => item.source === "user"));
@@ -80,49 +84,61 @@ async function importWallpaper(): Promise<void> {
   }
 }
 
-async function probeVideo(item: WallpaperLibraryItem): Promise<boolean> {
-  if (item.type !== "video") return true;
-  const video = document.createElement("video");
-  video.muted = true;
-  video.preload = "metadata";
-  video.src = assetUrl(item, "original");
-  const loaded = new Promise<boolean>((resolve) => {
-    const finish = (result: boolean) => {
-      video.onloadeddata = null;
-      video.onerror = null;
-      resolve(result);
-    };
-    video.onloadeddata = () => finish(video.videoWidth > 0 && video.videoHeight > 0);
-    video.onerror = () => finish(false);
-    window.setTimeout(() => finish(false), 8000);
-  });
-  video.load();
-  const result = await loaded;
-  video.removeAttribute("src");
-  video.load();
-  return result;
-}
-
 async function importLivePhoto(): Promise<void> {
   if (busy.value) return;
   busy.value = true;
   try {
-    const imported = await window.projectD.importLivePhotoWallpaper();
-    if (!imported) return;
-    const decodes = await probeVideo(imported);
-    if (!decodes) {
-      await window.projectD.deleteWallpaper(imported.id).catch(() => undefined);
-      setStatus("Live Photo 视频无法解码，已保留原壁纸并清理失败导入");
-      return;
-    }
-    await refreshLibrary();
-    selectedId.value = imported.id;
-    setStatus(`Live Photo 已通过解码探测：${imported.label}`);
+    const draft = await window.projectD.prepareLivePhotoImport();
+    if (!draft) return;
+    livePhotoDraft.value = draft;
+    livePhotoDecodeState.value = "waiting";
+    if (livePhotoDecodeTimer !== null) window.clearTimeout(livePhotoDecodeTimer);
+    livePhotoDecodeTimer = window.setTimeout(() => {
+      if (livePhotoDecodeState.value === "waiting") livePhotoDecodeState.value = "failed";
+    }, 8000);
   } catch (error) {
     setStatus(`Live Photo 导入失败：${error instanceof Error ? error.message : String(error)}`);
   } finally {
     busy.value = false;
   }
+}
+
+async function confirmLivePhotoImport(): Promise<void> {
+  const draft = livePhotoDraft.value;
+  if (!draft || livePhotoDecodeState.value !== "ready" || busy.value) return;
+  busy.value = true;
+  try {
+    const imported = await window.projectD.confirmLivePhotoImport(draft.token);
+    livePhotoDraft.value = null;
+    await refreshLibrary();
+    selectedId.value = imported.id;
+    setStatus(`Live Photo 已确认导入：${imported.label}`);
+  } catch (error) {
+    setStatus(`Live Photo 导入失败：${error instanceof Error ? error.message : String(error)}`);
+  } finally {
+    busy.value = false;
+  }
+}
+
+function cancelLivePhotoPreview(): void {
+  const token = livePhotoDraft.value?.token;
+  if (livePhotoDecodeTimer !== null) window.clearTimeout(livePhotoDecodeTimer);
+  livePhotoDecodeTimer = null;
+  livePhotoDraft.value = null;
+  if (token) void window.projectD.cancelLivePhotoImport(token);
+}
+
+function handleLivePhotoLoaded(): void {
+  if (livePhotoDecodeTimer !== null) window.clearTimeout(livePhotoDecodeTimer);
+  livePhotoDecodeTimer = null;
+  const video = livePhotoPreviewVideo.value;
+  livePhotoDecodeState.value = video && video.videoWidth > 0 && video.videoHeight > 0 ? "ready" : "failed";
+}
+
+function handleLivePhotoError(): void {
+  if (livePhotoDecodeTimer !== null) window.clearTimeout(livePhotoDecodeTimer);
+  livePhotoDecodeTimer = null;
+  livePhotoDecodeState.value = "failed";
 }
 
 async function deleteSelected(): Promise<void> {
@@ -182,6 +198,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+  cancelLivePhotoPreview();
   document.body.classList.remove("wallpaper-window-body");
 });
 </script>
@@ -270,5 +287,37 @@ onUnmounted(() => {
 
     <div v-if="statusMessage" class="wallpaper-studio-toast" role="status">{{ statusMessage }}</div>
     <div class="wallpaper-library-count"><Plus :size="13" />{{ bundledWallpapers.length }} 内置 · {{ userWallpapers.length }} 个人</div>
+
+    <div v-if="livePhotoDraft" class="live-photo-preview-backdrop" role="dialog" aria-modal="true" aria-label="Live Photo 导入预览">
+      <section class="live-photo-preview-dialog">
+        <header>
+          <div><span>导入前预览</span><strong>{{ livePhotoDraft.label }}</strong></div>
+          <button type="button" title="取消预览" @click="cancelLivePhotoPreview">×</button>
+        </header>
+        <div class="live-photo-preview-media">
+          <img :src="livePhotoDraft.coverUrl" :alt="`${livePhotoDraft.label} 封面`" />
+          <video
+            ref="livePhotoPreviewVideo"
+            :src="livePhotoDraft.videoUrl"
+            :poster="livePhotoDraft.coverUrl"
+            muted
+            autoplay
+            loop
+            playsinline
+            preload="auto"
+            @loadeddata="handleLivePhotoLoaded"
+            @canplay="handleLivePhotoLoaded"
+            @error="handleLivePhotoError"
+          ></video>
+        </div>
+        <p v-if="livePhotoDecodeState === 'waiting'" class="live-photo-preview-status">正在验证浏览器真实解码……</p>
+        <p v-else-if="livePhotoDecodeState === 'ready'" class="live-photo-preview-status ready">已解码，可确认写入壁纸库。{{ Math.round(livePhotoDraft.videoBytes / 1024 / 1024) }} MB · {{ livePhotoDraft.videoExtension }}</p>
+        <p v-else class="live-photo-preview-status failed">视频无法真实解码，请更换配对视频；当前壁纸不会改变。</p>
+        <footer>
+          <button type="button" class="live-photo-preview-secondary" @click="cancelLivePhotoPreview">取消</button>
+          <button type="button" class="live-photo-preview-primary" :disabled="livePhotoDecodeState !== 'ready' || busy" @click="confirmLivePhotoImport">确认导入</button>
+        </footer>
+      </section>
+    </div>
   </main>
 </template>

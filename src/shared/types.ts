@@ -167,6 +167,18 @@ export interface WallpaperLibraryItem {
   safeRegion?: WallpaperSafeRegion;
 }
 
+export interface LivePhotoImportPreview {
+  token: string;
+  label: string;
+  coverUrl: string;
+  videoUrl: string;
+  coverWidth: number;
+  coverHeight: number;
+  videoBytes: number;
+  videoExtension: string;
+  expiresAt: string;
+}
+
 export interface WallpaperSafeRegion {
   left: number;
   top: number;
@@ -560,6 +572,9 @@ export interface ProjectDApi {
   getWallpaperLibrary: () => Promise<WallpaperLibraryItem[]>;
   importWallpaper: () => Promise<WallpaperLibraryItem | null>;
   importLivePhotoWallpaper: () => Promise<WallpaperLibraryItem | null>;
+  prepareLivePhotoImport: () => Promise<LivePhotoImportPreview | null>;
+  confirmLivePhotoImport: (token: string) => Promise<WallpaperLibraryItem>;
+  cancelLivePhotoImport: (token: string) => Promise<void>;
   importGeneratedWallpaper: (dataUrl: string, label: string) => Promise<WallpaperLibraryItem>;
   deleteWallpaper: (wallpaperId: string) => Promise<void>;
   applyWallpaper: (wallpaperId: string) => Promise<SettingsSnapshot>;
