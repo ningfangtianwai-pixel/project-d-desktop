@@ -1,4 +1,4 @@
-import type { PetWindowBounds } from "../shared/types.js";
+import type { PetWindowBounds, WallpaperSafeRegion } from "../shared/types.js";
 
 export interface PetDisplayWorkArea {
   x: number;
@@ -18,14 +18,29 @@ export function fitPetWindowToWorkArea(bounds: PetWindowBounds, workArea: PetDis
   return { x, y, width, height };
 }
 
-export function defaultPetWindowForWorkArea(workArea: PetDisplayWorkArea): PetWindowBounds {
+export function defaultPetWindowForWorkArea(workArea: PetDisplayWorkArea, safeRegion?: WallpaperSafeRegion): PetWindowBounds {
   const requested = Math.min(250, Math.max(180, Math.floor(Math.min(workArea.width, workArea.height) * 0.32)));
+  const region = safeRegion ?? { left: 0.08, top: 0.12, right: 0.92, bottom: 0.94, petAnchor: "right" as const };
+  const safeLeft = workArea.x + Math.round(workArea.width * clampUnit(region.left));
+  const safeRight = workArea.x + Math.round(workArea.width * clampUnit(region.right));
+  const safeTop = workArea.y + Math.round(workArea.height * clampUnit(region.top));
+  const safeBottom = workArea.y + Math.round(workArea.height * clampUnit(region.bottom));
+  const anchorX = region.petAnchor === "left" ? safeLeft + 18 : safeRight - requested - 28;
   return fitPetWindowToWorkArea({
-    x: workArea.x + workArea.width - requested - 28,
-    y: workArea.y + workArea.height - requested - 24,
+    x: anchorX,
+    y: safeBottom - requested - 24,
     width: requested,
     height: requested
-  }, workArea);
+  }, {
+    x: safeLeft,
+    y: safeTop,
+    width: Math.max(requested, safeRight - safeLeft),
+    height: Math.max(requested, safeBottom - safeTop)
+  });
+}
+
+function clampUnit(value: number): number {
+  return Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0));
 }
 
 function clamp(value: number, minimum: number, maximum: number): number {

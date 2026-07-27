@@ -264,3 +264,10 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 3. Add screenshot checks for quiet, bright, high-detail, low-contrast, and video-poster studio states.
 4. Split the renderer chunk only after measuring the studio and Pixi contributions; preserve startup and recovery timing.
 5. Begin Phase E with dynamic pet anchor lanes and verify pet placement against the selected wallpaper safe region.
+
+## After Stage 58
+
+1. Add runtime reposition prompts when a wallpaper changes and the current pet position falls inside a declared subject-safe exclusion zone; never move without consent unless the position is invalid.
+2. Add a compact pet task surface for character, personality, talk frequency, and action preview without opening the full settings page.
+3. Verify pet anchor behavior on mixed-DPI portrait/landscape displays and after sleep/wake or display hot-plug.
+4. Continue Phase F with weather quality tiers and screenshot/pixel baselines after the wallpaper and pet layers are stable.

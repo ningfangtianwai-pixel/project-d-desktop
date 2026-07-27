@@ -889,3 +889,13 @@
 - [x] Wallpaper-library import QA passes with cleanup of the temporary user asset.
 - [x] Typecheck, lint, 221 Node tests, 2 component tests, and production build pass.
 - [ ] Pre-copy chooser preview and crop/safe-region visual profiles remain open.
+
+## Stage 58 - Wallpaper-Aware Pet Anchors
+
+- [x] Bundled wallpaper safe regions declare a left/right pet anchor.
+- [x] New pet windows use the active wallpaper safe region without leaving the connected display union.
+- [x] Existing manually saved or dragged pet positions remain authoritative.
+- [x] Pet size and DPI clamps remain active for small, portrait, and negative-origin displays.
+- [x] All five characters retain six verified action slots.
+- [x] Typecheck, lint, 222 Node tests, production build, and pet asset verification pass.
+- [ ] Runtime consented reposition prompt after wallpaper changes remains open.

@@ -1561,3 +1561,10 @@
 - Kept all file selection and storage operations behind existing Settings-only IPC; no renderer filesystem access was added.
 - Verification: `pnpm typecheck`, `pnpm lint`, `pnpm test` (221/221), `pnpm test:component` (2/2), `pnpm build`, and `pnpm qa:wallpaper-library` passed.
 - Vite reports a 518.90 kB renderer chunk after the studio UI; this remains a performance follow-up, not a build failure.
+
+## 2026-07-27 - Stage 58 Wallpaper-Aware Pet Anchors
+
+- Added `WallpaperSafeRegion` metadata and safe-region lookup for bundled wallpapers.
+- Extended `pet-window-layout.ts` so new pet windows choose a left/right anchor within the selected wallpaper's safe region while retaining virtual display and size clamps.
+- Main-process default pet bounds now consult the active wallpaper id. Persisted/manual bounds remain authoritative.
+- Verification: typecheck, lint, Node tests 222/222, production build, and `pnpm verify:pet-assets` passed.

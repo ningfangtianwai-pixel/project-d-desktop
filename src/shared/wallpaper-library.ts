@@ -1,4 +1,4 @@
-import type { WallpaperLibraryItem } from "./types.js";
+import type { WallpaperLibraryItem, WallpaperSafeRegion } from "./types.js";
 
 export const WALLPAPER_STYLES = [
   ["anime", "动漫"],
@@ -107,6 +107,29 @@ export const WALLPAPER_LIBRARY: WallpaperLibraryItem[] = [
     aliases: ["季节", "秋天", "秋日", "森林", "seasonal", "autumn"]
   }
 ];
+
+const DEFAULT_SAFE_REGION: WallpaperSafeRegion = {
+  left: 0.08,
+  top: 0.12,
+  right: 0.92,
+  bottom: 0.94,
+  petAnchor: "right"
+};
+
+const WALLPAPER_SAFE_REGIONS: Record<string, WallpaperSafeRegion> = {
+  "anime-lakeside-station": { left: 0.08, top: 0.12, right: 0.78, bottom: 0.94, petAnchor: "left" },
+  "anime-seaside-town": { left: 0.22, top: 0.12, right: 0.94, bottom: 0.94, petAnchor: "right" },
+  "landscape-alpine-lake": { left: 0.08, top: 0.18, right: 0.72, bottom: 0.94, petAnchor: "left" },
+  "landscape-coastal-cliffs": { left: 0.24, top: 0.12, right: 0.94, bottom: 0.94, petAnchor: "right" },
+  "cyberpunk-neon-bridge": { left: 0.08, top: 0.14, right: 0.78, bottom: 0.92, petAnchor: "left" },
+  "cyberpunk-neon-street": { left: 0.22, top: 0.14, right: 0.94, bottom: 0.92, petAnchor: "right" },
+  "seasonal-autumn-path": { left: 0.14, top: 0.12, right: 0.9, bottom: 0.94, petAnchor: "right" }
+};
+
+export function wallpaperSafeRegion(id: string | null | undefined): WallpaperSafeRegion {
+  const region = id ? WALLPAPER_SAFE_REGIONS[id] : undefined;
+  return region ? { ...region } : { ...DEFAULT_SAFE_REGION };
+}
 
 export function wallpaperDisplayLabel(item: WallpaperLibraryItem | null | undefined): string {
   if (!item) {

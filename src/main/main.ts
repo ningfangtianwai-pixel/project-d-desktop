@@ -46,7 +46,7 @@ import { SystemEventManager } from "./system-event-manager.js";
 import { setWindowsTaskbarVisible } from "./windows-taskbar.js";
 import { IPC_CHANNELS, MENU_COMMANDS, type MenuCommand } from "../shared/ipc.js";
 import { registerAllIpcHandlers, type ServiceDeps } from "./ipc/register-all.js";
-import { WALLPAPER_LIBRARY } from "../shared/wallpaper-library.js";
+import { wallpaperSafeRegion, WALLPAPER_LIBRARY } from "../shared/wallpaper-library.js";
 import { WallpaperLibraryService } from "./wallpaper-library-service.js";
 import type { ActionExecution, DesktopStatus, FilePreviewData, InterruptedActionRecovery, PetWindowBounds, PrivacyNetworkState, RecoveryHealthCode, RecoverySystemStatus, SettingsPatch, SettingsSnapshot, SuggestionDeliveryControls, SuggestionPolicy, SuggestionRecord, SuggestionSuppressionHistoryEntry, SupportDiagnosticsReport, WallpaperDisplayInfo, WallpaperLibraryItem, WorkspaceSearchResult } from "../shared/types.js";
 import type { UpdateStatus } from "../shared/update.js";
@@ -815,7 +815,7 @@ async function verifyVisibleWallpaperFrame(window: BrowserWindow, timeoutMs = 2_
 
 function defaultPetBounds(): PetWindowBounds {
   const display = screen.getPrimaryDisplay();
-  return defaultPetWindowForWorkArea(display.bounds);
+  return defaultPetWindowForWorkArea(display.bounds, wallpaperSafeRegion(database?.getSettings().wallpaper.dynamicId));
 }
 
 function normalizePetBounds(bounds: PetWindowBounds): PetWindowBounds {

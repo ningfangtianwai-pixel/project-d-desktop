@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 const { defaultPetWindowForWorkArea, fitPetWindowToWorkArea } = require("../dist/main/pet-window-layout.js");
+const { wallpaperSafeRegion } = require("../dist/shared/wallpaper-library.js");
 
 test("pet remains visible on a small external display", () => {
   const area = { x: 1920, y: 0, width: 1280, height: 680 };
@@ -16,4 +17,13 @@ test("pet defaults inside a portrait monitor with a negative desktop origin", ()
   const fitted = defaultPetWindowForWorkArea(area);
   assert.ok(fitted.x >= area.x && fitted.x + fitted.width <= 0);
   assert.ok(fitted.y >= area.y && fitted.y + fitted.height <= 1520);
+});
+
+test("pet default anchor follows the selected wallpaper safe region", () => {
+  const area = { x: 0, y: 0, width: 1920, height: 1080 };
+  const left = defaultPetWindowForWorkArea(area, wallpaperSafeRegion("anime-lakeside-station"));
+  const right = defaultPetWindowForWorkArea(area, wallpaperSafeRegion("anime-seaside-town"));
+  assert.ok(left.x < area.width / 2, `expected left anchor, got ${left.x}`);
+  assert.ok(right.x > area.width / 2, `expected right anchor, got ${right.x}`);
+  assert.ok(left.y >= 0 && right.y >= 0);
 });

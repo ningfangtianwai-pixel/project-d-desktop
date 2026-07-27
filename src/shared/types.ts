@@ -164,6 +164,15 @@ export interface WallpaperLibraryItem {
   };
   aliases: string[];
   source?: "bundled" | "user";
+  safeRegion?: WallpaperSafeRegion;
+}
+
+export interface WallpaperSafeRegion {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+  petAnchor: "left" | "right";
 }
 
 export interface WallpaperDisplayInfo {

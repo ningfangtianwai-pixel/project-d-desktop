@@ -1099,3 +1099,10 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Live Photo import now combines main-process size/container/cover validation with a renderer video decode probe. A failed probe deletes the newly imported asset and keeps the previous wallpaper.
 - Verification passes: typecheck, lint, 221/221 Node tests, 2/2 component tests, production build, and wallpaper-library import QA.
 - The remaining Phase D gap is a true pre-copy chooser preview; current selection happens in the privileged dialog, then decode is verified before application.
+
+## Stage 58 - Wallpaper-Aware Pet Anchors (Complete)
+
+- Added wallpaper safe-region metadata and left/right pet anchor preferences for the bundled wallpaper library.
+- New pet windows use the selected wallpaper's safe region while preserving the existing multi-display virtual-boundary and size/DPI clamps.
+- Existing saved or manually dragged pet positions are not overwritten.
+- Verification passes: typecheck, lint, 222/222 Node tests, production build, and all five six-slot pet asset verification.
