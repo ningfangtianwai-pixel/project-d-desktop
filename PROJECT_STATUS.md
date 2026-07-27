@@ -1076,3 +1076,10 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Resolved the open experience decisions: four primary edge actions, dynamic pet placement, organizer-as-task-state, offline wallpaper profiling, and personal-use-first open-source scope.
 - Added eight generated design references covering dark and bright quiet states, realistic rain and snow, pet interaction, spatial organization, wallpaper studio, and mixed-display adaptation.
 - Added an implementation map and measurable acceptance matrix without changing runtime code, safety behavior, test conclusions, or asset-license status.
+- Stage 55: Quiet Desktop Shell (in progress)
+- Added a shared five-state experience model: quiet, attention, task, clean, and safe.
+- The renderer now starts wallpaper-first with a compact edge rail and status capsule.
+- Organizer, search, inbox, assistant, wallpaper, settings, and recovery controls remain reachable through explicit task entry points.
+- Escape closes the active task surface without changing desktop files or system state.
+- Verification: typecheck, lint, Node tests 219/219, component tests 2/2, and production build pass.
+- Electron E2E: 10/11 passed; the remaining clean-desktop scenario fails in the Windows taskbar/icon PowerShell probe and needs separate Explorer-host investigation.

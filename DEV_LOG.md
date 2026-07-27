@@ -1534,3 +1534,13 @@
 - Generated and retained eight 1672×941 visual concepts under `docs/visual-concepts/v4-ambient`.
 - Recorded the image purposes, prompt summaries, docs-only scope, and warning that MIT code licensing does not automatically cover visual assets.
 - No runtime source, build configuration, database, packaged resource, remote repository, or licensing conclusion was changed.
+-
+## 2026-07-27 - Stage 55 Quiet Desktop Shell
+
+- Added `src/shared/desktop-experience.ts` with explicit experience modes and task-surface transitions.
+- Updated `src/renderer/App.vue` with a wallpaper-first default shell, edge tools for search, organizer, inbox, AI, wallpaper, and settings, a status capsule, and Escape-to-close task behavior.
+- Added low-opacity adaptive glass tokens and responsive edge-rail styles. The existing task console is hidden only in quiet/clean states and remains available in task states.
+- Added `tests/desktop-experience-state.test.cjs` for quiet, task, safe, and attention transitions.
+- Verification: typecheck passed; lint passed; Node tests 219/219; component tests 2/2; production build passed; first-launch Electron E2E passed in isolation.
+- Full Electron replay passed 10/11. `clean-desktop-system-state` still fails at the Windows taskbar/icon PowerShell probe and is recorded as a host-level follow-up.
+- No remote push was performed. Rollback snapshot remains `v5.1-wallpaper-first-baseline-20260724`.

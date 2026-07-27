@@ -3119,3 +3119,124 @@ h1 {
     grid-template-columns: 1fr;
   }
 }
+
+/* V5.1 wallpaper-first shell tokens. The existing task surface remains available on demand. */
+:root {
+  --experience-quiet-glass: rgba(13, 22, 34, 0.13);
+  --experience-glass-border: rgba(255, 255, 255, 0.2);
+  --experience-glass-shadow: 0 14px 42px rgba(4, 10, 18, 0.18);
+  --experience-blur: 12px;
+  --experience-edge-gap: 18px;
+}
+
+.app-shell[data-experience-mode="quiet"],
+.app-shell[data-experience-mode="clean"] { background: transparent; }
+
+.ambient-edge-rail {
+  position: fixed;
+  z-index: 30;
+  top: 50%;
+  left: var(--experience-edge-gap);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 7px;
+  transform: translateY(-50%);
+  border: 1px solid var(--experience-glass-border);
+  border-radius: 16px;
+  background: var(--experience-quiet-glass);
+  box-shadow: var(--experience-glass-shadow);
+  backdrop-filter: blur(var(--experience-blur));
+  -webkit-backdrop-filter: blur(var(--experience-blur));
+}
+
+.ambient-edge-rail button,
+.ambient-status-capsule button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.86);
+  background: transparent;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.ambient-edge-rail button:hover,
+.ambient-edge-rail button:focus-visible,
+.ambient-status-capsule button:hover,
+.ambient-status-capsule button:focus-visible {
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.16);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.ambient-status-capsule {
+  position: fixed;
+  z-index: 30;
+  top: var(--experience-edge-gap);
+  right: var(--experience-edge-gap);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 6px 8px 6px 12px;
+  border: 1px solid var(--experience-glass-border);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 12px;
+  letter-spacing: 0;
+  background: var(--experience-quiet-glass);
+  box-shadow: var(--experience-glass-shadow);
+  backdrop-filter: blur(var(--experience-blur));
+  -webkit-backdrop-filter: blur(var(--experience-blur));
+}
+
+.ambient-status-divider { opacity: 0.48; }
+.ambient-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #9cc9d6;
+  box-shadow: 0 0 0 3px rgba(156, 201, 214, 0.16);
+}
+.ambient-status-dot[data-mode="task"] { background: #f2d47d; }
+.ambient-status-dot[data-mode="attention"] { background: #ef9d88; }
+.ambient-status-dot[data-mode="safe"] { background: #a7d8ab; }
+
+.app-shell[data-experience-mode="quiet"] .desktop-band,
+.app-shell[data-experience-mode="clean"] .desktop-band {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px) scale(0.985);
+}
+.app-shell[data-experience-mode="task"] .desktop-band,
+.app-shell[data-experience-mode="attention"] .desktop-band,
+.app-shell[data-experience-mode="safe"] .desktop-band {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+}
+.desktop-band { transition: opacity 180ms ease, transform 220ms ease; }
+
+@media (max-width: 760px) {
+  .ambient-edge-rail {
+    top: auto;
+    right: 50%;
+    bottom: 14px;
+    left: auto;
+    flex-direction: row;
+    transform: translateX(50%);
+  }
+  .ambient-status-capsule {
+    top: 12px;
+    right: 12px;
+    max-width: calc(100vw - 24px);
+  }
+}

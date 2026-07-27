@@ -857,3 +857,14 @@
 - [x] Eight visual references cover the requested weather, wallpaper, pet, layout, editor, and multi-display directions.
 - [x] Every visual reference is retained under a docs-only directory with source-purpose and license-boundary notes.
 - [x] The plan distinguishes code-complete work from physical display, DPI, soak, and subjective visual acceptance.
+-
+## Stage 55 - Quiet Desktop Shell
+
+- [x] A shared experience-state model defines quiet, attention, task, clean, and safe modes.
+- [x] Default renderer composition is wallpaper-first and keeps the existing task console reachable.
+- [x] Edge tools expose search, organizer, inbox, assistant, wallpaper, and settings entry points.
+- [x] Escape closes an active task surface without mutating desktop files or system state.
+- [x] Quiet-shell state transitions have dedicated Node coverage.
+- [x] Typecheck, lint, 219 Node tests, 2 component tests, and production build pass.
+- [ ] Full Electron E2E is green; current run is 10/11 because the Windows taskbar/icon probe timed out in `clean-desktop-system-state`.
+- [ ] Task-specific composition replaces the remaining all-in-one legacy console.

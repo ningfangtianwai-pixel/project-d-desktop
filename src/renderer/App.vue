@@ -33,6 +33,14 @@ import OnboardingFlow from "./components/OnboardingFlow.vue";
 import { wallpaperDisplayLabel } from "@shared/wallpaper-library";
 import { containerAccentOption } from "@shared/container-accents";
 import { readOnboardingState, shouldShowOnboarding } from "@shared/onboarding";
+import {
+  closeDesktopSurface as closeDesktopSurfaceState,
+  DEFAULT_DESKTOP_EXPERIENCE,
+  modeForDesktopStatus,
+  openDesktopSurface as openDesktopSurfaceState,
+  type DesktopTaskSurface,
+  type DesktopExperienceMode
+} from "@shared/desktop-experience";
 
 const appVersionFallback = __PROJECTD_VERSION__;
 import type { ActionExecution, ActionPlan, AppInfo, ContainerWithFiles, CurrentWeather, DatabaseStatus, DesktopFileRecord, DesktopStatus, ScanResult, SettingsSnapshot, SuggestionRecord, WallpaperLibraryItem, WorkspaceSearchResult } from "@shared/types";
@@ -65,6 +73,8 @@ const desktopStatus = ref<DesktopStatus>({
 const route = ref(window.location.hash);
 const showOnboarding = ref(!route.value && shouldShowOnboarding(readOnboardingState(localStorage, 5)));
 const activityLog = ref<string[]>(["Project D shell ready"]);
+const experienceMode = ref<DesktopExperienceMode>(DEFAULT_DESKTOP_EXPERIENCE.mode);
+const activeTaskSurface = ref<DesktopTaskSurface>(DEFAULT_DESKTOP_EXPERIENCE.activeSurface);
 const fileIconMap = {
   program: AppWindow,
   document: FileText,
@@ -152,6 +162,9 @@ async function refreshStatus(): Promise<void> {
     : nextThemeMode === "light" ? "light" : "dark";
   document.documentElement.dataset.theme = resolvedTheme;
   desktopStatus.value = nextDesktopStatus;
+  if (!activeTaskSurface.value) {
+    experienceMode.value = modeForDesktopStatus(nextDesktopStatus.mode);
+  }
   databaseStatus.value = nextDatabaseStatus;
   containers.value = nextContainers;
   settings.value = nextSettings;
@@ -163,6 +176,28 @@ async function refreshStatus(): Promise<void> {
     currentWeather.value = await window.projectD.getCurrentWeather();
   } catch {
     currentWeather.value = null;
+  }
+}
+
+function openDesktopSurface(surface: Exclude<DesktopTaskSurface, null>): void {
+  const next = openDesktopSurfaceState(surface);
+  experienceMode.value = next.mode;
+  activeTaskSurface.value = next.activeSurface;
+  if (surface === "search") {
+    void focusWorkspaceSearch();
+  }
+}
+
+function closeDesktopSurface(): void {
+  const next = closeDesktopSurfaceState();
+  experienceMode.value = next.mode;
+  activeTaskSurface.value = next.activeSurface;
+  contextMenu.value = null;
+}
+
+function handleExperienceKeydown(event: KeyboardEvent): void {
+  if (event.key === "Escape" && activeTaskSurface.value) {
+    closeDesktopSurface();
   }
 }
 
@@ -190,16 +225,21 @@ async function dismissRecoveryNotice(): Promise<void> {
 
 async function activateDesktop(): Promise<void> {
   desktopStatus.value = await window.projectD.activateDesktop();
+  experienceMode.value = "task";
+  activeTaskSurface.value = "organize";
   pushLog("已进入整理预备状态");
 }
 
 async function deactivateDesktop(): Promise<void> {
   desktopStatus.value = await window.projectD.deactivateDesktop();
+  closeDesktopSurface();
   pushLog("桌面已安全归位");
 }
 
 async function enterCleanDesktop(): Promise<void> {
   desktopStatus.value = await window.projectD.enterCleanDesktop();
+  experienceMode.value = "clean";
+  activeTaskSurface.value = null;
   pushLog("已进入纯净桌面");
 }
 
@@ -396,6 +436,7 @@ async function dismissOnboarding(): Promise<void> {
 
 onMounted(async () => {
   window.addEventListener("hashchange", handleHashChange);
+  window.addEventListener("keydown", handleExperienceKeydown);
   if (route.value) return;
 
   if (showOnboarding.value) await window.projectD.setOnboardingActive(true);
@@ -436,6 +477,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener("hashchange", handleHashChange);
+  window.removeEventListener("keydown", handleExperienceKeydown);
   unsubscribeMenu?.();
   unsubscribeDesktopUpdate?.();
   unsubscribeSettingsUpdate?.();
@@ -451,10 +493,37 @@ onUnmounted(() => {
   <PetPage v-else-if="isPetRoute" />
   <WallpaperPage v-else-if="isWallpaperRoute" />
 
-  <main v-else class="app-shell">
+  <main v-else class="app-shell" :data-experience-mode="experienceMode" :data-task-surface="activeTaskSurface || undefined">
     <OnboardingFlow v-if="showOnboarding" @completed="dismissOnboarding" @skipped="dismissOnboarding" />
     <WallpaperStage />
-    <section class="desktop-band">
+    <nav class="ambient-edge-rail" aria-label="桌面工具">
+      <button type="button" title="搜索工作区" aria-label="搜索工作区" @click="openDesktopSurface('search')">
+        <Search :size="18" />
+      </button>
+      <button type="button" title="启动整理" aria-label="启动整理" @click="openDesktopSurface('organize')">
+        <MonitorUp :size="18" />
+      </button>
+      <button type="button" title="收件箱" aria-label="收件箱" @click="openDesktopSurface('inbox')">
+        <Inbox :size="18" />
+      </button>
+      <button type="button" title="AI 对话" aria-label="AI 对话" @click="openDesktopSurface('assistant')">
+        <AppWindow :size="18" />
+      </button>
+      <button type="button" title="壁纸与场景" aria-label="壁纸与场景" @click="openDesktopSurface('wallpaper')">
+        <ImageIcon :size="18" />
+      </button>
+      <button type="button" title="设置" aria-label="设置" @click="openSettings">
+        <Settings :size="18" />
+      </button>
+    </nav>
+    <div class="ambient-status-capsule" aria-live="polite">
+      <span class="ambient-status-dot" :data-mode="experienceMode"></span>
+      <span>{{ currentWallpaperLabel }}</span>
+      <span class="ambient-status-divider">·</span>
+      <span>{{ currentWeather?.city || "自动定位" }}</span>
+      <button v-if="activeTaskSurface" type="button" title="退出当前任务" aria-label="退出当前任务" @click="closeDesktopSurface">×</button>
+    </div>
+    <section class="desktop-band" :data-visible="Boolean(activeTaskSurface || experienceMode !== 'quiet')">
       <header class="topbar">
         <div class="brand-lockup">
           <span class="brand-mark">D</span>

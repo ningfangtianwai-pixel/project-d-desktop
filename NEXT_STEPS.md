@@ -240,3 +240,11 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 3. Convert `OverlayPage.vue` into the explicit organizer task state, using spatial group markers and one bottom action strip while preserving ActionPlan preview, conflict, execution, and undo.
 4. Add pre-import Live Photo playback and browser decode probing as part of the wallpaper canvas workflow.
 5. Validate each implementation phase against dark, bright, detailed, low-contrast, left-subject, right-subject, portrait, and ultrawide wallpapers before moving to the next phase.
+-
+## After Stage 55
+
+1. Add task-surface-specific composition so search, organizer, inbox, assistant, and wallpaper work do not all reveal the entire legacy console at once.
+2. Convert `OverlayPage.vue` into the organizer task surface with spatial groups and a bottom action strip while preserving preview, conflict, execute, and undo behavior.
+3. Investigate and stabilize the Windows taskbar/icon probe used by `clean-desktop-system-state`; rerun the isolated and full Electron E2E suites.
+4. Add renderer screenshot checks for quiet, task, clean, bright-wallpaper, and low-contrast-wallpaper states.
+5. Continue Phase D only after the shell passes visual and recovery gates: Live Photo pre-import probing, wallpaper library task surface, and mixed-display visual validation.
