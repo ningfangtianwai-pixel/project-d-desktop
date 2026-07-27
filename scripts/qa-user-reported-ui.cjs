@@ -51,7 +51,10 @@ async function run() {
     await page.locator(".app-shell").waitFor();
     const mainWallpaperVisible = await page.locator(".wallpaper-stage").isVisible();
 
+    // V5.1 keeps the desktop quiet by default; open the assistant task surface before testing chat history.
+    await page.locator('.ambient-edge-rail button[title="AI 对话"]').click();
     const chatInput = page.locator(".chat-input input");
+    await chatInput.waitFor({ state: "visible" });
     for (let index = 0; index < 7; index += 1) {
       await chatInput.fill(`history-${index}`);
       await chatInput.press("Enter");

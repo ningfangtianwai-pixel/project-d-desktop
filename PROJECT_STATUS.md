@@ -1083,3 +1083,11 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Escape closes the active task surface without changing desktop files or system state.
 - Verification: typecheck, lint, Node tests 219/219, component tests 2/2, and production build pass.
 - Electron E2E: 10/11 passed; the remaining clean-desktop scenario fails in the Windows taskbar/icon PowerShell probe and needs separate Explorer-host investigation.
+
+## Stage 56 - Task Surface And Organizer Closure (Complete)
+
+- Search, organizer, inbox, assistant, and wallpaper now expose distinct task compositions instead of revealing the entire legacy console for every action.
+- The organizer overlay now has a persistent bottom action strip for search, inbox, save scene, undo, and safe restore, while preserving the existing top tools.
+- UI regression scripts were updated to enter the assistant task surface before testing chat history and to use unique action labels.
+- Verification passes: typecheck, lint, 220/220 Node tests, 2/2 component tests, production build, user-reported UI QA, three critical Electron E2E scenarios, and organizer safe-restore E2E.
+- The known host-level `clean-desktop-system-state` PowerShell probe timeout remains separate from this renderer work.

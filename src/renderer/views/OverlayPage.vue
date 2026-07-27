@@ -87,6 +87,7 @@ const fileIconMap: Record<string, LucideIcon> = {
   design: Palette, other: FileQuestion
 };
 const movableInboxItems = computed(() => inboxPlan.value?.items.filter((item) => item.status === "pending" && !item.conflict).length ?? 0);
+const totalFiles = computed(() => containers.value.reduce((total, container) => total + container.files.length, 0));
 const latestUndoableExecution = computed(() => actionHistory.value.find((item) => item.undoable) ?? null);
 
 async function refresh(): Promise<void> {
@@ -784,6 +785,20 @@ onUnmounted(() => {
         </div>
       </article>
     </section>
+
+    <nav class="organizer-action-strip" aria-label="整理任务操作">
+      <div class="organizer-action-context">
+        <span>当前工作区</span>
+        <strong>{{ containers.length }} 个分区 · {{ totalFiles }} 个文件</strong>
+      </div>
+      <div class="organizer-action-buttons">
+        <button type="button" title="打开工作区搜索" @click="focusSearch"><Search :size="16" /><span>搜索</span></button>
+        <button type="button" title="打开收件箱方案" @click="prepareDesktopInbox(false)"><Inbox :size="16" /><span>收件箱</span></button>
+        <button type="button" title="保存当前整理场景" @click="saveScene"><Save :size="16" /><span>保存场景</span></button>
+        <button v-if="latestUndoableExecution" type="button" title="撤销最近整理" @click="undoLatestAction"><Undo2 :size="16" /><span>撤销</span></button>
+        <button class="organizer-action-primary" type="button" title="结束整理并安全归位" @click="deactivate"><PanelRightOpen :size="16" /><span>安全归位</span></button>
+      </div>
+    </nav>
 
     <section v-if="latestSuggestion" class="desktop-suggestion-toast" aria-live="polite">
       <Sparkles :size="18" />

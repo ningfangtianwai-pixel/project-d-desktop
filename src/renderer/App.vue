@@ -137,6 +137,16 @@ const weatherSourceLabel = computed(() => {
 });
 const movableInboxItems = computed(() => inboxPlan.value?.items.filter((item) => item.status === "pending" && !item.conflict).length ?? 0);
 const latestUndoableExecution = computed(() => actionHistory.value.find((item) => item.undoable) ?? null);
+const taskSurfaceLabel = computed(() => {
+  const labels: Record<Exclude<DesktopTaskSurface, null>, string> = {
+    search: "搜索工作区",
+    organize: "桌面整理",
+    inbox: "收件箱",
+    assistant: "AI 助手",
+    wallpaper: "壁纸与场景"
+  };
+  return activeTaskSurface.value ? labels[activeTaskSurface.value] : "";
+});
 function containerVisualStyle(container: ContainerWithFiles): Record<string, string> {
   return { "--container-accent": containerAccentOption(container.accentColor).rgb };
 }
@@ -193,6 +203,10 @@ function closeDesktopSurface(): void {
   experienceMode.value = next.mode;
   activeTaskSurface.value = next.activeSurface;
   contextMenu.value = null;
+}
+
+function openWallpaperPage(): void {
+  window.location.hash = "#/wallpaper";
 }
 
 function handleExperienceKeydown(event: KeyboardEvent): void {
@@ -524,6 +538,13 @@ onUnmounted(() => {
       <button v-if="activeTaskSurface" type="button" title="退出当前任务" aria-label="退出当前任务" @click="closeDesktopSurface">×</button>
     </div>
     <section class="desktop-band" :data-visible="Boolean(activeTaskSurface || experienceMode !== 'quiet')">
+      <div v-if="activeTaskSurface" class="task-surface-heading">
+        <div>
+          <span>当前任务面</span>
+          <strong>{{ taskSurfaceLabel }}</strong>
+        </div>
+        <button type="button" title="退出当前任务" @click="closeDesktopSurface">退出</button>
+      </div>
       <header class="topbar">
         <div class="brand-lockup">
           <span class="brand-mark">D</span>
@@ -697,6 +718,17 @@ onUnmounted(() => {
           <ChatPanel @request-inbox-plan="prepareDesktopInbox" />
         </aside>
       </div>
+      <section v-if="activeTaskSurface === 'wallpaper'" class="wallpaper-task-card">
+        <div>
+          <span>当前壁纸</span>
+          <strong>{{ currentWallpaperLabel }}</strong>
+          <small>{{ currentWeather?.city || "自动定位" }} · {{ wallpaperHostLabel }}</small>
+        </div>
+        <div class="wallpaper-task-actions">
+          <button type="button" @click="switchWallpaperStyle">切换下一张</button>
+          <button type="button" @click="openWallpaperPage">打开壁纸库</button>
+        </div>
+      </section>
     </section>
 
     <div v-if="contextMenu" class="context-menu" :style="{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }">

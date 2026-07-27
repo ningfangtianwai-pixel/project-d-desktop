@@ -1544,3 +1544,12 @@
 - Verification: typecheck passed; lint passed; Node tests 219/219; component tests 2/2; production build passed; first-launch Electron E2E passed in isolation.
 - Full Electron replay passed 10/11. `clean-desktop-system-state` still fails at the Windows taskbar/icon PowerShell probe and is recorded as a host-level follow-up.
 - No remote push was performed. Rollback snapshot remains `v5.1-wallpaper-first-baseline-20260724`.
+
+## 2026-07-27 - Stage 56 Task Surface And Organizer Closure
+
+- Added task-surface composition rules so search, assistant, inbox, and wallpaper show only the relevant work surface; organizer remains the full spatial workspace.
+- Added `task-surface-heading` and `wallpaper-task-card` to the main renderer, with direct wallpaper-library entry and one-click wallpaper switching.
+- Added `organizer-action-strip` to `OverlayPage.vue` with search, inbox, save scene, undo, and safe-restore actions. Existing toolbar, drag/drop, preview, portal, scene, ActionPlan, and recovery behavior remain unchanged.
+- Updated `scripts/qa-user-reported-ui.cjs` to open the AI task surface before chat checks. Resolved duplicate button-title regressions by giving bottom actions unique accessible labels.
+- Verification: typecheck, lint, Node tests 220/220, component tests 2/2, production build, `pnpm qa:user-reported-ui`, first-launch/AI-fallback/settings-persistence E2E (3/3), and organizer-safe-restore E2E passed.
+- Renderer bundle remains below 510 kB with the existing Vite warning; no new runtime dependency was introduced.

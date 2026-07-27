@@ -3240,3 +3240,168 @@ h1 {
     max-width: calc(100vw - 24px);
   }
 }
+
+/* Task surfaces keep one clear job in view while preserving the underlying capabilities. */
+.task-surface-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(1120px, calc(100% - 36px));
+  margin: 0 auto 12px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  background: rgba(13, 22, 34, 0.18);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.task-surface-heading div { display: grid; gap: 2px; }
+.task-surface-heading span { color: rgba(255, 255, 255, 0.52); font-size: 11px; }
+.task-surface-heading strong { color: rgba(255, 255, 255, 0.94); font-size: 17px; }
+.task-surface-heading button,
+.wallpaper-task-actions button {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 9px;
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+.task-surface-heading button:hover,
+.wallpaper-task-actions button:hover { background: rgba(255, 255, 255, 0.16); }
+
+.app-shell[data-task-surface="search"] .desktop-library,
+.app-shell[data-task-surface="assistant"] .desktop-library,
+.app-shell[data-task-surface="inbox"] .desktop-library,
+.app-shell[data-task-surface="wallpaper"] .control-grid { display: none; }
+
+.app-shell[data-task-surface="search"] .command-panel > .panel-title,
+.app-shell[data-task-surface="search"] .command-panel > .action-row,
+.app-shell[data-task-surface="search"] .command-panel > .status-list,
+.app-shell[data-task-surface="search"] .command-panel > .file-preview,
+.app-shell[data-task-surface="search"] .command-panel > .inbox-review,
+.app-shell[data-task-surface="search"] .command-panel > .inbox-suggestion,
+.app-shell[data-task-surface="search"] .command-panel > .chat-panel,
+.app-shell[data-task-surface="assistant"] .command-panel > .workspace-search,
+.app-shell[data-task-surface="assistant"] .command-panel > .workspace-search-results,
+.app-shell[data-task-surface="assistant"] .command-panel > .action-row,
+.app-shell[data-task-surface="assistant"] .command-panel > .status-list,
+.app-shell[data-task-surface="assistant"] .command-panel > .file-preview,
+.app-shell[data-task-surface="assistant"] .command-panel > .inbox-review,
+.app-shell[data-task-surface="assistant"] .command-panel > .inbox-suggestion,
+.app-shell[data-task-surface="inbox"] .command-panel > .workspace-search,
+.app-shell[data-task-surface="inbox"] .command-panel > .workspace-search-results,
+.app-shell[data-task-surface="inbox"] .command-panel > .status-list,
+.app-shell[data-task-surface="inbox"] .command-panel > .file-preview,
+.app-shell[data-task-surface="inbox"] .command-panel > .chat-panel,
+.app-shell[data-task-surface="inbox"] .command-panel > .inbox-suggestion { display: none; }
+
+.app-shell[data-task-surface="search"] .command-panel,
+.app-shell[data-task-surface="assistant"] .command-panel,
+.app-shell[data-task-surface="inbox"] .command-panel {
+  grid-column: 1 / -1;
+  width: min(760px, 100%);
+  min-height: 0;
+  margin: 0 auto;
+}
+.app-shell[data-task-surface="assistant"] .command-panel .chat-panel { display: block; }
+.app-shell[data-task-surface="inbox"] .command-panel > .action-row { display: flex; }
+.app-shell[data-task-surface="inbox"] .command-panel > .action-row .action-button:not(.inbox),
+.app-shell[data-task-surface="inbox"] .command-panel > .action-row .icon-button { display: none; }
+
+.wallpaper-task-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(760px, calc(100% - 36px));
+  margin: 0 auto;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(13, 22, 34, 0.2);
+  box-shadow: 0 18px 56px rgba(4, 10, 18, 0.18);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.wallpaper-task-card > div:first-child { display: grid; gap: 4px; }
+.wallpaper-task-card span { color: rgba(255, 255, 255, 0.54); font-size: 11px; }
+.wallpaper-task-card strong { font-size: 20px; }
+.wallpaper-task-card small { color: rgba(255, 255, 255, 0.62); }
+.wallpaper-task-actions { display: flex; gap: 8px; }
+
+@media (max-width: 760px) {
+  .task-surface-heading,
+  .wallpaper-task-card { width: calc(100% - 24px); }
+  .wallpaper-task-card { align-items: stretch; flex-direction: column; gap: 14px; }
+  .wallpaper-task-actions { flex-wrap: wrap; }
+}
+
+/* Organizer task state: one persistent bottom strip makes the reversible actions easy to find. */
+.organizer-action-strip {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: min(920px, calc(100vw - 36px));
+  min-height: 56px;
+  padding: 8px 10px 8px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+  background: rgba(13, 22, 34, 0.42);
+  box-shadow: 0 18px 54px rgba(4, 10, 18, 0.24);
+  backdrop-filter: blur(16px) saturate(1.08);
+  -webkit-backdrop-filter: blur(16px) saturate(1.08);
+  transform: translateX(-50%);
+}
+.organizer-action-context {
+  display: grid;
+  gap: 2px;
+  min-width: 150px;
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 11px;
+}
+.organizer-action-context strong { color: rgba(255, 255, 255, 0.86); font-size: 12px; }
+.organizer-action-buttons { display: flex; justify-content: flex-end; flex: 1; gap: 6px; }
+.organizer-action-buttons button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 11px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.84);
+  background: rgba(255, 255, 255, 0.07);
+  cursor: pointer;
+}
+.organizer-action-buttons button:hover,
+.organizer-action-buttons button:focus-visible {
+  border-color: rgba(159, 215, 237, 0.44);
+  background: rgba(159, 215, 237, 0.14);
+  outline: none;
+}
+.organizer-action-buttons .organizer-action-primary {
+  border-color: rgba(167, 216, 171, 0.35);
+  color: #d9f1da;
+  background: rgba(99, 157, 108, 0.18);
+}
+.organizer-action-buttons .organizer-action-primary:hover { background: rgba(99, 157, 108, 0.3); }
+
+@media (max-width: 760px) {
+  .organizer-action-strip {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+    width: calc(100vw - 24px);
+    padding: 10px;
+  }
+  .organizer-action-context { min-width: 0; }
+  .organizer-action-buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .organizer-action-buttons button { min-width: 0; padding: 0 7px; }
+}

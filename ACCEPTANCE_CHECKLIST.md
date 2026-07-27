@@ -868,3 +868,14 @@
 - [x] Typecheck, lint, 219 Node tests, 2 component tests, and production build pass.
 - [ ] Full Electron E2E is green; current run is 10/11 because the Windows taskbar/icon probe timed out in `clean-desktop-system-state`.
 - [ ] Task-specific composition replaces the remaining all-in-one legacy console.
+
+## Stage 56 - Task Surface And Organizer Closure
+
+- [x] Search, assistant, inbox, and wallpaper task surfaces hide unrelated legacy controls.
+- [x] Organizer retains the spatial file workspace and exposes a bottom action strip.
+- [x] Bottom actions provide search, inbox, save scene, undo, and safe restore without changing the ActionPlan contract.
+- [x] User-reported browser UI QA enters the assistant task surface before chat-history checks.
+- [x] Unique accessible labels prevent duplicate toolbar/task-strip action ambiguity.
+- [x] Typecheck, lint, 220 Node tests, 2 component tests, production build, browser UI QA, and critical Electron E2E pass.
+- [ ] Full Electron E2E remains blocked only by the Windows taskbar/icon PowerShell probe timeout.
+- [ ] Wallpaper task canvas, Live Photo decode probe, and visual profiles remain for Phase D.

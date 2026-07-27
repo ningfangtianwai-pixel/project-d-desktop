@@ -248,3 +248,11 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 3. Investigate and stabilize the Windows taskbar/icon probe used by `clean-desktop-system-state`; rerun the isolated and full Electron E2E suites.
 4. Add renderer screenshot checks for quiet, task, clean, bright-wallpaper, and low-contrast-wallpaper states.
 5. Continue Phase D only after the shell passes visual and recovery gates: Live Photo pre-import probing, wallpaper library task surface, and mixed-display visual validation.
+
+## After Stage 56
+
+1. Add a real wallpaper task canvas with a bottom filmstrip, current-asset metadata, and a compact inspector without moving privileged wallpaper operations out of Settings IPC.
+2. Add Live Photo pre-import playback and a browser decode probe; keep the current wallpaper when media validation or playback fails.
+3. Add wallpaper visual profiles for subject-safe regions, crop mode, display assignment, and bright/dark contrast checks.
+4. Run the full Electron suite again after the wallpaper task surface lands; separately stabilize the Windows taskbar/icon PowerShell probe.
+5. Continue to Phase E only after the wallpaper task surface passes damaged-media, portrait, ultrawide, and mixed-DPI checks.
