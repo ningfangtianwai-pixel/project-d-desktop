@@ -1568,3 +1568,9 @@
 - Extended `pet-window-layout.ts` so new pet windows choose a left/right anchor within the selected wallpaper's safe region while retaining virtual display and size clamps.
 - Main-process default pet bounds now consult the active wallpaper id. Persisted/manual bounds remain authoritative.
 - Verification: typecheck, lint, Node tests 222/222, production build, and `pnpm verify:pet-assets` passed.
+## 2026-07-27 - Stage 59 Weather Visual QA And Runtime Tiers
+
+- Ran `pnpm qa:weather-visual` against clear, rain, snow, fog, leaves, and light states.
+- Result: passed. The report recorded independent layer visibility, bitmap weather plates, rain-streak coverage, weather opacity, and quality-tier pruning.
+- Reviewed `artifacts/qa/weather-visual/rain.png`; the weather layer is rendered over the wallpaper with bitmap depth plates and atmospheric grade.
+- Hardware matrix, fullscreen, sleep/wake, and 4/24-hour soak remain unclaimed until physically exercised.

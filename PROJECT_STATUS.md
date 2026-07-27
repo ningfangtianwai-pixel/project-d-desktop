@@ -1106,3 +1106,9 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - New pet windows use the selected wallpaper's safe region while preserving the existing multi-display virtual-boundary and size/DPI clamps.
 - Existing saved or manually dragged pet positions are not overwritten.
 - Verification passes: typecheck, lint, 222/222 Node tests, production build, and all five six-slot pet asset verification.
+## Stage 59 - Weather Visual QA And Runtime Tiers (Complete)
+
+- Verified clear, rain, snow, fog, leaves, and light preview states with independent weather layers above the wallpaper.
+- Verified bitmap rain/snow plates and quality-aware pruning across balanced, automatic, and battery-saver profiles.
+- `pnpm qa:weather-visual` passed and stored screenshots plus metrics under `artifacts/qa/weather-visual`.
+- Automated visual evidence is complete; physical GPU, multi-monitor, fullscreen, sleep/wake, and long-soak evidence remain hardware acceptance work.

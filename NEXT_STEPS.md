@@ -271,3 +271,9 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 2. Add a compact pet task surface for character, personality, talk frequency, and action preview without opening the full settings page.
 3. Verify pet anchor behavior on mixed-DPI portrait/landscape displays and after sleep/wake or display hot-plug.
 4. Continue Phase F with weather quality tiers and screenshot/pixel baselines after the wallpaper and pet layers are stable.
+## After Stage 59
+
+1. Investigate the isolated Windows `clean-desktop-system-state` E2E failure in the taskbar/icon PowerShell probe.
+2. Add screenshot baselines for quiet, task, clean, bright-wallpaper, low-contrast-wallpaper, and weather-quality states.
+3. Run physical acceptance for mixed-DPI, portrait/landscape, multi-display hot-plug, fullscreen pause, sleep/wake, and 4/24-hour stability.
+4. Add the consented pet reposition prompt after wallpaper changes, then verify it on the same display matrix.

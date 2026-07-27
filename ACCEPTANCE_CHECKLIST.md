@@ -899,3 +899,10 @@
 - [x] All five characters retain six verified action slots.
 - [x] Typecheck, lint, 222 Node tests, production build, and pet asset verification pass.
 - [ ] Runtime consented reposition prompt after wallpaper changes remains open.
+## Stage 59 - Weather Visual QA And Runtime Tiers
+
+- [x] Clear, rain, snow, fog, leaves, and light states have independent visual QA coverage.
+- [x] Rain and snow retain layered bitmap depth plates instead of abstract-only line particles.
+- [x] Balanced, automatic, and battery-saver weather pruning is observable in the QA report.
+- [x] `pnpm qa:weather-visual` passes and stores screenshots plus metrics under `artifacts/qa/weather-visual`.
+- [ ] Physical GPU, multi-display, fullscreen-game, sleep/wake, and long-soak evidence remains outstanding.
