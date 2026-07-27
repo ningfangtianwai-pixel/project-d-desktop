@@ -381,6 +381,7 @@ export interface WorkspaceScene {
   pinnedResources?: DesktopResourceRef[];
   displayAssignments?: DisplayWorkAreaSnapshot[];
   visualProfile?: WorkspaceSceneVisualProfile;
+  displayFitModes?: Record<string, "cover" | "contain">;
   todoSummary?: { total: number; active: number };
 }
 

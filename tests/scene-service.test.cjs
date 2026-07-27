@@ -13,12 +13,14 @@ function createStore() {
   ];
   const portalWrites = [];
   const accents = [];
+  const displayFitModes = new Map();
   return {
     scenes,
     positions,
     settingsPatches,
     portalWrites,
     accents,
+    displayFitModes,
     getContainers: () => [
       { id: 1, positionX: 24, positionY: 96, width: 300, height: 280, isCollapsed: false, accentColor: "sky" },
       { id: 2, positionX: 348, positionY: 96, width: 320, height: 240, isCollapsed: true, accentColor: "mint" }
@@ -44,6 +46,8 @@ function createStore() {
     getWorkspaceScene: (sceneId) => scenes.has(sceneId) ? structuredClone(scenes.get(sceneId)) : null,
     updateContainerPosition: (...args) => positions.push(args),
     updateContainerAccent: (...args) => accents.push(args),
+    getDisplayWallpaperFitModes: () => Object.fromEntries(displayFitModes),
+    setDisplayWallpaperFitMode: (displayKey, fitMode) => displayFitModes.set(displayKey, fitMode),
     updateSettings: (patch) => {
       settingsPatches.push(structuredClone(patch));
       return {};
@@ -53,6 +57,7 @@ function createStore() {
 
 test("workspace scene saves and restores real container geometry and appearance state", () => {
   const store = createStore();
+  store.displayFitModes.set("display-1", "contain");
   const service = new SceneService(store);
   const scene = service.save("  深度工作  ");
 
@@ -68,8 +73,9 @@ test("workspace scene saves and restores real container geometry and appearance 
     edgeRailPlacement: "left",
     glassPreset: "quiet",
     audioPolicy: "muted",
-    displayFitMode: "cover"
+    displayFitMode: "contain"
   });
+  assert.deepEqual(scene.displayFitModes, { "display-1": "contain" });
   assert.equal(scene.petState.currentOutfit, "raincoat");
   assert.equal(scene.suggestionControls.disabled, false);
   assert.equal(scene.containerLayout.length, 2);
@@ -81,6 +87,7 @@ test("workspace scene saves and restores real container geometry and appearance 
     [2, 348, 96, 320, 240, true]
   ]);
   assert.deepEqual(store.accents, [[1, "sky"], [2, "mint"]]);
+  assert.deepEqual(Object.fromEntries(store.displayFitModes), { "display-1": "contain" });
   assert.deepEqual(store.settingsPatches, [{
     wallpaper: { dynamicId: "anime-lake", isDynamic: true },
     weather: { particleIntensity: 72, enableBorderInteraction: true },
@@ -92,7 +99,7 @@ test("workspace scene saves and restores real container geometry and appearance 
       edge_rail_placement: "left",
       glass_preset: "quiet",
       audio_policy: "muted",
-      display_fit_mode: "cover"
+      display_fit_mode: "contain"
     }
   }]);
   assert.deepEqual(store.portalWrites, []);
@@ -107,6 +114,7 @@ test("workspace scene preserves bounded visual profile values", () => {
     audio_policy: "ambient",
     display_fit_mode: "contain"
   })[key] ?? baseGetAppState(key);
+  store.displayFitModes.set("display-2", "contain");
   const service = new SceneService(store);
   const scene = service.save("视觉场景");
 
@@ -116,6 +124,7 @@ test("workspace scene preserves bounded visual profile values", () => {
     audioPolicy: "ambient",
     displayFitMode: "contain"
   });
+  assert.deepEqual(scene.displayFitModes, { "display-2": "contain" });
   store.scenes.set(scene.id, structuredClone(scene));
   service.apply(scene.id);
   assert.deepEqual(store.settingsPatches.at(-1).appState, {
@@ -127,6 +136,7 @@ test("workspace scene preserves bounded visual profile values", () => {
     audio_policy: "ambient",
     display_fit_mode: "contain"
   });
+  assert.deepEqual(Object.fromEntries(store.displayFitModes), { "display-2": "contain" });
 });
 
 test("workspace scene persists pinned search resources without duplicating them", () => {

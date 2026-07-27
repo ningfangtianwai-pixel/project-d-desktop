@@ -322,3 +322,9 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 4. Continue physical V5.1 acceptance: hot-plug, sleep/wake, fullscreen pause, GPU/battery profiles, and 4/24-hour soak.
 
 5. Run the complete Electron E2E suite serially after the cleanup hardening; retain any Windows file-lock failures as test infrastructure defects until reproduced against the product lifecycle.
+## After Stage 68
+
+1. Run the full Electron E2E and visual matrix after the scene display-fit correction when the long serial validation window is available.
+2. Verify scene restoration on physical portrait, ultrawide, mixed-DPI, and hot-plug display setups.
+3. Exercise real paired Live Photo media and retain the current wallpaper on malformed or undecodable input.
+4. Keep hardware, signing, artwork, and long-soak evidence separate from the local code baseline.

@@ -15,6 +15,8 @@ interface SceneStore {
   updateContainerPosition(id: number, x: number, y: number, width: number, height: number, isCollapsed?: boolean): void;
   updateContainerAccent(id: number, accent: ContainerAccent): void;
   updateSettings(patch: SettingsPatch): SettingsSnapshot;
+  getDisplayWallpaperFitModes(): Record<string, "cover" | "contain">;
+  setDisplayWallpaperFitMode(displayKey: string, fitMode: "cover" | "contain"): void;
 }
 
 export class SceneService {
@@ -37,6 +39,7 @@ export class SceneService {
     const id = randomUUID();
     const displays = this.environment.getDisplays();
     const primaryDisplay = displays.find((display) => display.isPrimary) ?? displays[0];
+    const displayFitModes = this.store.getDisplayWallpaperFitModes();
     const scene: WorkspaceScene = {
       id,
       name: normalizedName,
@@ -63,7 +66,8 @@ export class SceneService {
       suggestionControls: this.parseSuggestionControls(this.store.getAppState("suggestion:delivery-controls")),
       pinnedResources: [],
       displayAssignments: snapshotDisplays(id, displays),
-      visualProfile: this.readVisualProfile(),
+      visualProfile: this.readVisualProfile(displayFitModes, primaryDisplay?.displayId),
+      displayFitModes,
       todoSummary: { total: 0, active: 0 },
       containerLayout: this.store.getContainers().map((container) => ({
         id: container.id,
@@ -102,6 +106,9 @@ export class SceneService {
         container.isCollapsed
       );
       if (savedContainer.accentColor) this.store.updateContainerAccent(container.id, savedContainer.accentColor);
+    }
+    for (const [displayKey, fitMode] of Object.entries(scene.displayFitModes ?? {})) {
+      this.store.setDisplayWallpaperFitMode(displayKey, fitMode);
     }
     if (scene.portalIds) {
       const enabledIds = new Set(scene.portalIds);
@@ -159,12 +166,15 @@ export class SceneService {
     }
   }
 
-  private readVisualProfile(): WorkspaceSceneVisualProfile {
+  private readVisualProfile(displayFitModes: Record<string, "cover" | "contain">, preferredDisplayId?: string): WorkspaceSceneVisualProfile {
+    const persistedFitMode = preferredDisplayId
+      ? displayFitModes[preferredDisplayId]
+      : Object.values(displayFitModes)[0];
     return {
       edgeRailPlacement: this.readEnum(this.store.getAppState("edge_rail_placement"), ["left", "right"], "left"),
       glassPreset: this.readEnum(this.store.getAppState("glass_preset"), ["quiet", "frosted", "clear"], "quiet"),
       audioPolicy: this.readEnum(this.store.getAppState("audio_policy"), ["muted", "ambient"], "muted"),
-      displayFitMode: this.readEnum(this.store.getAppState("display_fit_mode"), ["cover", "contain"], "cover")
+      displayFitMode: persistedFitMode ?? this.readEnum(this.store.getAppState("display_fit_mode"), ["cover", "contain"], "cover")
     };
   }
 

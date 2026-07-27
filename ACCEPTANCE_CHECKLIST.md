@@ -966,3 +966,11 @@
 - [x] Full Electron E2E passes serially with 11/11 scenarios, including tray exit.
 - [x] V5.1 visual matrix passes 9/9 captures, including emulated 125%, 150%, and 200% scale states.
 - [ ] Physical renderer verification confirms visual profile restoration across real displays and DPI settings.
+## Stage 68 - Scene Display Fit Restoration
+
+- [x] Scene save snapshots the existing per-display `cover` / `contain` mapping.
+- [x] Scene apply restores saved display fit modes through the database API.
+- [x] Disconnected display mappings remain persisted for later reconnection.
+- [x] Regression coverage passes for multiple display mappings.
+- [x] Typecheck, main build, and 228 Node tests pass.
+- [ ] Physical portrait, ultrawide, mixed-DPI, and hot-plug restoration evidence remains manual.

@@ -1622,3 +1622,9 @@
 - Extended `tests/scene-service.test.cjs` for default and non-default visual profiles.
 - Hardened the Electron E2E helper so close waits for the child process and retries transient Windows Chromium profile locks before removing isolated user data.
 - Verification: `pnpm typecheck`, `pnpm lint`, `pnpm test` (228/228), `pnpm test:component` (2/2), `pnpm build`, `pnpm test:e2e` (11/11), and `pnpm qa:v51-visual-matrix` (9/9) passed.
+## 2026-07-27 - Stage 68 Scene Display Fit Restoration
+
+- Corrected scene wallpaper-fit persistence to read the already persisted per-display `display_wallpaper_assignments.fit_mode` values.
+- Scene apply now restores each saved display fit mode through the existing database path; no schema migration was added.
+- Added regression coverage for saving and restoring multiple display fit mappings.
+- Verification: `pnpm typecheck`, `pnpm build:main`, and `pnpm test` (228/228) passed.
