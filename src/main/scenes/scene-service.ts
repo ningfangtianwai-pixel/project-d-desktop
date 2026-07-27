@@ -47,6 +47,8 @@ export class SceneService {
       updatedAt: now,
       layoutId: this.numberOrNull(this.store.getAppState("current_layout_id")),
       wallpaperId: settings.wallpaper.dynamicId,
+      wallpaperStyle: settings.wallpaper.currentStyle,
+      wallpaperIndex: settings.wallpaper.currentIndex,
       wallpaperDynamic: settings.wallpaper.isDynamic,
       performanceMode: this.store.getAppState("performance_mode") ?? "auto",
       petVisible: settings.pet.isVisible,
@@ -129,7 +131,9 @@ export class SceneService {
     this.store.updateSettings({
       wallpaper: {
         dynamicId: scene.wallpaperId,
-        isDynamic: scene.wallpaperDynamic ?? Boolean(scene.wallpaperId)
+        isDynamic: scene.wallpaperDynamic ?? Boolean(scene.wallpaperId),
+        ...(scene.wallpaperStyle ? { currentStyle: scene.wallpaperStyle } : {}),
+        ...(typeof scene.wallpaperIndex === "number" ? { currentIndex: scene.wallpaperIndex } : {})
       },
       weather: { ...scene.weatherState, ...scene.weatherProfile },
       pet: { isVisible: scene.petVisible, ...scene.petState, ...scene.petAnchor },

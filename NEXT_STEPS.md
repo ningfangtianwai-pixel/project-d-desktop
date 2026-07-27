@@ -357,3 +357,9 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 1. Verify scene switching restores the pet position on the real virtual desktop, including negative-origin and portrait displays.
 2. Continue real Live Photo, physical display/DPI, sleep/wake, fullscreen, and long-soak evidence.
 3. Keep scene anchor values bounded by the existing pet-window layout and safe-region recovery path.
+
+## After Stage 74
+
+1. Verify scene switching restores the selected wallpaper, style label, and rotation state in the packaged renderer.
+2. Continue real Live Photo, physical display/DPI, sleep/wake, fullscreen, and long-soak evidence.
+3. Keep wallpaper safe-region and media failure recovery as the next visual-runtime focus.

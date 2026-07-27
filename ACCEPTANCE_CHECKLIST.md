@@ -1014,3 +1014,11 @@
 - [x] Legacy scenes without an anchor remain compatible.
 - [x] Typecheck, main build, and targeted scene tests 6/6 pass.
 - [ ] Physical negative-origin, portrait-display, and hot-plug position evidence remains manual.
+
+## Stage 74 - Scene Wallpaper Selection Persistence
+
+- [x] Scenes persist the selected wallpaper asset ID, style, and rotation index.
+- [x] Scene apply restores wallpaper selection without breaking disabled dynamic-wallpaper scenes.
+- [x] Legacy scenes without style/index fields remain compatible.
+- [x] Typecheck, main build, targeted scene tests 6/6, and Node tests 230/230 pass.
+- [ ] Packaged renderer and physical multi-display visual confirmation remain manual.

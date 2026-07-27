@@ -26,7 +26,7 @@ function createStore() {
       { id: 2, positionX: 348, positionY: 96, width: 320, height: 240, isCollapsed: true, accentColor: "mint" }
     ],
     getSettings: () => ({
-      wallpaper: { dynamicId: "anime-lake", isDynamic: true },
+      wallpaper: { dynamicId: "anime-lake", currentStyle: "anime", currentIndex: 2, isDynamic: true },
       weather: { mode: "manual", manualWeather: "rain", particleIntensity: 72, enableBorderInteraction: true },
       pet: { isVisible: true, positionX: 420, positionY: 760, currentOutfit: "raincoat", scale: 1.1, personality: "gentle", autoOutfit: true, actionInterval: 15, talkFrequency: "normal" }
     }),
@@ -64,6 +64,8 @@ test("workspace scene saves and restores real container geometry and appearance 
   assert.equal(scene.name, "深度工作");
   assert.equal(scene.layoutId, 4);
   assert.equal(scene.wallpaperId, "anime-lake");
+  assert.equal(scene.wallpaperStyle, "anime");
+  assert.equal(scene.wallpaperIndex, 2);
   assert.equal(scene.wallpaperDynamic, true);
   assert.equal(scene.performanceMode, "balanced");
   assert.equal(scene.petVisible, true);
@@ -91,7 +93,7 @@ test("workspace scene saves and restores real container geometry and appearance 
   assert.deepEqual(store.accents, [[1, "sky"], [2, "mint"]]);
   assert.deepEqual(Object.fromEntries(store.displayFitModes), { "display-1": "contain" });
   assert.deepEqual(store.settingsPatches, [{
-    wallpaper: { dynamicId: "anime-lake", isDynamic: true },
+    wallpaper: { dynamicId: "anime-lake", isDynamic: true, currentStyle: "anime", currentIndex: 2 },
     weather: { particleIntensity: 72, enableBorderInteraction: true, mode: "manual", manualWeather: "rain" },
     pet: { isVisible: true, positionX: 420, positionY: 760, currentOutfit: "raincoat", scale: 1.1, personality: "gentle", autoOutfit: true, actionInterval: 15, talkFrequency: "normal" },
     appState: {
@@ -177,7 +179,9 @@ test("workspace scene preserves a disabled dynamic-wallpaper state", () => {
   service.apply(scene.id);
   assert.deepEqual(store.settingsPatches.at(-1).wallpaper, {
     dynamicId: "anime-lake",
-    isDynamic: false
+    isDynamic: false,
+    currentStyle: "anime",
+    currentIndex: 2
   });
 });
 

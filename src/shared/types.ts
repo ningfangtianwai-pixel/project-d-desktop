@@ -370,6 +370,8 @@ export interface WorkspaceScene {
   updatedAt: string;
   layoutId: number | null;
   wallpaperId: string | null;
+  wallpaperStyle?: string;
+  wallpaperIndex?: number;
   wallpaperDynamic?: boolean;
   performanceMode: string;
   petVisible: boolean;

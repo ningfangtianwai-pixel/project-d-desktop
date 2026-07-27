@@ -1200,3 +1200,10 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Applying a scene restores the saved position together with the existing pet personality, outfit, scale, and activity settings.
 - Older scenes without an anchor continue to restore all previously supported pet settings without failure.
 - Verification: typecheck, main build, and targeted scene tests 6/6 pass.
+
+## Stage 74 - Scene Wallpaper Selection Persistence (Complete)
+
+- Workspace scenes now capture the selected wallpaper style and library index in addition to the wallpaper asset ID.
+- Scene apply restores these values without changing the existing dynamic-wallpaper enable/disable semantics.
+- Older scenes without style or index fields continue to restore their wallpaper ID safely.
+- Verification: typecheck, main build, targeted scene tests 6/6, and full Node tests 230/230 pass.

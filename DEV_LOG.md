@@ -1659,3 +1659,9 @@
 - Found that scene restore kept pet appearance and personality but not its virtual-desktop position.
 - Added an additive `petAnchor` with bounded settings-backed `positionX` / `positionY` values and merged it during scene apply; legacy scenes remain valid.
 - Verification: `pnpm typecheck`, `pnpm build:main`, and targeted scene tests 6/6 passed.
+
+## 2026-07-27 - Stage 74 Scene Wallpaper Selection Persistence
+
+- Found that scene restore kept the selected resource ID but not the current wallpaper style and rotation index.
+- Added additive `wallpaperStyle` and `wallpaperIndex` fields and restored them through the existing settings patch; old scene payloads remain valid.
+- Verification: `pnpm build:main`, targeted scene tests 6/6, and `pnpm test` 230/230 passed.
