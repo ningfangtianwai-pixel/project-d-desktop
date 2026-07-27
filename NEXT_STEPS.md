@@ -413,3 +413,9 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 1. Repeat packaged smoke after a fresh `pnpm dist` build and retain installer-path evidence.
 2. Exercise install, cover upgrade, uninstall, Chinese path, offline launch, and residual-process checks.
 3. Continue physical display/DPI, Live Photo format matrix, sleep/wake, fullscreen, battery, and 4/24-hour soak evidence.
+
+## After Stage 83 Investigation
+
+1. Fix packaged IPC route identity for the wallpaper FPS report without widening privileged route permissions.
+2. Rebuild with `pnpm dist`, then require `pnpm verify:packaged` and `pnpm qa:packaged-smoke` to pass with an empty error log.
+3. Repeat the full Electron E2E and V5.1 visual matrix after the route fix.

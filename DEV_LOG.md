@@ -1718,3 +1718,10 @@
 - Ran `pnpm verify:packaged`: 38 packaged diagnostic modules loaded successfully.
 - Ran `pnpm qa:packaged-smoke`: packaged executable started in isolated data, logged core readiness, exited with code 0, completed shutdown, and produced no error-log entries.
 - Report: `artifacts/qa/packaged-smoke-2026-07-27T07-41-26-944Z/report.json`.
+
+## 2026-07-27 - Stage 83 Packaged IPC Route Investigation (Open)
+
+- A fresh `pnpm dist` completed and produced `release/ProjectD-0.3.0-dev.0-Setup.exe` (152,885,080 bytes).
+- Fresh packaged smoke passed startup, core readiness, clean exit, and shutdown, but failed the no-warning gate because the renderer logged repeated `blocked IPC route` entries.
+- Added diagnostic fields to the blocked-route record. The reproduced case has `senderId=1`, `hash=""`, `allowedHashes=["#/wallpaper"]`, and `expectedWindowIds=[1]`; this points to packaged URL-fragment handling around the wallpaper FPS reporting route.
+- No security relaxation was made. The issue remains open for the next round and must be fixed by preserving trustworthy window identity/route semantics, not by allowing all routes.

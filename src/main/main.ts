@@ -330,7 +330,13 @@ function assertTrustedIpcSender(event: IpcMainInvokeEvent, allowedHashes: readon
       || expectedWindows.length === 0
       || !expectedWindows.some((candidate) => !candidate.isDestroyed() && candidate.webContents.id === event.sender.id)
     ) {
-      logger?.warn("error", "blocked IPC route", { url });
+      logger?.warn("error", "blocked IPC route", {
+        url,
+        hash,
+        senderId: event.sender.id,
+        allowedHashes,
+        expectedWindowIds: expectedWindows.filter((candidate) => !candidate.isDestroyed()).map((candidate) => candidate.webContents.id)
+      });
       throw new Error("This window cannot perform that operation");
     }
   } catch (error) {
