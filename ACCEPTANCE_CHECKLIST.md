@@ -906,3 +906,12 @@
 - [x] Balanced, automatic, and battery-saver weather pruning is observable in the QA report.
 - [x] `pnpm qa:weather-visual` passes and stores screenshots plus metrics under `artifacts/qa/weather-visual`.
 - [ ] Physical GPU, multi-display, fullscreen-game, sleep/wake, and long-soak evidence remains outstanding.
+## Stage 60 - Consented Pet Repositioning
+
+- [x] Wallpaper changes compare the existing pet window with the assigned display safe region.
+- [x] Obstructing positions show a consent prompt instead of moving silently.
+- [x] `移到安全区` uses the existing wallpaper-aware anchor reset path.
+- [x] `保持原位` preserves the user's saved/manual position.
+- [x] Shared safe-region geometry has regression coverage.
+- [x] Typecheck, lint, 223 Node tests, 2 component tests, and production build pass.
+- [ ] Physical left/right subject screenshot evidence remains outstanding.

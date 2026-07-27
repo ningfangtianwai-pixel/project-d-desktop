@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { petActionIntervalMs, petBubbleCue, petBubbleDelayMs, type PetBubbleAction, type PetBubbleMoment } from "@shared/pet-behavior";
 import { getPetCharacter, normalizePetCharacterId } from "@shared/pet-characters";
 import { parsePetManifest, petActionSlotFor, type PetActionSlot } from "@shared/pet-manifest";
+import { petBoundsInsideSafeRegion } from "@shared/pet-safe-region";
 import type { CurrentWeather, SettingsSnapshot, SuggestionRecord } from "@shared/types";
 
 const bubble = ref("我在桌面上。");
@@ -18,6 +19,8 @@ const autoOutfit = ref(true);
 const currentOutfit = ref("default");
 const activeSuggestion = ref<SuggestionRecord | null>(null);
 const actionAssets = ref<Partial<Record<PetActionSlot, string>>>({});
+const repositionPromptVisible = ref(false);
+const repositionWallpaperLabel = ref("");
 type PetAction =
   | "idle"
   | "happy"
@@ -138,6 +141,8 @@ let removeSettingsListener: (() => void) | null = null;
 let removeSuggestionListener: (() => void) | null = null;
 let acceptingSuggestions = false;
 let assetLoadRequest = 0;
+let lastWallpaperId = "";
+let promptedWallpaperId = "";
 const announcedSuggestionIds = new Set<string>();
 
 const actions: PetAction[] = [
@@ -412,6 +417,42 @@ function handlePetClick(): void {
   showPersonalityBubble("interaction", 8_000);
 }
 
+async function evaluateWallpaperSafeRegion(settings: SettingsSnapshot): Promise<void> {
+  const wallpaperId = settings.wallpaper.dynamicId ?? "";
+  if (!wallpaperId || !lastWallpaperId || wallpaperId === lastWallpaperId || promptedWallpaperId === wallpaperId) return;
+
+  const [bounds, displays, library] = await Promise.all([
+    window.projectD.getPetWindowBounds(),
+    window.projectD.getWallpaperDisplays(),
+    window.projectD.getWallpaperLibrary()
+  ]);
+  const centerX = bounds.x + bounds.width / 2;
+  const centerY = bounds.y + bounds.height / 2;
+  const display = displays.find((candidate) => {
+    const area = candidate.bounds;
+    return centerX >= area.x && centerX <= area.x + area.width && centerY >= area.y && centerY <= area.y + area.height;
+  });
+  const assignedId = display?.wallpaperId ?? wallpaperId;
+  const wallpaper = library.find((item) => item.id === assignedId);
+  if (!display || !wallpaper?.safeRegion) return;
+
+  promptedWallpaperId = wallpaperId;
+  if (petBoundsInsideSafeRegion(bounds, display.bounds, wallpaper.safeRegion)) return;
+  repositionWallpaperLabel.value = wallpaper.label;
+  repositionPromptVisible.value = true;
+  showBubble("新壁纸的主体换了位置，我可以移到更合适的停留带。", "looking", 20_000);
+}
+
+async function movePetToSafeRegion(): Promise<void> {
+  repositionPromptVisible.value = false;
+  await window.projectD.resetPetWindow();
+  showBubble(`已为「${repositionWallpaperLabel.value}」找到停留位。`, "happy", 8_000);
+}
+
+function dismissRepositionPrompt(): void {
+  repositionPromptVisible.value = false;
+}
+
 function applyPetSettings(settings: SettingsSnapshot): void {
   petScale.value = Math.max(0.5, Math.min(1.6, settings.pet.scale));
   characterId.value = normalizePetCharacterId(settings.pet.characterId);
@@ -429,7 +470,10 @@ async function refreshContextState(reschedule = false): Promise<void> {
       window.projectD.getCurrentWeather()
     ]);
     const personalityChanged = personality.value !== settings.pet.personality;
+    const wallpaperChanged = Boolean(lastWallpaperId && settings.wallpaper.dynamicId && lastWallpaperId !== settings.wallpaper.dynamicId);
     applyPetSettings(settings);
+    if (wallpaperChanged) void evaluateWallpaperSafeRegion(settings);
+    lastWallpaperId = settings.wallpaper.dynamicId ?? "";
     restartActionTimer(settings.pet.actionInterval);
     const weatherAction = settings.pet.autoOutfit ? actionForWeather(weather) : null;
     if (!activeSuggestion.value) {
@@ -591,6 +635,14 @@ function stopDrag(): void {
         :data-tone="bubbleTone"
         @click.stop="handleBubbleClick"
       >{{ bubble }}</span>
+      <span v-if="repositionPromptVisible" class="pet-reposition-prompt" aria-live="polite" @click.stop>
+        <strong>壁纸停留位</strong>
+        <small>{{ repositionWallpaperLabel }} 可能被桌宠遮住了。</small>
+        <span class="pet-reposition-actions">
+          <span class="pet-reposition-action primary" role="button" tabindex="0" @click.stop="movePetToSafeRegion" @keydown.enter.prevent="movePetToSafeRegion">移到安全区</span>
+          <span class="pet-reposition-action" role="button" tabindex="0" @click.stop="dismissRepositionPrompt" @keydown.enter.prevent="dismissRepositionPrompt">保持原位</span>
+        </span>
+      </span>
       <span class="pet-stage" :style="petStageStyle">
         <span class="pet-shadow"></span>
         <span class="pet-emote" aria-hidden="true"></span>

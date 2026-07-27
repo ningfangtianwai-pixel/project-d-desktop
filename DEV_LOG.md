@@ -1574,3 +1574,10 @@
 - Result: passed. The report recorded independent layer visibility, bitmap weather plates, rain-streak coverage, weather opacity, and quality-tier pruning.
 - Reviewed `artifacts/qa/weather-visual/rain.png`; the weather layer is rendered over the wallpaper with bitmap depth plates and atmospheric grade.
 - Hardware matrix, fullscreen, sleep/wake, and 4/24-hour soak remain unclaimed until physically exercised.
+## 2026-07-27 - Stage 60 Consented Pet Repositioning
+
+- Added `src/shared/pet-safe-region.ts` to evaluate a pet window center against a display's normalized wallpaper safe region.
+- PetPage now compares the previous and new wallpaper after settings updates, checks the actual display assignment, and asks before moving an obstructing pet.
+- `移到安全区` delegates to the existing `resetPetWindow` IPC; `保持原位` leaves the saved/manual bounds untouched.
+- Verification: `pnpm typecheck`, `pnpm lint`, `pnpm test` (223/223), `pnpm test:component` (2/2), and `pnpm build` passed.
+- No desktop files, wallpaper assets, credentials, or remote settings were changed.

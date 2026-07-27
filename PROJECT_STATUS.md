@@ -1112,3 +1112,10 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Verified bitmap rain/snow plates and quality-aware pruning across balanced, automatic, and battery-saver profiles.
 - `pnpm qa:weather-visual` passed and stored screenshots plus metrics under `artifacts/qa/weather-visual`.
 - Automated visual evidence is complete; physical GPU, multi-monitor, fullscreen, sleep/wake, and long-soak evidence remain hardware acceptance work.
+## Stage 60 - Consented Pet Repositioning (Complete)
+
+- Existing pet positions remain authoritative after a wallpaper change, but the pet now checks the selected wallpaper safe region against its current display and window center.
+- If the new wallpaper's subject-safe region would be obstructed, the pet presents a compact consent prompt with `移到安全区` and `保持原位`; no automatic movement occurs.
+- Confirming uses the existing guarded reset IPC and the wallpaper-aware anchor logic. Dismissing preserves the user's position for that wallpaper.
+- Added a shared safe-region geometry helper and regression coverage for safe versus obstructing positions.
+- Verification: typecheck, lint, 223/223 Node tests, 2/2 component tests, and production build pass.

@@ -277,3 +277,9 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 2. Add screenshot baselines for quiet, task, clean, bright-wallpaper, low-contrast-wallpaper, and weather-quality states.
 3. Run physical acceptance for mixed-DPI, portrait/landscape, multi-display hot-plug, fullscreen pause, sleep/wake, and 4/24-hour stability.
 4. Add the consented pet reposition prompt after wallpaper changes, then verify it on the same display matrix.
+## After Stage 60
+
+1. Capture screenshot baselines for quiet, task, clean, bright-wallpaper, low-contrast-wallpaper, and weather-quality states.
+2. Run physical mixed-DPI, portrait/landscape, multi-display hot-plug, fullscreen pause, sleep/wake, and 4/24-hour stability checks.
+3. Verify the reposition prompt on an actual left-subject and right-subject wallpaper, including a user dismissal and a confirmed move.
+4. Add a compact pet task surface only if the existing settings and context menu do not cover character, personality, talk frequency, and action preview ergonomically.

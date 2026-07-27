@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 const { defaultPetWindowForWorkArea, fitPetWindowToWorkArea } = require("../dist/main/pet-window-layout.js");
+const { petBoundsInsideSafeRegion } = require("../dist/shared/pet-safe-region.js");
 const { wallpaperSafeRegion } = require("../dist/shared/wallpaper-library.js");
 
 test("pet remains visible on a small external display", () => {
@@ -26,4 +27,11 @@ test("pet default anchor follows the selected wallpaper safe region", () => {
   assert.ok(left.x < area.width / 2, `expected left anchor, got ${left.x}`);
   assert.ok(right.x > area.width / 2, `expected right anchor, got ${right.x}`);
   assert.ok(left.y >= 0 && right.y >= 0);
+});
+
+test("pet safe-region consent check distinguishes a subject obstruction", () => {
+  const display = { x: 0, y: 0, width: 1920, height: 1080 };
+  const region = { left: 0.08, top: 0.12, right: 0.44, bottom: 0.94, petAnchor: "left" };
+  assert.equal(petBoundsInsideSafeRegion({ x: 80, y: 760, width: 220, height: 220 }, display, region), true);
+  assert.equal(petBoundsInsideSafeRegion({ x: 1320, y: 760, width: 220, height: 220 }, display, region), false);
 });
