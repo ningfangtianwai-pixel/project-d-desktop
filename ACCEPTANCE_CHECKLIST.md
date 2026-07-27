@@ -979,4 +979,5 @@
 - [x] Temporary Live Photo preview drafts are cleared during guarded shutdown.
 - [x] Preview cleanup does not modify confirmed wallpaper assets.
 - [x] Lifecycle contract coverage passes with the current Node suite.
+- [x] Latest full Electron E2E passes 11/11 and the V5.1 visual matrix passes 9/9.
 - [ ] Real packaged Live Photo and physical display evidence remains manual.

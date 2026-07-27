@@ -330,6 +330,6 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 4. Keep hardware, signing, artwork, and long-soak evidence separate from the local code baseline.
 ## After Stage 69
 
-1. Re-run the full serial Electron E2E after the latest main-process lifecycle change.
-2. Verify real Live Photo pairs and malformed media in packaged runtime.
-3. Continue physical display, DPI, hot-plug, sleep/wake, fullscreen, and long-soak evidence.
+1. Verify real Live Photo pairs and malformed media in packaged runtime.
+2. Continue physical display, DPI, hot-plug, sleep/wake, fullscreen, and long-soak evidence.
+3. Keep the renderer chunk-splitting warning as a measured performance follow-up rather than changing startup behavior without evidence.

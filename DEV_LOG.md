@@ -1632,4 +1632,4 @@
 
 - Added explicit `livePhotoImportDrafts.clear()` to guarded shutdown so temporary preview tokens and absolute source references do not survive application exit.
 - Added a source contract test for this lifecycle invariant.
-- Verification: `pnpm typecheck`, `pnpm build:main`, and `pnpm test` (229/229) passed.
+- Verification: `pnpm typecheck`, `pnpm build:main`, and `pnpm test` (229/229) passed; latest full Electron E2E (11/11) and V5.1 visual matrix (9/9) also pass.

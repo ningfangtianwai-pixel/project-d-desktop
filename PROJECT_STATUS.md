@@ -1170,4 +1170,4 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 
 - Shutdown now clears all temporary Live Photo preview drafts before closing wallpaper, database, and tray resources.
 - The cleanup is bounded and does not alter the confirmed wallpaper library or current wallpaper.
-- Verification: typecheck, main build, and 229/229 Node tests pass.
+- Verification: typecheck, main build, 229/229 Node tests, full Electron E2E 11/11, and V5.1 visual matrix 9/9 pass.
