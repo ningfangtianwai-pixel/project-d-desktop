@@ -1070,6 +1070,13 @@
 - [x] Probe requires `loadeddata`, non-zero video dimensions, and a playable ready state.
 - [ ] MOV/WebM and user-provided paired Live Photo decode evidence remains manual.
 
+## Stage 82 - Packaged Runtime Smoke
+
+- [x] Existing unpacked release runtime loads 38 diagnostic modules without missing dependencies.
+- [x] Packaged executable starts with isolated user data and reports core readiness.
+- [x] Packaged executable exits cleanly, completes shutdown, and leaves no error-log entries.
+- [ ] Fresh installer, upgrade, uninstall, offline, and hardware evidence remains separate.
+
 - [x] Older user wallpaper records receive a conservative safe-region fallback during listing.
 - [x] No schema migration or destructive asset rewrite is required.
 - [x] Targeted tests 12/12 and Node tests 232/232 pass.

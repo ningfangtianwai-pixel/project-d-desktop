@@ -1253,3 +1253,9 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Added a hidden Electron probe that loads the real H.264 fixture through Chromium's video element and asserts `loadeddata`, non-zero dimensions, and a ready state suitable for playback.
 - The probe is separate from library import validation, so container acceptance and renderer decode evidence cannot be confused.
 - MOV/WebM codec coverage and a user-supplied paired Live Photo remain manual gates.
+
+## Stage 82 - Packaged Runtime Smoke (Complete)
+
+- Verified the existing unpacked release runtime imports 38 diagnostic modules without missing packaged dependencies.
+- Started the packaged executable in an isolated user-data directory and verified core readiness, clean exit, completed shutdown, and an empty error log.
+- This is a packaged smoke gate; installer upgrade/uninstall and physical hardware evidence remain separate.

@@ -1712,3 +1712,9 @@
 - Added `scripts/qa-live-photo-decode.cjs` and `pnpm qa:live-photo-decode`.
 - The hidden Electron window loads the real H.264 fixture, waits for Chromium `loadeddata`, and asserts decoded dimensions and `readyState >= 2`.
 - This is stronger than a file-header check but intentionally does not claim MOV/WebM or a user's paired Live Photo have been physically tested.
+
+## 2026-07-27 - Stage 82 Packaged Runtime Smoke
+
+- Ran `pnpm verify:packaged`: 38 packaged diagnostic modules loaded successfully.
+- Ran `pnpm qa:packaged-smoke`: packaged executable started in isolated data, logged core readiness, exited with code 0, completed shutdown, and produced no error-log entries.
+- Report: `artifacts/qa/packaged-smoke-2026-07-27T07-41-26-944Z/report.json`.
