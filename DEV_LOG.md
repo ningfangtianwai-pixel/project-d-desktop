@@ -1633,3 +1633,9 @@
 - Added explicit `livePhotoImportDrafts.clear()` to guarded shutdown so temporary preview tokens and absolute source references do not survive application exit.
 - Added a source contract test for this lifecycle invariant.
 - Verification: `pnpm typecheck`, `pnpm build:main`, and `pnpm test` (229/229) passed; latest full Electron E2E (11/11) and V5.1 visual matrix (9/9) also pass.
+## 2026-07-27 - Stage 70 Luna Action Manifest Repair
+
+- Found `public/pet/luna-q/manifest.json` invalid because several legacy `states` bubble strings had missing closing quotes.
+- Rebuilt the manifest as the strict six-slot schema already used by the other characters; existing action images and dimensions are unchanged.
+- Verification: `pnpm verify:pet-assets` passed for `luna-q`, `luna-spring`, `starlight`, `floral-star`, and `lin-yuxi`; all six action slots passed native image checks.
+- Full regression after the repair: `pnpm test` 229/229, component tests 2/2, typecheck, lint, build, `pnpm test:e2e` 11/11, and `pnpm qa:v51-visual-matrix` 9/9.

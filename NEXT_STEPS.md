@@ -333,3 +333,8 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 1. Verify real Live Photo pairs and malformed media in packaged runtime.
 2. Continue physical display, DPI, hot-plug, sleep/wake, fullscreen, and long-soak evidence.
 3. Keep the renderer chunk-splitting warning as a measured performance follow-up rather than changing startup behavior without evidence.
+## After Stage 70
+
+1. Verify the five character manifests in packaged runtime and record any real-device crop issues separately.
+2. Continue physical V5.1 display, Live Photo, sleep/wake, fullscreen, and long-soak evidence.
+3. Keep the renderer chunk-splitting warning as a measured performance follow-up.

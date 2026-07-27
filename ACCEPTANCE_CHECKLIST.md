@@ -981,3 +981,11 @@
 - [x] Lifecycle contract coverage passes with the current Node suite.
 - [x] Latest full Electron E2E passes 11/11 and the V5.1 visual matrix passes 9/9.
 - [ ] Real packaged Live Photo and physical display evidence remains manual.
+## Stage 70 - Luna Action Manifest Repair
+
+- [x] Luna Q manifest is valid JSON and matches the strict action-slot schema.
+- [x] All five supplied characters expose `idle`, `walk`, `happy`, `thinking`, `sleep`, and `interaction`.
+- [x] Every declared image is non-empty and matches its manifest dimensions.
+- [x] `pnpm verify:pet-assets` passes.
+- [x] Full regression passes: Node 229/229, component 2/2, Electron E2E 11/11, and visual matrix 9/9.
+- [ ] Physical crop and visual quality evidence for each character remains manual.

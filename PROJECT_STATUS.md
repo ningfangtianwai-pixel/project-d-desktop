@@ -1171,3 +1171,10 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - Shutdown now clears all temporary Live Photo preview drafts before closing wallpaper, database, and tray resources.
 - The cleanup is bounded and does not alter the confirmed wallpaper library or current wallpaper.
 - Verification: typecheck, main build, 229/229 Node tests, full Electron E2E 11/11, and V5.1 visual matrix 9/9 pass.
+## Stage 70 - Luna Action Manifest Repair (Complete)
+
+- Replaced the malformed Luna Q manifest with valid JSON containing all six required action slots.
+- Kept the existing verified image dimensions and bounded relative asset paths; no character artwork was replaced.
+- `pnpm verify:pet-assets` now validates all five supplied characters, six action slots each, non-empty files, and native image dimensions.
+- This closes the runtime manifest parse failure that previously caused Luna to silently fall back to the legacy single-image path.
+- Verification after the repair: 229/229 Node tests, 2/2 component tests, typecheck, lint, build, Electron E2E 11/11, and V5.1 visual matrix 9/9 pass.
