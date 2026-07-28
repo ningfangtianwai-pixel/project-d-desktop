@@ -1,5 +1,37 @@
 # Acceptance Checklist
 
+## V6.0 Planning Baseline
+
+- [x] The active product target is consistently named Project D V6.0.
+- [x] V6.0 is distinguished from internal version `0.3.0-dev.0`.
+- [x] Historical commit `86ae722` and tag `v5.1-wallpaper-first-baseline-20260724` remain unchanged.
+- [x] The real planning HEAD `7f04dd7` is recorded separately.
+- [x] Native is the ordinary Windows-compatible state.
+- [x] Immersive is the explicitly awakened reference-image experience.
+- [x] Task allows exactly one active task surface.
+- [x] Clean preserves scene and companionship while blocking work surfaces.
+- [x] Safe can interrupt every mode and does not depend on AI.
+- [x] InteractionState is not a sixth mode.
+- [x] The seven-layer model defines input and failure behavior.
+- [x] Search, organize, scene, and assistant are the four primary entries.
+- [x] Agent tools have read-only, reversible-preview, and explicit-confirmation levels.
+- [x] AI cannot bypass ActionPlan or file confirmation.
+- [x] AmbientScene extends WorkspaceScene rather than creating a parallel system.
+- [x] Pet placement uses scene anchors and safe regions.
+- [x] Virtual organization is separated from real file mutation.
+- [x] The old default console has a migration and deletion plan.
+- [x] The first product slice has measurable acceptance.
+- [x] Reference images are Immersive direction, not runtime evidence.
+- [x] Runtime assets, docs-only concepts, user imports, and MIT code have separate boundaries.
+- [x] The current scope is personal-use-first and open-source-candidate, not commercial GA.
+- [x] Future commercial gates are retained separately.
+- [x] This planning round modified documentation only.
+- [x] The planning baseline correctly records that Phase A has not started.
+- [ ] Phase A runtime implementation is complete.
+- [ ] Native/Immersive runtime behavior is implemented.
+- [ ] The old default console is deleted after equivalence verification.
+- [ ] Physical hardware, installer lifecycle, and long-soak gates are closed with evidence.
+
 ## Stage 33 Update And Stability Preflight
 
 - [x] `electron-updater` is integrated with a fail-closed production-feed requirement.

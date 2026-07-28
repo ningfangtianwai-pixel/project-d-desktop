@@ -1,6 +1,19 @@
 # Next Steps
 
-## V5 Immediate Queue
+## V6.0 Immediate Queue
+
+1. Execute Phase A from `docs/ProjectD_V6.0_沉浸式AI桌面空间重构执行计划.md`.
+2. Start from the real current HEAD `7f04dd7`; retain `86ae722` and `v5.1-wallpaper-first-baseline-20260724` as historical rollback anchors.
+3. Establish `native`, `immersive`, `task`, `clean`, and `safe`, plus `InteractionState` and the single `ActiveTaskSurface`, before changing product behavior.
+4. Freeze the feature, screenshot, recovery, performance, and test baseline and create the old-to-new capability migration table.
+5. After Phase A, build the Native/Immersive desktop shell and four primary entries.
+6. Do not expand features, rebuild all weather effects, add Live2D, connect payment, or add cloud sync before the first V6.0 slice is stable.
+7. Reuse the existing database, search, ActionPlan, WorkspaceScene, wallpaper host, recovery, tray, settings, and IPC foundation.
+
+
+## Historical V5 Queue (Superseded By V6.0)
+
+The items below are retained as history and evidence inputs. They are not a second active execution queue; the V6.0 Immediate Queue above has authority.
 
 1. Run `pnpm verify:clean-checkout` from the committed `0.3.0-dev.0` baseline, then create a new internal installer with matching SHA-256 evidence.
 2. Retain the successful full Electron E2E report and configure CI with an execution budget above five minutes for the serial suite.

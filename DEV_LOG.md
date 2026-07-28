@@ -1,5 +1,21 @@
 # Dev Log
 
+## 2026-07-27 - V6.0 Product And Refactor Plan
+
+- Unified the active product target from historical V4.0/V5.1 planning names to **Project D V6.0 沉浸式 AI 桌面空间**.
+- Audited Git state, package metadata, README, status documents, the V5.1 plan, visual concepts, the available untracked V4.0 UI note, renderer pages, settings, shared types, main process, database, wallpaper host, preload, recovery, tests, QA, packaging, and supply-chain scripts.
+- Confirmed that historical anchor `86ae722` and its annotated tag exist, while the effective implementation baseline has advanced to `7f04dd7` through Stage 83.
+- Confirmed that the command-referenced root V4.0 immersive-plan file is not present; the new plan records this instead of inventing it.
+- Found that the current `quiet/attention/task/clean/safe` model does not distinguish ordinary Windows Native from explicitly awakened Immersive.
+- Found that `App.vue` still exposes six edge entries and can mount the file grid, command center, suggestion, ActionPlan, and ChatPanel together. `OverlayPage.vue` remains a full organizer grid.
+- Defined Native and Immersive separately so normal Windows use can stay quiet and the reference-image scene appears only after active user entry.
+- Rejected fixed-right Luna placement; pet position must follow safe regions, display geometry, DPI, taskbar, and scene anchors.
+- Required deletion of the old default console after capability-equivalence and recovery verification; CSS hiding and long-term dual products are prohibited.
+- Treated large-file line count as a responsibility signal rather than a quality target. Recovery, migration, compatibility, and tests must not be removed merely to reduce size.
+- Created the V6.0 execution plan and future commercial GA appendix and synchronized status, next steps, and acceptance planning.
+- This was documentation-only. No runtime code, tests, dependencies, assets, version, branch, tag, commit, push, PR, release, or remote setting changed.
+
+
 ## 2026-07-24 - V5 Phase 0 Baseline Freeze
 
 ### Implemented

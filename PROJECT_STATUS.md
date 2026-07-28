@@ -1,8 +1,20 @@
 # Project D Status
 
-Current stage: V5 Phase 0 - the Stage 50 desktop and personalization work is frozen as version `0.3.0-dev.0` after local lint, typecheck, 203/203 Node tests, 2/2 component tests, production build, and focused Electron startup/safe-restore verification. Controlled internal Beta remains appropriate; physical hardware, artwork-license, Live Photo, signing, and long-soak gates remain open.
+## V6.0 Product Target Established
 
-## V5 Phase 0 Baseline Freeze
+- The current product target is **Project D V6.0 沉浸式 AI 桌面空间**.
+- The execution baseline is `docs/ProjectD_V6.0_沉浸式AI桌面空间重构执行计划.md`.
+- The historical reconstruction anchor remains `86ae722da1b1cfc2379937c9b20b72633f53e5c3` and tag `v5.1-wallpaper-first-baseline-20260724`.
+- The real reviewed HEAD is `7f04dd76b4b73e76fa912d023a3b29e2bef6dd71`; it includes Stage 55-83 and is the effective Phase A starting point.
+- The internal version remains `0.3.0-dev.0`.
+- This round did not modify runtime source, dependencies, build configuration, tests, assets, tags, branches, or remote state.
+- The repository remains a V6.0 pre-refactor stable snapshot. Phase A has not started.
+- Current evidence remains 235/235 Node tests, lint, typecheck, distribution build, packaged verification, and clean packaged smoke. Physical hardware and long-soak gates remain open.
+
+
+Historical V5 Phase 0 record: Stage 50 froze desktop and personalization work as `0.3.0-dev.0` after the then-current local verification. This record is retained for traceability and is not the active project stage; the active target and evidence are stated in the V6.0 section above.
+
+## Historical V5 Phase 0 Baseline Freeze
 
 - [x] Version identity advanced from `0.2.0-beta.2` to `0.3.0-dev.0` for the V5 development line.
 - [x] Preserved the Stage 50 source changes and V5 requirements/implementation documents in one reviewable baseline commit.

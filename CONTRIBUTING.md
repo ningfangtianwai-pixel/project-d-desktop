@@ -1,6 +1,6 @@
 # Contributing to Project D
 
-感谢关注 Project D。当前仓库处于 V4 免费版本地开发和发布准备阶段，优先关注桌面恢复、稳定性、隐私、性能和 Windows 兼容性。
+感谢关注 Project D。当前产品目标为 Project D V6.0 沉浸式 AI 桌面空间，程序内部版本仍为 `0.3.0-dev.0`，处于 V6.0 重构前稳定基线。贡献应优先保护桌面恢复、稳定性、隐私、性能和 Windows 兼容性，并遵循 `docs/ProjectD_V6.0_沉浸式AI桌面空间重构执行计划.md`。
 
 ## 贡献许可
 
