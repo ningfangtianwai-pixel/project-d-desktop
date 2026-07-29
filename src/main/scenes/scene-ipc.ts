@@ -23,12 +23,12 @@ export function registerSceneIpcHandlers(deps: SceneIpcDependencies): void {
   const { ipc, assertTrustedSender } = deps;
 
   ipc.handle(IPC_CHANNELS.SCENES_GET_ALL, (event): WorkspaceScene[] => {
-    assertTrustedSender(event, ["#/settings", "#/overlay"]);
+    assertTrustedSender(event, ["", "#/settings", "#/overlay"]);
     return deps.getService()?.list() ?? [];
   });
 
   ipc.handle(IPC_CHANNELS.SCENES_SAVE, (event, name: unknown): WorkspaceScene => {
-    assertTrustedSender(event, ["#/settings", "#/overlay"]);
+    assertTrustedSender(event, ["", "#/settings", "#/overlay"]);
     const service = deps.getService();
     if (!service || typeof name !== "string" || name.trim().length === 0 || name.length > 40) {
       throw new Error("Invalid scene name");
@@ -39,7 +39,7 @@ export function registerSceneIpcHandlers(deps: SceneIpcDependencies): void {
   });
 
   ipc.handle(IPC_CHANNELS.SCENES_APPLY, (event, sceneId: unknown): WorkspaceScene => {
-    assertTrustedSender(event, ["#/settings", "#/overlay"]);
+    assertTrustedSender(event, ["", "#/settings", "#/overlay"]);
     const service = deps.getService();
     if (!service || typeof sceneId !== "string" || sceneId.length < 8 || sceneId.length > 80) {
       throw new Error("Invalid scene id");

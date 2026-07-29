@@ -154,7 +154,9 @@ export function petBubbleCue(
   const momentAction: Record<PetBubbleMoment, PetBubbleAction | null> = {
     ambient: null,
     greeting: "interaction",
-    interaction: "interaction",
+    // Interaction bubbles should keep the personality's declared motion. A
+    // cold or sleepy character should not become cheerful just because it was clicked.
+    interaction: null,
     "personality-change": "happy"
   };
   const text = moment === "ambient" ? petSentence(normalized, random) : `${lead}${petSentence(normalized, random)}`;

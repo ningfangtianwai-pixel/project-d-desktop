@@ -385,6 +385,8 @@ function performanceFactor(): number {
 }
 
 function particleBudget(maximum: number): number {
+  const intensity = Math.max(0, Math.min(1.2, settings?.weather.particleIntensity ?? 0.55));
+  if (intensity === 0) return 0;
   return Math.max(12, Math.round(maximum * performanceFactor()));
 }
 
@@ -404,7 +406,9 @@ function currentWeatherMode(): WeatherVisualMode {
   if (override) {
     return override;
   }
-  const raw = (currentWeather?.condition ?? settings?.weather.manualWeather ?? "clear").toLowerCase();
+  const raw = (settings?.weather.mode === "manual"
+    ? settings.weather.manualWeather
+    : currentWeather?.condition ?? settings?.weather.manualWeather ?? "clear").toLowerCase();
   if (raw.includes("rain") || raw.includes("drizzle") || raw.includes("thunder")) {
     return "rain";
   }
@@ -417,9 +421,10 @@ function currentWeatherMode(): WeatherVisualMode {
   if (raw.includes("leaves") || raw.includes("leaf")) {
     return "leaves";
   }
-  if (raw.includes("light") || raw.includes("clear")) {
+  if (raw.includes("light")) {
     return "light";
   }
+  if (raw.includes("clear") || raw.includes("sun")) return "clear";
   return "clear";
 }
 
@@ -436,7 +441,7 @@ async function refreshRuntime(): Promise<void> {
   wallpaperLibrary = nextLibrary;
   applyRuntimeState(nextRuntimeState);
   weatherMode.value = currentWeatherMode();
-  weatherIntensity.value = Math.max(0.2, Math.min(1.2, settings?.weather.particleIntensity ?? 0.55));
+  weatherIntensity.value = Math.max(0, Math.min(1.2, settings?.weather.particleIntensity ?? 0.55));
   const styleId = currentStyleId();
   if (host.value) {
     host.value.style.background = currentPalette().css;
@@ -528,7 +533,7 @@ onMounted(async () => {
       const height = host.value.clientHeight;
       const time = ticker.lastTime / 1000;
       const weather = currentWeatherMode();
-      const intensity = Math.max(0.2, Math.min(1.2, settings?.weather.particleIntensity ?? 0.55));
+      const intensity = Math.max(0, Math.min(1.2, settings?.weather.particleIntensity ?? 0.55));
       const palette = currentPalette();
 
       veil.clear();
@@ -753,6 +758,7 @@ function startCanvasFallback(container: HTMLDivElement): void {
       class="real-weather-layer"
       :data-weather="weatherMode"
       :data-performance="performanceProfile"
+      :data-intensity="weatherIntensity"
       :style="{ '--weather-intensity': String(weatherIntensity) }"
     >
       <div class="weather-fog" aria-hidden="true">

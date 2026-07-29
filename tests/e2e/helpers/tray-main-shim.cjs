@@ -1,7 +1,8 @@
-const path = require("node:path");
 const electron = require("electron");
+const path = require("node:path");
+const { resolveProjectRoot } = require("./resolve-project-root.cjs");
 
-const projectRoot = path.resolve(process.argv[2]);
+const projectRoot = resolveProjectRoot(process.argv, __filename);
 process.chdir(projectRoot);
 electron.app.setAppPath(projectRoot);
 

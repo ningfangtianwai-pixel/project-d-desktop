@@ -17,6 +17,9 @@ test("all desktop renderer windows keep the sandbox and web security enabled", (
   const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
   assert.match(html, /Content-Security-Policy/);
   assert.match(html, /default-src 'self'/);
+  assert.match(html, /img-src[^;]*projectd-media:/);
+  assert.match(html, /media-src[^;]*projectd-media:/);
+  assert.match(html, /connect-src[^;]*projectd-media:/);
   assert.doesNotMatch(html, /script-src[^;]*'unsafe-eval'/);
 });
 

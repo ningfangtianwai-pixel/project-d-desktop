@@ -439,3 +439,163 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 1. Fix packaged IPC route identity for the wallpaper FPS report without widening privileged route permissions.
 2. Rebuild with `pnpm dist`, then require `pnpm verify:packaged` and `pnpm qa:packaged-smoke` to pass with an empty error log.
 3. Repeat the full Electron E2E and V5.1 visual matrix after the route fix.
+
+## After Stage 85 V6 Shell and Scene Surface
+
+1. Migrate the existing organizer and workspace search experiences into explicit V6 `organize` and `search` task surfaces, preserving preview-first and reversible execution semantics.
+2. Extend Scene Surface with real scene visual profiles: per-display fit preview, weather profile preview, pet anchor preview, and safe-region-aware placement.
+3. Unify assistant and pet events so an AI suggestion can wake the correct task surface without creating a second competing panel.
+4. Harden Clean and Safe transitions on the real Windows desktop: Explorer icon restore, taskbar restore, Escape shortcut, sleep blocker, unexpected process exit, and repeated launch/exit.
+5. Add weather optical-quality controls and FPS sampling evidence for rain, snow, fog, leaves, and light layers; retain the low-power and battery budgets.
+6. Re-run the full Electron suite from a clean writable checkout after the current `dist` lock is released. Do not count browser-preview `safe` as physical Clean evidence.
+7. Keep manual gates explicit: multi-display/DPI/refresh-rate matrix, sleep/wake and lock/unlock cycles, Live Photo MP4/MOV/WebM pairs, installer/upgrade/uninstall, 4-hour stress, and 24-hour idle soak.
+
+## After Stage 87 V6 Scene Profile Preview and Suggestion Routing
+
+1. Extract the Organizer task into an explicit `OrganizerSurface.vue` boundary, preserving preview, conflict, execute, undo, and recovery actions before deleting legacy App markup.
+2. Add a dedicated `SearchSurface.vue` boundary and move the current action list and scene picker out of `App.vue`; keep IPC ownership in preload/main modules.
+3. Add an Assistant task boundary that owns chat draft, history, no-Key fallback, and AI error feedback without duplicating PetPage's short-bubble channel.
+4. Re-run the full Electron suite from the freshly rebuilt `dist` using the direct repository Playwright CLI, with output under `artifacts-e2e-v6`; separate product failures from Windows clean-desktop system gates.
+5. Continue real display/DPI, sleep/wake, lock/unlock, fullscreen, battery, Live Photo format, installer, and 4/24-hour soak evidence.
+
+## After Stage 88 V6 Explicit Task Surface Boundaries
+
+1. Review and remove duplicated Search/Organizer/Assistant compatibility markup now that the full Electron recovery matrix is 13/13; preserve a deliberate Safe/compatibility fallback if it is still needed.
+2. Add task-surface E2E for search result actions, organizer conflict/undo, assistant no-Key fallback, and Escape return to Immersive.
+3. Add a real Windows clean/safe integration run with Explorer icon restoration, taskbar restoration, unexpected overlay exit, and repeated launch/exit.
+4. Continue weather optical-quality controls, FPS sampling, multi-display/DPI, Live Photo formats, installer, and 4/24-hour soak evidence.
+
+## After Stage 90 V6 Search Task Surface and Visual Closure
+
+1. Extract the Safe compatibility console into a named `CompatibilitySurface.vue` boundary; keep it only for recovery and prove its actions before removing any legacy markup.
+2. Add result-bearing Search E2E with a controlled approved portal fixture so open, reveal, copy, portal authorization, and pin-to-scene are exercised through the new task surface.
+3. Add Organizer task E2E for generated preview, conflict visibility, cancel, execute, and undo using a disposable desktop fixture.
+4. Add a real Windows clean/safe integration run with Explorer icon restoration, taskbar restoration, unexpected overlay exit, and repeated launch/exit.
+5. Continue weather optical-quality controls, FPS sampling, multi-display/DPI, Live Photo formats, installer, and 4/24-hour soak evidence.
+
+## After Stage 91 V6 Safe Compatibility Boundary
+
+1. Keep the compatibility surface isolated and decide whether it should be renamed `RecoverySurface.vue` after the real Windows Safe-mode run; do not delete it before that evidence exists.
+2. Add result-bearing Search E2E with a controlled approved portal fixture so open, reveal, copy, portal authorization, and pin-to-scene are exercised through the new task surface.
+3. Add Organizer task E2E for generated preview, conflict visibility, cancel, execute, and undo using a disposable desktop fixture.
+4. Re-run the full Electron matrix once more if the worker exit code `3221226505` recurs; collect Windows Event Viewer/process evidence instead of weakening the tray assertion.
+5. Continue real multi-display/DPI, sleep/wake, lock/unlock, fullscreen/battery, installer/upgrade/uninstall, Live Photo formats, and 4/24-hour soak evidence.
+
+## After Stage 92 Tray Launch Argument Regression Fix
+
+1. Re-run the complete Electron lifecycle matrix once from a freshly built `dist` and confirm no launch-error dialog appears.
+2. Keep the verified-root guard in the tray shim; do not relax it back to positional or switch-only filtering.
+3. Continue the controlled portal/search fixture and disposable organizer fixture work.
+4. Continue real multi-display/DPI, sleep/wake, lock/unlock, fullscreen/battery, installer/upgrade/uninstall, Live Photo formats, and 4/24-hour soak evidence.
+
+## After Stage 93 V6 Search Result Action Closure
+
+1. Add a disposable desktop fixture for Organizer preview, conflict display, cancel, execute, and undo; assert the fixture is restored after the test.
+2. Repeat the full 15-case Electron lifecycle suite from the rebuilt `dist` and inspect process trees after completion.
+3. Add a UI-level scene card assertion for the new pinned-resource count after returning from Search.
+4. Continue real multi-display/DPI, sleep/wake, lock/unlock, fullscreen/battery, installer/upgrade/uninstall, Live Photo formats, and 4/24-hour soak evidence.
+
+## After Stage 94 V6 Reversible Organizer Fixture
+
+1. Re-run the complete 15-case Electron lifecycle suite from the newly rebuilt `dist`; inspect both exit codes and the process tree after completion.
+2. Add a result-bearing UI assertion for the Organizer state strip after execute and undo, including its accessible live status.
+3. Continue controlled portal authorization and organizer fixtures without relaxing production path or trusted-sender boundaries.
+4. Continue real multi-display/DPI, sleep/wake, lock/unlock, fullscreen/battery, installer/upgrade/uninstall, Live Photo formats, and 4/24-hour soak evidence.
+
+## After Stage 95 V6 Full Lifecycle Regression
+
+1. Keep the 17-case Electron matrix as the regression baseline and rerun it after any main-process or IPC change.
+2. Add the next visual matrix capture for the Organizer state strip in review, undoable, and restored states.
+3. Move to real Windows evidence: multi-display/DPI, sleep/wake, lock/unlock, fullscreen/battery, and installer/upgrade/uninstall.
+4. Continue Live Photo format validation and 4/24-hour soak evidence; do not count automated fixture coverage as a substitute for hardware gates.
+
+## After Stage 96 V6 Scene Pinned Resource Summary
+
+1. Add a visual capture of Scene cards in empty, one-resource, and overflow-resource states.
+2. Re-run the full 17-case Electron lifecycle matrix after the next main-process change; the current change is renderer-only and has focused evidence.
+3. Continue real multi-display/DPI, sleep/wake, lock/unlock, fullscreen/battery, installer/upgrade/uninstall, Live Photo, and soak evidence.
+
+## After Stage 97 V6 Scene Pinned Resource Visual Matrix
+
+1. Keep the three-state scene visual matrix as the baseline for future SceneSurface changes.
+2. Re-run the full 17-case Electron lifecycle suite after the next main-process change; this round's fixture and UI evidence are green.
+3. Continue real multi-display/DPI, sleep/wake, lock/unlock, fullscreen/battery, installer/upgrade/uninstall, Live Photo, and 4/24-hour soak evidence.
+
+## After Stage 98 V6 Electron Launch Argument Regression Guard
+
+1. Keep the root-resolution unit test and tray E2E in the lifecycle baseline; rerun them after changes to Playwright/Electron launch arguments.
+2. If the packaged shortcut shows a similar error, collect its shortcut Target/Start-in fields and `bootstrap.log`; the current screenshot path is the test shim, not the packaged main entry.
+3. Continue the remaining physical gates: multi-display/DPI, sleep/wake, lock/unlock, fullscreen/battery, installer/upgrade/uninstall, Live Photo, and 4/24-hour soak evidence.
+
+## After Stage 99 V6 Organizer Safety State Visual Closure
+
+1. Keep the four Organizer lifecycle screenshots as the visual baseline for future task-surface changes.
+2. Add the same result-bearing visual treatment to Search and Scene only where it clarifies a reversible action; do not add persistent panels to Native mode.
+3. Re-run the full 17-case Electron lifecycle suite after the next main-process or IPC change; this round changed renderer UI only and has focused behavior evidence.
+4. Continue physical multi-display/DPI, sleep/wake, lock/unlock, fullscreen/battery, installer/upgrade/uninstall, Live Photo, and 4/24-hour soak evidence.
+
+## After Stage 100 V6 Scene Action Feedback Semantics
+
+1. Keep Scene success/neutral/error feedback as the baseline for any future task result message.
+2. Apply the same explicit status contract to Search actions, preferably with an action kind and result id so feedback never appears detached from the clicked result.
+3. Re-run the full 17-case Electron lifecycle suite after the next main-process or IPC change; current work is renderer UI plus a focused Scene E2E.
+4. Continue physical multi-display/DPI, sleep/wake, lock/unlock, fullscreen/battery, installer/upgrade/uninstall, Live Photo, and 4/24-hour soak evidence.
+
+## After Stage 101 V6 Search Result-Level Action Feedback
+
+1. Keep result-id-bound feedback as the standard for future Search actions; do not return to detached page-only confirmations.
+2. Audit Assistant and wallpaper-library actions for the same “started / succeeded / failed” distinction before adding new visual controls.
+3. Re-run the full 17-case Electron lifecycle suite after the next main-process or IPC change; this round remains renderer-focused with targeted E2E evidence.
+4. Continue physical multi-display/DPI, sleep/wake, lock/unlock, fullscreen/battery, installer/upgrade/uninstall, Live Photo, and 4/24-hour soak evidence.
+
+## After Stage 102 V6 Assistant and Wallpaper Action Feedback Closure
+
+1. Keep the `#/wallpaper` main-window trusted-route regression covered; any future IPC route change must rerun the split full Electron lifecycle batches.
+2. Add one controlled failure fixture for Assistant provider timeout so the red error state is verified without contacting a real provider.
+3. Add import/delete/export visual evidence when a disposable user wallpaper fixture is available; do not add user assets to Git or the installer.
+4. Continue physical multi-display/DPI, sleep/wake, lock/unlock, fullscreen/battery, installer/upgrade/uninstall, Live Photo, and 4/24-hour soak evidence.
+
+## After Stage 103 V6 Assistant Provider Failure Recovery
+
+1. Keep `ChatFallbackReason` limited to safe renderer-facing enums; never surface raw provider errors or request metadata.
+2. Add a controlled HTTP-error fixture alongside the timeout fixture so 5xx and timeout states remain visually distinct from no-Key fallback.
+3. Audit the Pet short-bubble path so provider failure, local fallback, and completed local tools use the same truthful status language.
+4. Continue physical multi-display/DPI, sleep/wake, lock/unlock, fullscreen/battery, installer/upgrade/uninstall, Live Photo, and 4/24-hour soak evidence.
+
+## After Stage 104 V6 Provider Error and Pet Personality Motion Closure
+
+1. Keep the timeout and HTTP 503 fixtures in the Assistant regression set; add no real provider keys or remote calls to E2E.
+2. Add a five-character Pet visual matrix that checks each manifest's idle fallback, character framing, and at least one personality-specific interaction cue.
+3. Add disposable Wallpaper Studio import/delete/export visual evidence, including a failed import and a restored library state; do not commit user media.
+4. Continue Live Photo format coverage, weather quality/FPS evidence, multi-display/DPI, sleep/wake, installer/upgrade/uninstall, and 4/24-hour soak gates.
+
+## After Stage 105 V6 Pet Asset Visual Matrix
+
+1. Keep the five-character matrix and `verify:pet-assets` in the release regression set whenever character manifests or CSS framing change.
+2. Add a controlled action-slot fallback case that removes one disposable fixture asset and verifies the renderer falls back to idle without crashing; never mutate tracked `public/pet` assets.
+3. Continue Wallpaper Studio disposable import/delete/export evidence and Live Photo format coverage.
+4. Continue weather quality/FPS, multi-display/DPI, sleep/wake, installer/upgrade/uninstall, and 4/24-hour soak gates.
+
+## After Stage 106 V6 Wallpaper Studio User Asset Loop
+
+1. Keep the CSP and `projectd-media:` protocol assertions in the release regression set; any media-scheme change must rerun the disposable import/export/delete Electron flow.
+2. Add a controlled failed-import case and a Live Photo byte-range playback case using disposable local fixtures; never contact a remote media source in E2E.
+3. Continue weather quality/FPS, multi-display/DPI, sleep/wake, installer/upgrade/uninstall, and 4/24-hour soak evidence.
+
+## After Stage 107 V6 Live Photo Pairing and Recovery Evidence
+
+1. Keep the real cover/video decode, byte-range, confirmation, and missing-input cases in the Wallpaper Studio regression set.
+2. Add WebM/MOV fixture coverage only when a local decoder-compatible fixture is available; never weaken container validation to accept arbitrary renamed files.
+3. Improve weather quality controls and capture renderer FPS/CPU evidence for the next V6 iteration, then continue multi-display/DPI and sleep/wake gates.
+
+## After Stage 108 V6 Weather State and Performance Evidence
+
+1. Keep the six-state weather matrix and zero-intensity case in the regression set whenever weather CSS, textures, or performance profiles change.
+2. Add runtime CPU/working-set evidence beside FPS for quality, balanced, and battery-saver profiles; keep the report local and privacy-safe.
+3. Continue physical GPU/battery/4K/multi-display/DPI, sleep/wake, installer/upgrade/uninstall, and 4/24-hour soak gates.
+
+## After Stage 109 V6 Performance Profile Evidence
+
+1. Keep the GPU-enabled profile matrix and the software-renderer safety path in the regression set; do not compare their FPS numbers as the same hardware claim.
+2. Add a bounded long-run memory-growth report for the weather layer and dynamic wallpaper, then compare it with the existing 4-hour/24-hour soak thresholds.
+3. Continue physical Intel/AMD/NVIDIA, battery, 4K, multi-display/DPI, sleep/wake, installer/upgrade/uninstall, and 4/24-hour soak gates.

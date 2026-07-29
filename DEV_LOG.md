@@ -1749,3 +1749,222 @@
 - Added `tests/runtime-ipc-contract.test.cjs` to lock the allowlist boundary.
 - Commands and results: `pnpm test` 235/235; `pnpm lint` pass; `pnpm typecheck` pass; fresh `pnpm dist` pass; `pnpm verify:packaged` pass; `pnpm qa:packaged-smoke` pass with `noErrorLogEntries: true`.
 - This closes the reproduced packaged IPC warning. It does not replace physical hardware, installer, or 4/24-hour soak evidence.
+
+## 2026-07-28 - Stage 84 V6 Native / Immersive Shell
+
+- Implemented the first V6 experience state model in `src/shared/desktop-experience.ts`: Native is the default, Immersive is explicit, task surfaces are single-owner, Clean and Safe are explicit recovery states.
+- Added `EdgeRail.vue` and `AmbientStatus.vue` and wired the four V6 root entries into `App.vue` without removing existing organizer, wallpaper, weather, pet, AI, settings, tray, or recovery routes.
+- Updated the shell CSS to keep Native/Immersive wallpaper-first and task/safe surfaces bounded. Fixed a z-index issue where the desktop task surface intercepted the status capsule return action.
+- Commands: `pnpm.cmd typecheck` pass; `pnpm.cmd lint` pass; `pnpm.cmd test:component` 2/2 pass; source Node suite 235/235 pass after excluding the stale preload artifact; isolated renderer Vite build pass with the existing 530.21 kB bundle warning.
+
+## 2026-07-28 - Stage 85 Scene Surface and Visual QA
+
+- Added `SceneSurface.vue` with saved-scene loading, apply, save-current-scene, wallpaper-library, and next-wallpaper actions. Added `tests/e2e/scene-surface.spec.ts` and renderer contract checks.
+- The first Scene E2E failed because the test used an inaccessible label; corrected it to the visible action, then found and fixed a real `refreshStatus()` race that reverted Immersive to Native. Scene E2E then passed 1/1 and the prior full Electron baseline passed 12/12.
+- Visual matrix initially failed on legacy route assumptions and status z-index; both were corrected. Isolated V6 visual matrix passed with 9/9 captures: Immersive, Assistant task, Organizer task, Safe browser-preview fallback, Scene task, Wallpaper Studio, and 125%/150%/200% device-scale captures. Output: `qa-v6-visual-matrix-3/report.json`.
+- User-reported UI regression passed with chat history 14 messages, folder preview 3 entries, scene picker 2 options, 2 wallpaper search results, 5 characters, loaded character images, personality preview, and transparent pet cutout. Output: `qa-user-reported-ui-v6/report.json`.
+
+## 2026-07-28 - QA Environment Finding
+
+- The normal `pnpm.cmd build` / `build:main` path could not overwrite `dist` or `artifacts`; even a new file in `dist` returned `EPERM`, while the repository root and a clean `dist-v6-qa` directory were writable. This is an external file-lock condition, not a source permission change.
+- The stale `dist/preload/preload.js` was the old TypeScript output and logged `module not found: ../shared/ipc.js`; the isolated esbuild bundle passed the same preload assertions: Electron import present, no local runtime require, no `shared/ipc.js`, and `projectD` bridge present.
+- The current laptop also produced Electron GPU child exit code `-1073741515`. The E2E helper now launches QA Electron with `--no-sandbox` and `--disable-gpu`, and the main process keeps the software renderer switch restricted to QA/safe-renderer mode. This does not disable GPU acceleration for normal users.
+- Isolated Electron rerun: first launch 1/1, AI no-key, AI settings, duplicate launch, first launch, renderer recovery, and Scene Surface passed. Clean desktop returned `safe-mode` under the isolated no-GPU/system-automation run, and configuration/force-kill/organizer cases need a follow-up with the normal trusted desktop integration path; the 12-test run timed out after test 10. This is intentionally left visible as an open environment/system gate rather than reported as 12/12.
+
+## 2026-07-29 - Stage 86 V6 Search Actions and Organizer Focus
+
+- Moved the existing safe search actions into the V6 task surface: open, locate, copy the opaque result path, authorize a read-only portal, and pin a result into a selected scene.
+- Kept all actions behind the existing preload IPC contract; stale handles and canceled portal authorization are reported in the task surface instead of being treated as success.
+- Reduced organizer task-surface noise by hiding unrelated search, chat, status, and file-preview sections while keeping scan, preview-first inbox, execute, undo, and safe restore available.
+- Commands and results: `pnpm.cmd typecheck` pass; `pnpm.cmd lint` pass; `pnpm.cmd test:component` 2/2; V6 state tests 11/11; full Node tests 237/237.
+
+## 2026-07-29 - Stage 87 V6 Scene Profile Preview and Suggestion Routing
+
+- Extended `SceneSurface.vue` with a current atmosphere profile, display count, wallpaper host, weather intensity, display-fit summary, safe-region canvas, and pet-anchor preview.
+- Saved-scene preview is non-mutating; only the explicit Apply button invokes `applyWorkspaceScene`.
+- Added one immersive suggestion capsule. Luna's desktop suggestion can wake the Organizer task surface and generate the existing reversible ActionPlan without creating a second competing panel.
+- Commands and results: formal `pnpm.cmd build` pass; scene Electron E2E 1/1 pass using the repository Playwright 1.61.1 CLI directly; V6 visual matrix pass with 9/9 captures. Evidence: `artifacts-e2e-v6/visual/report.json`.
+- Visual review: Immersive remains wallpaper-first; Scene Surface reads as a centered translucent tool layer; 125%/150%/200% captures retain readable controls and visible wallpaper.
+
+## 2026-07-29 - Stage 88 V6 Explicit Task Surface Boundaries
+
+- Extracted `SearchSurface.vue` from `App.vue`; it owns search input/result actions and scene picker presentation while App owns state and calls the existing preload contract.
+- Extracted `OrganizerSurface.vue`; the V6 Organizer task now renders one preview-first workspace with native icons, file context actions, inbox plan, conflicts, execute, undo, safe restore, and settings.
+- Extracted `AssistantSurface.vue`; the existing ChatPanel is now the single assistant body in the Assistant task, with no duplicate chat implementation.
+- Added `organizer-surface.spec.ts` and extended V6 source contracts. Organizer E2E 1/1 and Scene E2E 1/1 pass.
+- Commands and results: `pnpm.cmd build` pass; typecheck pass; lint pass; component tests 2/2; state tests 11/11; final V6 visual matrix 9/9. Evidence: `artifacts-e2e-v6/visual-final/report.json`.
+- Existing renderer bundle warning increased to 545.10 kB after moving the new task boundaries; it remains a measured code-splitting follow-up, not a build failure.
+
+## 2026-07-29 - Stage 89 V6 Electron Lifecycle Matrix Closure
+
+- The first full Electron run had one timeout in `tray-exit.spec.ts`. Investigation found the tray shim assumed `process.argv[2]` was the project root, but Electron placed `--no-sandbox` and `--disable-gpu` before the shim path. The shim now locates its own argument and reads the following non-switch root argument.
+- Hardened the production tray quit callback in `src/main/main.ts`: the renderer menu notification is attempted, but `app.quit()` is guaranteed in `finally` if a renderer is already closing or destroyed.
+- Commands and results: `pnpm.cmd build:main` pass; tray E2E 1/1 pass; full Electron E2E 13/13 pass in 3m 10s using the direct repository Playwright CLI; no Electron process remained after completion.
+- The result file is `artifacts-e2e-v6/full-results-final.json`. Physical Windows hardware, installer, and long-soak evidence are still explicitly open and were not counted as code-complete.
+
+## 2026-07-29 - Stage 90 V6 Search Task Surface and Visual Closure
+
+- Upgraded `SearchSurface.vue` from a migrated form fragment into a complete task surface: wallpaper-first header, explicit local/authorized scope, clear button, no-result state, status role, accessible result actions, and expanded scene-picker semantics.
+- Fixed `clearWorkspaceSearch()` so clearing the visible search also clears the parent query. Added `search-surface.spec.ts` and `assistant-surface.spec.ts`; the latter verifies the input clears and refocuses after local-fallback chat.
+- Normal Search mode now renders SearchSurface directly at the task layer. The legacy command panel retains its search only for Safe compatibility mode. Task mode hides the old topbar and wallpaper pull cord so there is one status/return layer.
+- Commands and results: `pnpm.cmd typecheck` pass; `pnpm.cmd lint` pass; component tests 4/4; `pnpm.cmd test` Node tests 237/237; task-surface E2E 4/4; full Electron E2E 15/15 in 3m 24s; V6 visual matrix 10/10 with output `artifacts-e2e-v6/visual-round-90-final`.
+- The renderer bundle is 546.70 kB minified with the existing Vite code-splitting warning. No Electron process remained after the full run.
+
+## 2026-07-29 - Stage 91 V6 Safe Compatibility Boundary
+
+- Extracted the old App control-console markup into `src/renderer/components/CompatibilitySurface.vue`. It is rendered only when the explicit V6 experience mode is `safe`; normal task surfaces now use SearchSurface, OrganizerSurface, AssistantSurface, or SceneSurface directly.
+- The compatibility component owns its SearchSurface focus bridge and preserves native icon rendering, folder/file events, search and portal actions, suggestion controls, reversible inbox flow, chat, settings, clean desktop, refresh, and safe restore.
+- Commands and results: `pnpm.cmd typecheck` pass; `pnpm.cmd lint` pass; component tests 4/4; Node tests 237/237; targeted Safe/task E2E 6/6; visual matrix 10/10 at `artifacts-e2e-v6/visual-round-90-compat`.
+- Full Electron first attempt reached 14/15 before a worker exited with Windows code `3221226505` on the final tray case. The tray test then passed alone, and the complete 15-test rerun passed 15/15 in 3m 20s at `artifacts-e2e-v6/full-results-stage-91-rerun.json`. Treat the first event as a machine-level flake to monitor, not a waived failure.
+- Renderer bundle is now 550.25 kB minified after extraction; the existing Vite code-splitting warning remains. No known P0/P1 product failure was introduced.
+
+## 2026-07-29 - Stage 92 Tray Launch Argument Regression Fix
+
+- Reproduced the reported Electron main-process error where the tray shim attempted to `chdir` into `D:\桌面操作系统\--disable-gpu`. Root cause was unsafe positional argument parsing in the E2E tray shim; the switch could be mistaken for the project root by older launch argument ordering.
+- Updated `tests/e2e/helpers/tray-main-shim.cjs` to locate the shim argument, resolve later candidates, and accept only a directory containing both `package.json` and `dist/main/bootstrap.js`.
+- Commands and results: `pnpm.cmd typecheck` pass; `pnpm.cmd lint` pass; direct Playwright tray E2E `1/1` pass; `git diff --check` pass.
+- This fix is scoped to the test launch shim and does not change the normal packaged application startup path. The screenshot reflects the pre-fix/stale shim behavior; the current working tree no longer treats `--disable-gpu` as a directory.
+- Fresh build plus the complete Electron suite also passed `15/15`; the first post-run inspection found three Electron processes from the tray case still alive, so they were identified by their Project D tray command line and controlled-terminated. A standalone tray rerun then passed `1/1` with no Electron process remaining. Keep this lifecycle residue as a follow-up until a repeated full-suite run proves it does not recur.
+
+## 2026-07-29 - Stage 93 V6 Search Result Action Closure
+
+- Added `PROJECTD_QA_SEARCH_FIXTURE_PATH` as a non-packaged, QA-run-only provider fixture. The fixture is a disposable file supplied by the E2E test; production search providers and real desktop contents are unchanged.
+- Added `PROJECTD_QA_AUTO_AUTHORIZE_PORTAL=1` for the isolated QA run only. It selects the fixture's containing folder instead of opening a native picker, while still passing through `createAuthorizedSearchPortal` and the normal portal service.
+- Fixed a real migration gap: the V6 main-window task surface could render SceneSurface and SearchSurface but Scene IPC still rejected the main route. Scene get/list/save/apply now trust `""` in addition to settings and overlay. Portal IPC now does the same for choose/list/add/remove/resource/open operations.
+- The new `tests/e2e/search-actions.spec.ts` proves search fixture result -> copy path -> pin to a saved scene -> read-only portal authorization, then checks the persisted scene and portal state.
+- Commands and results: `pnpm.cmd typecheck` pass; `pnpm.cmd lint` pass; `pnpm.cmd build` pass with the existing 550.25 kB Vite chunk warning; component tests 4/4; focused Electron E2E 5/5 (`assistant`, `organizer`, `scene`, `search`, `search-actions`) pass; no Electron process remained after the run; `git diff --check` pass.
+
+## 2026-07-29 - Stage 94 V6 Reversible Organizer Fixture
+
+- Added `PROJECTD_QA_DESKTOP_PATH`, honored only by a non-packaged QA run before core services initialize. It changes Electron's desktop path for the isolated process, allowing FileScanner and ActionEngine to exercise their real code against a disposable folder.
+- Added `organizer-actions.spec.ts`: creates one movable document and one pre-existing target conflict, verifies the preview contains both, cancels without moving anything, executes with the native confirmation accepted, then undoes and verifies the movable file returns while both conflict files remain unchanged.
+- Added `organizer-state-strip` to the Organizer task surface. The user can now see whether the desktop is unchanged, a review is waiting for confirmation, or the latest run is undoable; the message text is surfaced beneath the state.
+- The first attempt correctly failed before any execution because the freshly changed main process had not been rebuilt and the stale `dist` scanned the real desktop. After `pnpm.cmd build`, the isolated test passed and the real desktop was not modified.
+- Commands and results: `pnpm.cmd build` pass with the existing 550.74 kB Vite chunk warning; component tests 4/4; focused task-surface Electron E2E 6/6 pass; no Electron process remained; `git diff --check` pass.
+
+## 2026-07-29 - Stage 95 V6 Full Lifecycle Regression
+
+- Extended the Organizer fixture assertion to verify the final UI state after undo: no undo button remains and the state strip returns to `data-state="idle"`.
+- Ran the full Electron suite from the rebuilt `dist` with the repository Playwright CLI. The suite now contains 17 tests and all 17 passed in approximately 4.1 minutes.
+- Covered first launch, duplicate launch, settings persistence, tray quit, renderer white-screen recovery, force-kill recovery, AI no-Key fallback, corrupted config recovery, clean desktop system restoration, Organizer safe restore and reversible fixture, Scene, Search, Search actions, Assistant, and AI settings connection.
+- Post-run process inspection reported no Electron process remaining. `git diff --check` passed.
+- This is automated Windows evidence only; physical multi-display/DPI, sleep/wake, lock/unlock, fullscreen/battery, installer/upgrade/uninstall, and 4/24-hour soak remain unclaimed manual gates.
+
+## 2026-07-29 - Stage 96 V6 Scene Pinned Resource Summary
+
+- Improved `SceneSurface.vue` scene cards so a saved scene exposes up to three pinned resource labels with origin badges (`桌面资源`, `只读门户`, or the opt-in search provider), plus an overflow count. This turns a previously opaque count into a useful scan-level summary without exposing full paths.
+- Extended `search-actions.spec.ts` to move from Search to Scene and back, assert the pinned fixture label is visible in `.scene-pinned-resources`, and then complete the portal authorization action.
+- Commands and results: `pnpm.cmd typecheck` pass; `pnpm.cmd lint` pass; `pnpm.cmd build` pass with the existing renderer chunk warning (551.51 kB minified); Scene E2E 1/1 and Search action E2E 1/1 pass; no Electron process remained; `git diff --check` pass.
+
+## 2026-07-29 - Stage 97 V6 Scene Pinned Resource Visual Matrix
+
+- Extended the QA search fixture to accept a semicolon-separated list of temporary files and added `scene-pinned-visual.spec.ts`.
+- The visual test saves one scene, captures empty state, pins one result and captures the single-resource state, then pins three more results and captures the overflow state. It follows the real task transition through Search before returning to Scene so the component remounts and reloads persisted state.
+- Layout assertions verify the expected chip count, `document.documentElement.scrollWidth <= window.innerWidth`, and every chip's right edge remains inside the scene card. Screenshots: `01-empty.png`, `02-one-resource.png`, `03-overflow.png` under `artifacts-e2e-v6/scene-pinned-visual/`.
+- Commands and results: `pnpm.cmd typecheck` pass; `pnpm.cmd lint` pass; `pnpm.cmd build` pass with the existing 551.51 kB renderer chunk warning; visual E2E 1/1 pass; no Electron process remained. The first attempt exposed a stale component-navigation assumption and was corrected before acceptance.
+
+## 2026-07-29 - Stage 98 V6 Electron Launch Argument Regression Guard
+
+- Investigated the reported main-process error: `chdir ...\\--disable-gpu` from `tests/e2e/helpers/tray-main-shim.cjs`. The screenshot corresponds to the older positional parser that treated Electron switches as the project root.
+- Added `tests/e2e/helpers/resolve-project-root.cjs`, which ignores option-like arguments and accepts only an existing directory containing `package.json` and `dist/main/bootstrap.js`. The tray shim now uses this resolver.
+- Added `tests/tray-root-resolution.test.cjs` for the exact `--disable-gpu` ordering and missing-root cases.
+- Commands and results: targeted ESLint pass; `node --test tests/tray-root-resolution.test.cjs` pass 2/2; `pnpm.cmd build:main` pass; `pnpm.cmd build` pass with the existing large-renderer-chunk warning; direct Playwright tray E2E pass 1/1; no Electron process remained.
+- This fix is limited to the QA tray launch shim. Normal packaged startup does not load this file. The old failing screenshot should not recur from the current working tree, and the regression is now locked by both a unit seam and a real Electron test.
+
+## 2026-07-29 - Stage 99 V6 Organizer Safety State Visual Closure
+
+- Upgraded `OrganizerSurface.vue`'s persistent state strip from a plain message into an inspectable safety summary. Review shows the no-auto-move boundary plus movable/conflict counts; undoable shows the recorded item count and original-location retention; restored returns to a neutral shield state.
+- Added responsive styling for the icon, semantic badge, metrics, and narrow viewport wrapping in `styles.css`. The Action Engine, IPC, confirmation dialog, and undo behavior were not changed.
+- Added `tests/e2e/organizer-visual.spec.ts`, which drives a disposable desktop fixture through idle -> review -> undoable -> restored and captures four screenshots under `artifacts-e2e-v6/organizer-state-visual/`.
+- The first visual run correctly failed because the new fixture used a differently encoded folder name and therefore produced `2` movable/`0` conflict items. The fixture was corrected to use the real Organizer target names and the rerun passed with `1` movable/`1` conflict.
+- Commands and results: `pnpm.cmd typecheck` pass; `pnpm.cmd lint` pass; `pnpm.cmd build` pass with the existing 552.79 kB renderer chunk warning; component tests 4/4; Organizer behavior/surface/visual Electron E2E 3/3; visual inspection passed; no Electron process remained.
+
+## 2026-07-29 - Stage 100 V6 Scene Action Feedback Semantics
+
+- Added semantic feedback state to `SceneSurface.vue`: success is the default completed state, in-progress messages are neutral, and read/apply/save failures are visibly marked as errors. CSS adds a small status marker without changing the wallpaper-first composition.
+- Extended `scene-surface.spec.ts` to create a scene through the real isolated preload IPC, navigate away and back through the task rail, apply the saved scene, and assert `.scene-message[data-tone="success"]`.
+- The first test attempt exposed that Electron's native `window.prompt` was not a stable automated seam in this harness: the page remained at zero saved scenes. The test was corrected to use the real IPC setup and still exercises the user-facing Apply action.
+- Commands and results: `pnpm.cmd typecheck` pass; targeted ESLint pass; `pnpm.cmd build` pass with the existing 552.94 kB renderer chunk warning; Scene E2E 1/1 pass; no Electron process remained.
+
+## 2026-07-29 - Stage 101 V6 Search Result-Level Action Feedback
+
+- Added a renderer-only `SearchActionNotice` contract keyed by `WorkspaceSearchResult.id`. SearchSurface renders a compact status row inside the matching result card with loader, success, or warning iconography.
+- The App layer clears stale feedback on new/cleared queries and scene-picker interaction, then tracks open, reveal, copy, portal, and pin actions without adding new IPC or returning paths to the renderer.
+- Added a component assertion for result-id-bound success feedback and strengthened `search-actions.spec.ts` to assert copy, scene pin, and portal feedback on the exact result. Captures: `01-copy-feedback.png`, `02-scene-feedback.png`, and `03-portal-feedback.png` under `artifacts-e2e-v6/search-feedback-visual/`.
+- Typecheck initially caught the inferred `tone: string` widening; the union was made explicit before rerunning the suite.
+- Commands and results: `pnpm.cmd typecheck` pass; targeted ESLint pass; `pnpm.cmd build` pass with the existing 553.82 kB renderer chunk warning; component tests 5/5; Search surface/actions E2E 2/2; visual inspection passed; no Electron process remained.
+
+## 2026-07-29 - Stage 102 V6 Assistant and Wallpaper Action Feedback Closure
+
+- Updated `ChatPanel.vue` so every send has an explicit neutral `正在理解` state, a success state that distinguishes local fallback from a configured provider, and an error state. The form exposes `aria-busy` and keeps the input focus after the request settles.
+- Updated `WallpaperPage.vue` and `styles.css` with the same status contract for wallpaper application, image/Live Photo import, deletion, export, and per-display operations. Errors now use the error tone instead of inheriting the green success style.
+- The first wallpaper Electron attempt exposed a real V6 regression: `#/wallpaper` was rendered in the main window, but `assertTrustedIpcSender` only accepted dedicated wallpaper windows. This caused the library to appear as `0` assets and blocked apply. The trusted sender set now includes the main window for that hash, and all Wallpaper Studio operations accept the route while preserving the existing window identity checks.
+- Fixed `.wallpaper-studio-page > :not(.wallpaper-stage)` so it no longer overrides the toast's fixed positioning. The success screenshot is at `artifacts-e2e-v6/wallpaper-feedback-visual/01-apply-success.png`.
+- Commands and results: `pnpm.cmd typecheck` pass; `pnpm.cmd lint` pass; `pnpm.cmd build` pass with the existing renderer chunk warning; Node tests 239/239; component tests 5/5; assistant/wallpaper E2E 2/2; split full Electron E2E batches 7/7, 9/9, and 4/4; no Electron process remained.
+- A single all-files Electron invocation exceeded the external 304-second command budget without an individual failure record. The suite was split into three sequential batches and all 20 E2E cases passed; the timeout is retained as a harness-budget observation, not counted as a product pass.
+
+## 2026-07-29 - Stage 103 V6 Assistant Provider Failure Recovery
+
+- Found a semantic gap in `AiService`: a configured provider timeout or HTTP failure was swallowed into a normal-looking local fallback response. This preserved availability but misled the user about the provider state.
+- Added `ChatFallbackReason` with only `provider-timeout` and `provider-error`. The service returns the enum only when a configured provider was actually attempted; no Key, privacy pause, disabled AI, and local provider behavior remain normal local fallback paths.
+- Added a QA-only `PROJECTD_QA_AI_TIMEOUT_MS` bound (50–2,000 ms); production/default requests remain bounded at 12 seconds. Provider logs now record only the provider and safe reason enum, never raw request errors.
+- Added `assistant-provider-timeout.spec.ts`. It starts a local HTTP server that never responds, configures an isolated test profile with a fake QA key, and verifies the local answer remains available while the UI shows `云端响应超时 · 已切换本地降级`. Screenshot: `artifacts-e2e-v6/assistant-feedback-visual/01-provider-timeout.png`.
+- Commands and results: `pnpm.cmd typecheck` pass; targeted and full ESLint pass; `pnpm.cmd build` pass with the existing 555.30 kB renderer chunk warning; Node tests 239/239; component tests 5/5; AI/no-Key/assistant E2E 3/3; no Electron process remained.
+
+## 2026-07-29 - Stage 104 V6 Provider Error and Pet Personality Motion Closure
+
+- Added `tests/e2e/assistant-provider-error.spec.ts`, backed by a local HTTP server returning 503. It configures an isolated OpenAI-compatible provider with a QA-only key, verifies the local answer remains usable, and checks the explicit `云端服务不可用 · 已切换本地降级` status.
+- Added `tests/e2e/pet-personality-feedback.spec.ts`. It skips onboarding, disables suggestion delivery in the isolated profile, saves the cold `lin-yuxi` personality, opens the real pet window, enables its interaction seam, and verifies a cold voice plus the idle motion. The test captures `artifacts-e2e-v6/pet-feedback-visual/01-cold-personality-idle.png`.
+- Fixed `src/shared/pet-behavior.ts`: an interaction moment no longer overrides the selected personality action with the generic `interaction` action. Greeting and personality-change cues keep their intentional overrides; click feedback now preserves the personality's motion mapping.
+- Updated `tests/pet-behavior.test.cjs` to lock the new action contract. The test suite now reports 240 passing Node tests.
+- Commands and results: `pnpm.cmd typecheck` pass; `pnpm.cmd lint` pass; `pnpm.cmd build` pass with the existing 555.29 kB renderer chunk warning; Node tests 240/240; component tests 5/5; targeted Assistant timeout/error and Pet E2E 3/3; no Electron process remained.
+- No commit or remote push was made. Physical Windows matrix, installer, certificate, and long-soak evidence remain external gates.
+
+## 2026-07-29 - Stage 105 V6 Pet Asset Visual Matrix
+
+- Added `tests/e2e/pet-visual-matrix.spec.ts`, which uses the real settings update and Pet window IPC path to switch all five bundled characters. The test checks each manifest-backed image has non-zero natural dimensions, a visible renderer bounding box, and no asset fallback before taking a screenshot.
+- The matrix captured `luna-q.png`, `luna-spring.png`, `starlight.png`, `floral-star.png`, and `lin-yuxi.png` under `artifacts-e2e-v6/pet-visual-matrix/`. Visual inspection found all five centered and visible; the transparent window is shown against the screenshot viewer's black background as expected.
+- `pnpm.cmd verify:pet-assets` passed for all five characters and six action slots per character. Targeted E2E passed 1/1, and the final process check found no Electron process residue.
+- No image assets were edited or added in this stage; this is evidence and regression coverage only.
+
+## 2026-07-29 - Stage 106 V6 Wallpaper Studio User Asset Loop
+
+- Added QA-only `PROJECTD_QA_WALLPAPER_IMPORT_PATH` and `PROJECTD_QA_WALLPAPER_EXPORT_PATH` seams. They are restricted to non-packaged QA runs and are not used by packaged users.
+- Reproduced the disposable personal-wallpaper flow in Electron. The thumbnail and library record were created, but the main preview was broken. The Electron log identified the cause precisely: CSP rejected `projectd-media://` under `img-src` and `connect-src`.
+- Updated `index.html` CSP to allow only the app-owned `projectd-media:` protocol for image, media, and media-protocol connections. No broad remote origin was added.
+- Replaced `file://` media fetching with an app-owned streaming protocol handler. It validates file metadata, returns the correct image/video MIME, supports `HEAD` and byte ranges for video/Live Photo playback, closes file handles on completion/cancellation, and sends `Cache-Control: no-store`.
+- Added a disposable Electron regression test that imports a temporary copy of a bundled wallpaper, checks the real main preview dimensions, exports the original to a temporary path, deletes the user record, and confirms the built-in library is restored. Evidence: `artifacts-e2e-v6/wallpaper-library-visual/01-imported.png` and `02-deleted.png`.
+- Added security baseline assertions so future CSP edits must retain all three `projectd-media:` directives.
+- Commands and results: `pnpm.cmd typecheck` pass; targeted ESLint pass; `pnpm.cmd build` pass with the existing 555.29 kB renderer chunk warning; `wallpaper-library-disposable.spec.ts` 1/1; visual inspection pass; no Electron process remained.
+- No commit, tag, or remote push was made.
+
+## 2026-07-29 - Stage 107 V6 Live Photo Pairing and Recovery Evidence
+
+- Added two QA-only environment keys for a cover/video pair. The seam is active only when the app is not packaged and the explicit QA run marker is present; without both paths the existing native file-picker flow remains unchanged.
+- Added `wallpaper-live-photo.spec.ts`. The valid case opens the real Wallpaper Studio, waits for the actual Chromium video decode state, checks the custom media protocol with a `bytes=0-63` request, captures the ready preview, confirms the import, and verifies the resulting asset is dynamic and marked Live Photo.
+- Added a failure case with a missing cover. It verifies the UI emits the error-toned Live Photo status, does not open a half-created preview, keeps the Wallpaper Studio visible, and does not mutate the library.
+- Visual evidence: `artifacts-e2e-v6/wallpaper-live-photo-visual/01-preview-ready.png` shows the cover and decoded video side by side; `02-imported.png` shows the dynamic personal asset after confirmation.
+- The first test attempt appeared stuck because the targeted command had skipped `build:main`; Electron was running the previous compiled main process. Rebuilding the main process before E2E produced 2/2 passing tests. The subsequent full check passed all three Wallpaper Studio cases.
+- Commands and results: `pnpm.cmd typecheck` pass; `pnpm.cmd lint` pass; `pnpm.cmd test` 240/240; `pnpm.cmd test:component` 5/5; `pnpm.cmd build` pass with the existing 555.29 kB renderer chunk warning; Wallpaper Studio E2E 3/3; no Electron process remained.
+- No commit, tag, or remote push was made.
+
+## 2026-07-29 - Stage 108 V6 Weather State and Performance Evidence
+
+- Audited `WallpaperStage` and found two semantic/performance gaps: manual weather selection could be visually overridden by a cached automatic condition, and a `0%` intensity still retained the minimum Pixi particle budget.
+- Changed the weather resolver to prioritize `settings.weather.manualWeather` whenever `settings.weather.mode` is `manual`. `clear` and `light` now remain distinct; clear no longer activates the light-beam/orb layer.
+- Changed the particle budget and renderer intensity clamps to honor zero. The CSS layer and Pixi loop now agree when the user disables weather particles.
+- Added `weather-quality-matrix.spec.ts`, which runs in real Electron, switches all six weather states, checks visible layer opacity/texture counts/rain-streak count, captures six screenshots, waits for the local FPS sampler, and verifies a positive renderer FPS sample set. A second case verifies zero intensity remains visually and computationally disabled.
+- The first matrix run caught the clear/light merge. The second run caught an onboarding overlay in the evidence; the test now restores completed onboarding state before capturing. Final matrix result: 2/2 passing.
+- Visual evidence: `artifacts-e2e-v6/weather-quality-matrix/clear.png`, `rain.png`, `snow.png`, `fog.png`, `leaves.png`, and `light.png`. Rain and snow were visually inspected and show real layered texture/particle depth over the wallpaper.
+- Commands and results: `pnpm.cmd build` pass with the existing 555.46 kB renderer chunk warning; weather E2E 2/2; final full lint, Node tests 240/240, component tests 5/5, `git diff --check`, and no Electron process residue all pass.
+- No commit, tag, or remote push was made.
+
+## 2026-07-29 - Stage 109 V6 Performance Profile Evidence
+
+- Added a `刷新` action beside the Recovery Center local performance cards so users can request a fresh local report without reopening the settings window.
+- Updated the Electron E2E helper to omit `--disable-gpu` only when the test explicitly sets `PROJECTD_QA_DISABLE_GPU=0`; all existing deterministic tests keep the software-renderer default.
+- Added `performance-profile-matrix.spec.ts`. It runs real Electron with GPU enabled, sets quality/balanced/batterySaver through the persisted `appState.performance_mode` path, verifies the runtime arbiter and WallpaperStage agree, waits through the 15-second process sampler for each profile, and writes a privacy-safe local JSON summary.
+- The first run with forced software rendering produced only 5-7 FPS; that was correctly identified as a test-harness configuration, not accepted as hardware evidence. The GPU-enabled rerun passed and produced approximately 32.1/34.0/41.2 FPS for quality/balanced/battery saver.
+- The report now calculates CPU median/P95 and working-set peak from samples belonging to the current profile. Final artifact: `artifacts-e2e-v6/performance-profile-matrix.json`.
+- Commands and results: `pnpm.cmd typecheck` pass; targeted ESLint pass; `pnpm.cmd build` pass with the existing 555.71 kB renderer chunk warning; performance E2E 1/1; no Electron process remained.
+- No commit, tag, or remote push was made.

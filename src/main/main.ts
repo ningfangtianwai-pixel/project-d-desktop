@@ -1,9 +1,9 @@
-import { app, BrowserWindow, dialog, globalShortcut, Menu, net, powerMonitor, powerSaveBlocker, protocol, screen, session, shell } from "electron";
+import { app, BrowserWindow, dialog, globalShortcut, Menu, powerMonitor, powerSaveBlocker, protocol, screen, session, shell } from "electron";
 import type { IpcMainInvokeEvent, OpenDialogOptions } from "electron";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { DatabaseService } from "./database.js";
 import { DesktopController } from "./desktop-controller.js";
 import { FileScanner } from "./file-scanner.js";
@@ -58,6 +58,7 @@ const SAFE_RENDERER_ARG = "--projectd-safe-renderer";
 const START_HIDDEN_ARG = "--projectd-start-hidden";
 const qaRunEnabled = process.argv.some((argument) => argument.startsWith("--projectd-qa-run="));
 const safeRendererMode = process.argv.includes(SAFE_RENDERER_ARG);
+const qaSoftwareRenderer = qaRunEnabled && process.env.PROJECTD_QA_DISABLE_GPU === "1";
 const startHidden = process.argv.includes(START_HIDDEN_ARG);
 const GITHUB_RELEASES_URL = "https://github.com/ningfangtianwai-pixel/project-d-desktop/releases";
 const SUGGESTION_SUPPRESSION_HISTORY_KEY = "suggestion:suppression-history";
@@ -67,7 +68,10 @@ protocol.registerSchemesAsPrivileged([{
   scheme: USER_MEDIA_SCHEME,
   privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true }
 }]);
-if (safeRendererMode) app.disableHardwareAcceleration();
+if (safeRendererMode || qaSoftwareRenderer) {
+  app.disableHardwareAcceleration();
+  app.commandLine.appendSwitch("disable-gpu");
+}
 
 let mainWindow: BrowserWindow | null = null;
 let settingsWindow: BrowserWindow | null = null;
@@ -324,7 +328,9 @@ function assertTrustedIpcSender(event: IpcMainInvokeEvent, allowedHashes: readon
       "#/wallpaper": wallpaperWindow
     };
     const expectedWindow = windowByHash[hash];
-    const expectedWindows = hash === "#/wallpaper" ? [...wallpaperWindows.values()] : expectedWindow ? [expectedWindow] : [];
+    const expectedWindows = hash === "#/wallpaper"
+      ? [...wallpaperWindows.values(), ...(mainWindow ? [mainWindow] : [])]
+      : expectedWindow ? [expectedWindow] : [];
     if (
       !allowedHashes.includes(hash)
       || expectedWindows.length === 0
@@ -610,6 +616,92 @@ function getWallpaperLibrary(): WallpaperLibraryItem[] {
   return wallpaperLibraryService?.list() ?? WALLPAPER_LIBRARY;
 }
 
+function mediaContentType(filePath: string): string {
+  const extension = path.extname(filePath).toLowerCase();
+  const types: Record<string, string> = {
+    ".avif": "image/avif",
+    ".bmp": "image/bmp",
+    ".jpeg": "image/jpeg",
+    ".jpg": "image/jpeg",
+    ".m4v": "video/mp4",
+    ".mov": "video/quicktime",
+    ".mp4": "video/mp4",
+    ".png": "image/png",
+    ".webm": "video/webm",
+    ".webp": "image/webp"
+  };
+  return types[extension] ?? "application/octet-stream";
+}
+
+async function serveLocalMediaFile(request: Request, filePath: string): Promise<Response> {
+  const stat = await fs.promises.stat(filePath);
+  if (!stat.isFile() || stat.size <= 0) return new Response(null, { status: 404 });
+
+  let start = 0;
+  let end = stat.size - 1;
+  let status = 200;
+  const range = request.headers.get("range");
+  if (range) {
+    const match = /^bytes=(\d*)-(\d*)$/i.exec(range.trim());
+    if (!match) return new Response(null, { status: 416, headers: { "Content-Range": `bytes */${stat.size}` } });
+    if (match[1] === "" && match[2] === "") {
+      return new Response(null, { status: 416, headers: { "Content-Range": `bytes */${stat.size}` } });
+    }
+    if (match[1] === "") {
+      const suffixLength = Math.min(Number(match[2]), stat.size);
+      start = stat.size - suffixLength;
+    } else {
+      start = Number(match[1]);
+      end = match[2] === "" ? end : Number(match[2]);
+    }
+    if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || start >= stat.size || end < start) {
+      return new Response(null, { status: 416, headers: { "Content-Range": `bytes */${stat.size}` } });
+    }
+    end = Math.min(end, stat.size - 1);
+    status = 206;
+  }
+
+  const headers = new Headers({
+    "Accept-Ranges": "bytes",
+    "Cache-Control": "no-store",
+    "Content-Length": String(end - start + 1),
+    "Content-Type": mediaContentType(filePath)
+  });
+  if (status === 206) headers.set("Content-Range", `bytes ${start}-${end}/${stat.size}`);
+  if (request.method === "HEAD") return new Response(null, { status, headers });
+
+  const handle = await fs.promises.open(filePath, "r");
+  let position = start;
+  const stream = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        if (position > end) {
+          controller.close();
+          await handle.close();
+          return;
+        }
+        const length = Math.min(64 * 1024, end - position + 1);
+        const buffer = Buffer.allocUnsafe(length);
+        const result = await handle.read(buffer, 0, length, position);
+        if (result.bytesRead <= 0) {
+          controller.close();
+          await handle.close();
+          return;
+        }
+        position += result.bytesRead;
+        controller.enqueue(new Uint8Array(buffer.subarray(0, result.bytesRead)));
+      } catch (error) {
+        await handle.close().catch(() => undefined);
+        controller.error(error);
+      }
+    },
+    async cancel() {
+      await handle.close().catch(() => undefined);
+    }
+  });
+  return new Response(stream, { status, headers });
+}
+
 function registerUserWallpaperProtocol(): void {
   protocol.handle(USER_MEDIA_SCHEME, async (request) => {
     try {
@@ -622,7 +714,7 @@ function registerUserWallpaperProtocol(): void {
           return new Response(null, { status: 404 });
         }
         const sourcePath = url.searchParams.get("kind") === "cover" ? draft.coverPath : draft.videoPath;
-        return net.fetch(pathToFileURL(sourcePath).toString());
+        return serveLocalMediaFile(request, sourcePath);
       }
       if (url.hostname !== "wallpaper") return new Response(null, { status: 404 });
       const id = decodeURIComponent(url.pathname.replace(/^\//, ""));
@@ -631,7 +723,7 @@ function registerUserWallpaperProtocol(): void {
       const variant = requestedVariant === "thumbnail" || requestedVariant === "cover" ? requestedVariant : "original";
       const assetPath = wallpaperLibraryService?.resolveAssetPath(id, variant) ?? null;
       if (!assetPath) return new Response(null, { status: 404 });
-      return net.fetch(pathToFileURL(assetPath).toString());
+      return serveLocalMediaFile(request, assetPath);
     } catch {
       return new Response(null, { status: 404 });
     }
@@ -1772,15 +1864,20 @@ async function authorizeSearchResultPortal(resultId: string) {
     buttonLabel: "授权为只读门户",
     properties: ["openDirectory"]
   };
-  const owner = overlayWindow && !overlayWindow.isDestroyed() ? overlayWindow : mainWindow;
-  const selection = owner && !owner.isDestroyed()
-    ? await dialog.showOpenDialog(owner, options)
-    : await dialog.showOpenDialog(options);
-  if (selection.canceled || !selection.filePaths[0]) return null;
+  const selectedFolder = qaRunEnabled && !app.isPackaged && process.env.PROJECTD_QA_AUTO_AUTHORIZE_PORTAL === "1"
+    ? defaultPath
+    : await (async () => {
+      const owner = overlayWindow && !overlayWindow.isDestroyed() ? overlayWindow : mainWindow;
+      const selection = owner && !owner.isDestroyed()
+        ? await dialog.showOpenDialog(owner, options)
+        : await dialog.showOpenDialog(options);
+      return selection.canceled ? null : selection.filePaths[0] ?? null;
+    })();
+  if (!selectedFolder) return null;
 
   const portal = await createAuthorizedSearchPortal({
     resultPath,
-    selectedFolder: selection.filePaths[0],
+    selectedFolder,
     addPortal: (folderPath, name) => portalService!.add(folderPath, name)
   });
   syncPortalWatcher();
@@ -1865,8 +1962,12 @@ function startTray(): void {
       await updateService?.checkForUpdates();
     },
     quit: () => {
-      sendMenuCommand(MENU_COMMANDS.QUIT);
-      app.quit();
+      try {
+        sendMenuCommand(MENU_COMMANDS.QUIT);
+      } finally {
+        // A closing renderer must never be able to block the tray's final exit path.
+        app.quit();
+      }
     }
   }, (action, error) => {
     logger?.warn("app", "tray action failed", {
@@ -1896,6 +1997,12 @@ async function exportWallpaperOriginal(wallpaperId: string): Promise<{ cancelled
     : path.join(__dirname, "../renderer/wallpapers", wallpaper.file);
   if (!sourcePath) throw new Error("Wallpaper source is no longer available");
   if (!fs.existsSync(sourcePath)) throw new Error("Wallpaper source is unavailable");
+  const qaExportPath = !app.isPackaged && qaRunEnabled ? process.env.PROJECTD_QA_WALLPAPER_EXPORT_PATH : undefined;
+  if (qaExportPath) {
+    const targetPath = path.resolve(qaExportPath);
+    await fs.promises.copyFile(sourcePath, targetPath);
+    return { cancelled: false, filename: path.basename(targetPath) };
+  }
   const extension = path.extname(wallpaper.file) || ".png";
   const owner = settingsWindow && !settingsWindow.isDestroyed() ? settingsWindow : mainWindow;
   const options = {
@@ -1913,6 +2020,12 @@ async function exportWallpaperOriginal(wallpaperId: string): Promise<{ cancelled
 
 async function importWallpaperFromDialog(): Promise<WallpaperLibraryItem | null> {
   if (!wallpaperLibraryService) throw new Error("Wallpaper library is not initialized");
+  const qaImportPath = !app.isPackaged && qaRunEnabled ? process.env.PROJECTD_QA_WALLPAPER_IMPORT_PATH : undefined;
+  if (qaImportPath) {
+    const imported = await wallpaperLibraryService.importImage(path.resolve(qaImportPath));
+    broadcastSettingsUpdated();
+    return imported;
+  }
   const owner = settingsWindow && !settingsWindow.isDestroyed() ? settingsWindow : mainWindow ?? undefined;
   const options: OpenDialogOptions = {
     title: "Import wallpaper image",
@@ -1944,21 +2057,29 @@ export async function _legacyImportLivePhotoFromDialogs(): Promise<WallpaperLibr
 async function prepareLivePhotoImportFromDialogs(): Promise<LivePhotoImportPreview | null> {
   if (!wallpaperLibraryService) throw new Error("Wallpaper library is not initialized");
   removeExpiredLivePhotoDrafts();
-  const owner = settingsWindow && !settingsWindow.isDestroyed() ? settingsWindow : mainWindow ?? undefined;
-  const showOpen = (options: OpenDialogOptions) => owner && !owner.isDestroyed() ? dialog.showOpenDialog(owner, options) : dialog.showOpenDialog(options);
-  const cover = await showOpen({ title: "选择 Live Photo 静态封面", properties: ["openFile"], filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "webp", "bmp", "avif"] }] });
-  if (cover.canceled || !cover.filePaths[0]) return null;
-  const video = await showOpen({ title: "选择与封面配对的视频", properties: ["openFile"], filters: [{ name: "Video", extensions: ["mp4", "webm", "mov"] }] });
-  if (video.canceled || !video.filePaths[0]) return null;
-  const inspection = await wallpaperLibraryService.inspectLivePhoto(cover.filePaths[0], video.filePaths[0]);
+  const qaCoverPath = !app.isPackaged && qaRunEnabled ? process.env.PROJECTD_QA_LIVE_PHOTO_COVER_PATH : undefined;
+  const qaVideoPath = !app.isPackaged && qaRunEnabled ? process.env.PROJECTD_QA_LIVE_PHOTO_VIDEO_PATH : undefined;
+  let coverPath = qaCoverPath ? path.resolve(qaCoverPath) : undefined;
+  let videoPath = qaVideoPath ? path.resolve(qaVideoPath) : undefined;
+  if (!coverPath || !videoPath) {
+    const owner = settingsWindow && !settingsWindow.isDestroyed() ? settingsWindow : mainWindow ?? undefined;
+    const showOpen = (options: OpenDialogOptions) => owner && !owner.isDestroyed() ? dialog.showOpenDialog(owner, options) : dialog.showOpenDialog(options);
+    const cover = await showOpen({ title: "选择 Live Photo 静态封面", properties: ["openFile"], filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "webp", "bmp", "avif"] }] });
+    if (cover.canceled || !cover.filePaths[0]) return null;
+    const video = await showOpen({ title: "选择与封面配对的视频", properties: ["openFile"], filters: [{ name: "Video", extensions: ["mp4", "webm", "mov"] }] });
+    if (video.canceled || !video.filePaths[0]) return null;
+    coverPath = cover.filePaths[0];
+    videoPath = video.filePaths[0];
+  }
+  const inspection = await wallpaperLibraryService.inspectLivePhoto(coverPath, videoPath);
   const token = randomUUID();
   const expiresAt = Date.now() + LIVE_PHOTO_PREVIEW_TTL_MS;
-  livePhotoImportDrafts.set(token, { coverPath: path.resolve(cover.filePaths[0]), videoPath: path.resolve(video.filePaths[0]), expiresAt });
+  livePhotoImportDrafts.set(token, { coverPath: path.resolve(coverPath), videoPath: path.resolve(videoPath), expiresAt });
   const timer = setTimeout(() => livePhotoImportDrafts.delete(token), LIVE_PHOTO_PREVIEW_TTL_MS);
   timer.unref?.();
   return {
     token,
-    label: path.basename(cover.filePaths[0], inspection.coverExtension).slice(0, 80) || "My Live Photo",
+    label: path.basename(coverPath, inspection.coverExtension).slice(0, 80) || "My Live Photo",
     coverUrl: `${USER_MEDIA_SCHEME}://live-photo-preview/${token}?kind=cover`,
     videoUrl: `${USER_MEDIA_SCHEME}://live-photo-preview/${token}?kind=video`,
     coverWidth: inspection.coverSize.width,
@@ -2526,6 +2647,13 @@ async function initializeCoreServices(): Promise<void> {
     broadcastPortalsUpdated();
   });
   syncPortalWatcher();
+  const qaSearchFixturePaths = qaRunEnabled && !app.isPackaged
+    ? (process.env.PROJECTD_QA_SEARCH_FIXTURE_PATH ?? "")
+      .split(";")
+      .map((candidate) => candidate.trim())
+      .filter(Boolean)
+      .map((candidate) => path.resolve(candidate))
+    : [];
   searchService = new SearchService({
     getDesktopCandidates: () => database!.getDesktopFiles()
       .filter((file) => !file.isMissing)
@@ -2537,7 +2665,23 @@ async function initializeCoreServices(): Promise<void> {
         modifiedAt: file.modifiedAt
       })),
     getPortalCandidates: getPortalSearchCandidates,
-    everythingSearch: isEverythingAvailable() ? (query, limit, signal) => searchEverything(query, limit, signal) : undefined,
+    everythingSearch: qaSearchFixturePaths.length > 0
+      ? async () => (await Promise.all(qaSearchFixturePaths.map(async (fixturePath) => {
+        try {
+          const fixture = await fs.promises.stat(fixturePath);
+          if (!fixture.isFile()) return null;
+          return {
+            id: `qa-search-fixture:${path.basename(fixturePath)}`,
+            title: path.basename(fixturePath),
+            fullPath: fixturePath,
+            category: "document",
+            modifiedAt: fixture.mtime.toISOString()
+          };
+        } catch {
+          return null;
+        }
+      }))).filter((candidate): candidate is NonNullable<typeof candidate> => candidate !== null)
+      : isEverythingAvailable() ? (query, limit, signal) => searchEverything(query, limit, signal) : undefined,
     windowsSearch: (_query, limit, _signal) => searchWindowsSearch(_query, limit)
   });
   suggestionEngine = new SuggestionEngine({
@@ -2750,6 +2894,13 @@ if (!singleInstanceLock) {
     .whenReady()
     .then(async () => {
       writeBootstrapLog("app ready");
+
+      if (!app.isPackaged && qaRunEnabled && process.env.PROJECTD_QA_DESKTOP_PATH) {
+        const qaDesktopPath = path.resolve(process.env.PROJECTD_QA_DESKTOP_PATH);
+        await fs.promises.mkdir(qaDesktopPath, { recursive: true });
+        app.setPath("desktop", qaDesktopPath);
+        writeBootstrapLog("QA desktop path enabled", { desktopPath: qaDesktopPath });
+      }
 
       const userDataPath = app.getPath("userData");
       const resetMarker = path.join(userDataPath, "reset-requested.json");

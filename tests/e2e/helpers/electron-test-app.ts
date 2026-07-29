@@ -33,12 +33,21 @@ const SECRET_ENV_KEYS = [
 
 const QA_ENV_KEYS = [
   "PROJECTD_QA_CRASH_RENDERER",
+  "PROJECTD_QA_DISABLE_GPU",
   "PROJECTD_QA_ENABLE_UPDATER",
   "PROJECTD_QA_FORCE_WHITE_WALLPAPER",
   "PROJECTD_QA_HANG_SHUTDOWN",
   "PROJECTD_QA_METRICS_PATH",
   "PROJECTD_QA_OPEN_SETTINGS",
-  "PROJECTD_QA_SOAK"
+  "PROJECTD_QA_SOAK",
+  "PROJECTD_QA_SEARCH_FIXTURE_PATH",
+  "PROJECTD_QA_AUTO_AUTHORIZE_PORTAL",
+  "PROJECTD_QA_DESKTOP_PATH",
+  "PROJECTD_QA_AI_TIMEOUT_MS",
+  "PROJECTD_QA_WALLPAPER_IMPORT_PATH",
+  "PROJECTD_QA_WALLPAPER_EXPORT_PATH",
+  "PROJECTD_QA_LIVE_PHOTO_COVER_PATH",
+  "PROJECTD_QA_LIVE_PHOTO_VIDEO_PATH"
 ] as const;
 
 export async function createIsolatedUserData(label: string): Promise<string> {
@@ -59,12 +68,17 @@ export async function launchProjectD(label: string, options: LaunchOptions = {})
     PROJECTD_DEMO_AUTORUN: "0",
     PROJECTD_QA_AUTO_QUIT_MS: "60000",
     PROJECTD_QA_IDLE: "1",
+    PROJECTD_QA_DISABLE_GPU: "1",
     PROJECTD_QA_USER_DATA_DIR: userDataDir,
     ...options.env
   });
 
-  const entry = options.entry ?? root;
-  const args = entry === root ? [root, qaToken] : [entry, root, qaToken];
+  const disableGpu = env.PROJECTD_QA_DISABLE_GPU !== "0";
+  const entry = options.entry ?? process.env.PROJECTD_E2E_ENTRY ?? root;
+  const electronFlags = ["--no-sandbox", ...(disableGpu ? ["--disable-gpu"] : [])];
+  const args = entry === root
+    ? [...electronFlags, root, qaToken]
+    : [...electronFlags, entry, root, qaToken];
   const app = await electron.launch({ args, cwd: root, env });
   const firstWindow = await app.firstWindow();
   const window = options.env?.PROJECTD_QA_CRASH_RENDERER

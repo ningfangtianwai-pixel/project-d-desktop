@@ -242,10 +242,13 @@ export interface LunaIntentPreview {
   detail: string;
 }
 
+export type ChatFallbackReason = "provider-timeout" | "provider-error";
+
 export interface ChatResponse {
   message: ChatMessage;
   provider: string;
   fallback: boolean;
+  fallbackReason?: ChatFallbackReason;
   intentPreview?: LunaIntentPreview;
 }
 

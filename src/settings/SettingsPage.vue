@@ -191,6 +191,11 @@ const runtimePauseDetail = computed(() => {
 async function setManualRuntimePause(paused: boolean): Promise<void> {
   runtimeState.value = await window.projectD.setRuntimeManualPaused(paused);
 }
+
+async function refreshRuntimeMetrics(): Promise<void> {
+  runtimeMetrics.value = await window.projectD.getRuntimeMetrics().catch(() => null);
+}
+
 const particleIntensity = ref(55);
 const petEnabled = ref(true);
 const petCharacterId = ref("luna-q");
@@ -1816,7 +1821,7 @@ async function saveSettings(): Promise<void> {
             <p v-if="recoverySystemStatus" class="runtime-line">检测时间：{{ new Date(recoverySystemStatus.checkedAt).toLocaleString() }}</p>
           </div>
           <div class="settings-group">
-            <div class="group-heading"><div><h2>本机性能采样</h2><p class="runtime-line">仅保存在本机，不包含文件名、路径或聊天内容。</p></div></div>
+            <div class="group-heading"><div><h2>本机性能采样</h2><p class="runtime-line">仅保存在本机，不包含文件名、路径或聊天内容。</p></div><button class="secondary-command" type="button" title="刷新性能采样" @click="refreshRuntimeMetrics"><RefreshCcw :size="15" /><span>刷新</span></button></div>
             <div class="recovery-system-grid">
               <article data-status="ready"><span class="recovery-health-dot"></span><span><strong>CPU 中位数</strong><small>{{ (runtimeMetrics?.cpuMedianPercent ?? 0).toFixed(2) }}%</small></span></article>
               <article data-status="ready"><span class="recovery-health-dot"></span><span><strong>CPU P95</strong><small>{{ (runtimeMetrics?.cpuP95Percent ?? 0).toFixed(2) }}%</small></span></article>

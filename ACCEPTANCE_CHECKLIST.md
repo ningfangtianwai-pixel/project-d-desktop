@@ -1122,3 +1122,240 @@
 - [x] Source-contract test protects the route boundary.
 - [x] Fresh packaged smoke reports no error-log entries.
 - [ ] Installer, physical hardware, and long-duration soak evidence remains manual.
+
+## Stage 84 - V6 Native / Immersive Experience Shell
+
+- [x] Native is the default experience mode.
+- [x] Immersive, Task, Clean, and Safe are explicit state values.
+- [x] The immersive edge rail exposes Search, Organize, Scene, and Assistant.
+- [x] Ambient status capsule exposes wake, task return, and native return actions.
+- [x] Existing wallpaper, weather, pet, AI, organizer, settings, tray, and recovery modules remain available.
+- [x] Typecheck, lint, component tests 2/2, and source Node tests 235/235 pass.
+
+## Stage 85 - V6 Scene Surface and Visual QA
+
+- [x] Scene task surface loads saved scenes and supports apply.
+- [x] Scene task surface supports save-current-scene, wallpaper-library, and next-wallpaper actions.
+- [x] Scene E2E passes 1/1 after fixing the refresh race.
+- [x] Isolated V6 visual matrix passes 9/9 captures, including 125%/150%/200% scale evidence.
+- [x] User-reported UI regression passes in isolated browser preview.
+- [x] Isolated renderer/main/preload build passes without using locked `dist`.
+- [ ] Full Electron clean/restore/config/force-kill/organizer rerun from the normal writable packaged path.
+- [ ] Physical multi-display/DPI, sleep/wake, lock/unlock, fullscreen, battery, installer, and 4/24-hour soak evidence.
+
+## Stage 86 - V6 Search Actions and Organizer Focus
+
+- [x] Search exposes open, locate, copy path, read-only portal authorization, and pin-to-scene actions.
+- [x] Scene picker reports empty-scene and stale-result states.
+- [x] Organizer task surface keeps reversible inbox actions visible while reducing unrelated panel noise.
+- [x] V6 state tests 11/11 and full Node tests 237/237 pass.
+
+## Stage 87 - V6 Scene Profile Preview and Suggestion Routing
+
+- [x] Scene preview shows weather, display, host, fit, safe-region, and pet-anchor information.
+- [x] Scene preview is non-mutating until the explicit Apply action.
+- [x] Immersive suggestion capsule routes to the single Organizer task surface.
+- [x] Formal build passes, scene Electron E2E passes 1/1, and V6 visual matrix passes 9/9.
+- [ ] Full Electron recovery matrix and physical/manual gates remain open.
+
+## Stage 88 - V6 Explicit Task Surface Boundaries
+
+- [x] Search task is implemented as `SearchSurface.vue` with existing safe IPC actions.
+- [x] Organizer task is implemented as `OrganizerSurface.vue` with preview-first and reversible actions.
+- [x] Assistant task is implemented as `AssistantSurface.vue` around the existing ChatPanel.
+- [x] Organizer E2E 1/1 and Scene E2E 1/1 pass.
+- [x] Final V6 visual matrix passes 9/9 with wallpaper visible and DPI captures at 125%/150%/200%.
+- [x] Full Electron recovery matrix passes 13/13, including tray exit and renderer recovery.
+- [ ] Physical/manual gates remain open.
+
+## Stage 89 - V6 Electron Lifecycle Matrix Closure
+
+- [x] Tray E2E shim resolves the project root after Electron command-line switches.
+- [x] Tray quit guarantees `app.quit()` even when renderer notification fails.
+- [x] First launch, duplicate launch, settings restart, tray exit, white-screen recovery, force-kill recovery, AI no-Key fallback, corrupted config recovery, clean desktop, organizer restore, organizer surface, scene surface, and AI settings E2E: 13/13 passed.
+- [x] No Electron process remained after the full isolated run.
+- [ ] Multi-display/DPI, sleep/wake, lock/unlock, fullscreen/battery, installer/upgrade/uninstall, Live Photo formats, and 4/24-hour soak still require physical/manual evidence.
+
+## Stage 90 - V6 Search Task Surface and Visual Closure
+
+- [x] Search task has explicit scope, clear, empty-result, status, keyboard, and accessible action states.
+- [x] Normal Search mode renders outside the legacy command panel; Safe compatibility retains the fallback path.
+- [x] Clear-search resets query and result state together.
+- [x] Task mode has one primary return/status layer; legacy topbar and pull cord are hidden only in Task mode.
+- [x] Component tests 4/4, Node tests 237/237, task-surface E2E 4/4, full Electron E2E 15/15, and visual matrix 10/10 pass.
+- [ ] Physical multi-display/DPI, sleep/wake, lock/unlock, fullscreen/battery, installer/upgrade/uninstall, Live Photo formats, and 4/24-hour soak remain open.
+
+## Stage 91 - V6 Safe Compatibility Boundary
+
+- [x] Legacy control console is extracted into `CompatibilitySurface.vue`.
+- [x] Compatibility surface is rendered only in explicit Safe mode.
+- [x] Safe actions remain available: native file/folder interactions, search, portal, suggestions, preview-first inbox, undo, chat, settings, restore, refresh, and clean desktop.
+- [x] Source contract, typecheck, lint, component 4/4, Node 237/237, targeted E2E 6/6, visual 10/10, and full Electron rerun 15/15 pass.
+- [ ] One first full-run worker exit code `3221226505` remains an observed machine-level flake to monitor.
+- [ ] Physical multi-display/DPI, sleep/wake, lock/unlock, fullscreen/battery, installer/upgrade/uninstall, Live Photo formats, and 4/24-hour soak remain open.
+
+## Stage 92 - Tray Launch Argument Regression Fix
+
+- [x] Tray test shim rejects command-line switches and unrelated paths as project roots.
+- [x] `process.chdir()` is now reached only after verifying the Project D package and built main bootstrap exist.
+- [x] Typecheck, lint, tray E2E `1/1`, and diff whitespace validation pass.
+- [x] Fresh build plus full Electron E2E `15/15` pass; standalone tray rerun leaves no Electron process.
+- [ ] Full lifecycle rerun from a fresh build and physical/manual gates remain open.
+
+## Stage 93 - V6 Search Result Action Closure
+
+- [x] QA-only disposable search fixture is isolated from the real desktop and production providers.
+- [x] Search result path copy, scene pinning, and read-only portal authorization pass through the real task UI and IPC.
+- [x] Main-window task route is accepted by Scene and Portal IPC without weakening trusted renderer validation.
+- [x] Typecheck, lint, build, component 4/4, focused Electron E2E 5/5, diff check, and process cleanup pass.
+- [ ] Organizer fixture execute/undo, full lifecycle rerun after this change, and physical/manual gates remain open.
+
+## Stage 94 - V6 Reversible Organizer Fixture
+
+- [x] QA desktop fixture is disposable and injected before FileScanner/ActionEngine initialization.
+- [x] Preview lists movable and conflicting items without changing files.
+- [x] Cancel leaves the fixture unchanged.
+- [x] Execute moves only the non-conflicting item after confirmation.
+- [x] Undo restores the moved item; conflict source and target remain unchanged.
+- [x] Organizer state strip communicates unchanged, review-pending, and undoable states.
+- [x] Build, component 4/4, focused Electron E2E 6/6, diff check, and process cleanup pass.
+- [ ] Full lifecycle rerun after these changes and physical/manual gates remain open.
+
+## Stage 95 - V6 Full Lifecycle Regression
+
+- [x] Organizer returns to the unchanged state after undo and removes the undo action.
+- [x] Rebuilt `dist` and full Electron lifecycle matrix passes 17/17.
+- [x] Startup, duplicate launch, settings restart, tray exit, white-screen recovery, force-kill recovery, AI fallback, corrupted config, clean desktop, safety restore, Organizer, Search, Scene, and Assistant paths are covered.
+- [x] No Electron process remains after the suite.
+- [ ] Physical multi-display/DPI, sleep/wake, lock/unlock, fullscreen/battery, installer/upgrade/uninstall, Live Photo formats, and 4/24-hour soak remain open.
+
+## Stage 96 - V6 Scene Pinned Resource Summary
+
+- [x] Scene cards display pinned resource labels and origins instead of only a count.
+- [x] Search-to-scene-to-search navigation preserves the pinned resource and portal action.
+- [x] Typecheck, lint, build, Scene E2E 1/1, Search action E2E 1/1, diff check, and process cleanup pass.
+- [ ] Empty/one/overflow visual captures, full lifecycle rerun after the next main-process change, and physical/manual gates remain open.
+
+## Stage 97 - V6 Scene Pinned Resource Visual Matrix
+
+- [x] Empty, one-resource, and overflow-resource scene states have isolated screenshots.
+- [x] Overflow state shows three resource chips plus a remaining-count indicator.
+- [x] Scene chips remain within the card and the page has no horizontal overflow at the tested viewport.
+- [x] Visual E2E 1/1 and process cleanup pass.
+- [ ] Physical multi-display/DPI, sleep/wake, installer, and 4/24-hour soak remain open.
+
+## Stage 98 - V6 Electron Launch Argument Regression Guard
+
+- [x] Electron switches before the project root cannot be selected as the tray shim working directory.
+- [x] Missing or invalid project roots fail with a controlled diagnostic instead of calling `chdir` on an arbitrary argument.
+- [x] Root-resolution unit tests pass 2/2.
+- [x] Rebuilt project and tray Electron E2E pass 1/1.
+- [x] No Electron process remains after verification.
+- [ ] Physical multi-display/DPI, sleep/wake, installer, and 4/24-hour soak remain open.
+
+## Stage 99 - V6 Organizer Safety State Visual Closure
+
+- [x] Unchanged, review-pending, undoable, and restored Organizer states have distinct readable visual treatment.
+- [x] Review state shows movable and conflict-skipped counts without executing a plan.
+- [x] Undoable state shows recorded items and preserved original-location status.
+- [x] Four-state visual screenshots captured under `artifacts-e2e-v6/organizer-state-visual/`.
+- [x] Typecheck, lint, build, component 4/4, Organizer E2E 3/3, and process cleanup pass.
+- [ ] Physical multi-display/DPI, sleep/wake, installer, and 4/24-hour soak remain open.
+
+## Stage 100 - V6 Scene Action Feedback Semantics
+
+- [x] Scene save/apply/read failures are visually distinguishable from successful completion.
+- [x] In-progress Scene actions use neutral feedback and do not claim success early.
+- [x] Scene Apply success is verified through the real isolated IPC/Electron path.
+- [x] Typecheck, build, Scene E2E 1/1, and process cleanup pass.
+- [ ] Physical multi-display/DPI, sleep/wake, installer, and 4/24-hour soak remain open.
+
+## Stage 101 - V6 Search Result-Level Action Feedback
+
+- [x] Search feedback is attached to the matching result card by opaque result id.
+- [x] Copy, pin-to-scene, and portal authorization success states are verified in Electron E2E.
+- [x] Component coverage verifies the result-level feedback rendering and tone.
+- [x] Three Search feedback screenshots captured and visually inspected.
+- [x] Typecheck, build, component 5/5, Search E2E 2/2, and process cleanup pass.
+- [ ] Physical multi-display/DPI, sleep/wake, installer, and 4/24-hour soak remain open.
+
+## Stage 102 - V6 Assistant and Wallpaper Action Feedback Closure
+
+- [x] Assistant send feedback distinguishes processing, success, local fallback, and failure.
+- [x] Wallpaper Studio action feedback distinguishes processing, success, cancellation, and failure.
+- [x] Main-window `#/wallpaper` route can read and apply the wallpaper library through the trusted IPC boundary.
+- [x] Wallpaper Studio toast remains fixed and readable over the wallpaper-first layout.
+- [x] Typecheck, full lint, build, Node 239/239, component 5/5, split Electron E2E 20/20, and process cleanup pass.
+- [ ] Physical multi-display/DPI, sleep/wake, installer, and 4/24-hour soak remain open.
+
+## Stage 103 - V6 Assistant Provider Failure Recovery
+
+- [x] Configured-provider timeout and provider-error states are represented by privacy-safe enums.
+- [x] Provider failure keeps the local reply available without claiming that the cloud provider succeeded.
+- [x] No-Key and privacy-paused local fallback behavior remains available.
+- [x] QA-only local timeout fixture passes and captures the red recovery state.
+- [x] Typecheck, full lint, build, Node 239/239, component 5/5, AI E2E 3/3, and process cleanup pass.
+- [ ] Physical multi-display/DPI, sleep/wake, installer, and 4/24-hour soak remain open.
+
+## Stage 104 - V6 Provider Error and Pet Personality Motion Closure
+
+- [x] A local HTTP 503 provider fixture produces an explicit service-error recovery state distinct from timeout and no-Key fallback.
+- [x] The local Assistant reply remains available, input clears, and no provider response details are exposed to the renderer.
+- [x] Pet interaction cues preserve the selected personality motion instead of forcing every click into the generic cheerful action.
+- [x] Cold personality E2E verifies a cold voice and idle motion in the real pet window; visual evidence is captured under `artifacts-e2e-v6/pet-feedback-visual/`.
+- [x] Typecheck, full lint, build, Node 240/240, component 5/5, targeted E2E 3/3, and process cleanup pass.
+- [ ] Physical multi-display/DPI, sleep/wake, installer, and 4/24-hour soak remain open.
+
+## Stage 105 - V6 Pet Asset Visual Matrix
+
+- [x] All five bundled character ids are switched through the real settings/IPC path.
+- [x] Every character renders a verified non-empty action asset with positive natural dimensions and a visible on-screen bounding box.
+- [x] Five screenshots are captured under `artifacts-e2e-v6/pet-visual-matrix/` and visually inspected.
+- [x] `verify:pet-assets` passes six action slots for each character.
+- [x] Pet visual E2E 1/1 and process cleanup pass.
+- [ ] Physical multi-display/DPI, sleep/wake, installer, and 4/24-hour soak remain open.
+
+## Stage 106 - V6 Wallpaper Studio User Asset Loop
+
+- [x] Disposable local image can be imported through the real Wallpaper Studio UI.
+- [x] Imported asset renders in the main preview with positive natural dimensions.
+- [x] Original user asset can be exported to a disposable local path and verified non-empty.
+- [x] User asset can be deleted and the selected built-in wallpaper/library state is restored.
+- [x] CSP explicitly allows the app-owned `projectd-media:` protocol for image, media, and protocol connections.
+- [x] Media protocol supports MIME detection, `HEAD`, byte ranges, bounded streaming, and handle cleanup.
+- [x] Visual evidence captured under `artifacts-e2e-v6/wallpaper-library-visual/`.
+- [x] Typecheck, targeted ESLint, build, disposable Electron E2E 1/1, and process cleanup pass.
+- [ ] Failed-import recovery and Live Photo playback evidence remain open.
+- [ ] Physical multi-display/DPI, sleep/wake, installer, and 4/24-hour soak evidence remain open.
+
+## Stage 107 - V6 Live Photo Pairing and Recovery Evidence
+
+- [x] Valid cover/video pair reaches a real decoded preview before confirmation is enabled.
+- [x] Preview displays both cover and video media without a blank/black replacement.
+- [x] Local media protocol returns correct byte-range `206` responses for the video path.
+- [x] Confirmed import persists a dynamic personal asset marked `Live Photo`.
+- [x] Missing cover input shows an error state and preserves a usable Wallpaper Studio.
+- [x] Visual evidence captured under `artifacts-e2e-v6/wallpaper-live-photo-visual/`.
+- [x] Typecheck, full lint, Node 240/240, component 5/5, build, Wallpaper Studio E2E 3/3, and process cleanup pass.
+- [ ] WebM/MOV fixture coverage, physical Live Photo formats, multi-display/DPI, sleep/wake, installer, and 4/24-hour soak remain open.
+
+## Stage 108 - V6 Weather State and Performance Evidence
+
+- [x] Manual weather selection takes precedence over stale automatic weather data.
+- [x] Clear and light are distinct visual states.
+- [x] Rain, snow, fog, leaves, and light layers expose non-zero visual output at normal intensity.
+- [x] Rain uses the real texture layer plus 96 depth-varied streak nodes.
+- [x] Zero particle intensity produces zero visible weather opacity and zero Pixi particle budget.
+- [x] Six weather screenshots captured under `artifacts-e2e-v6/weather-quality-matrix/`.
+- [x] Renderer FPS sample set is produced by the real Electron runtime metrics path.
+- [x] Build and weather E2E 2/2 pass; no Electron process residue remains.
+- [ ] CPU/working-set evidence by performance profile and physical GPU/battery/4K/multi-display/DPI/soak evidence remain open.
+
+## Stage 109 - V6 Performance Profile Evidence
+
+- [x] Recovery Center can refresh local performance metrics on demand.
+- [x] Quality, balanced, and battery-saver modes propagate through persisted settings to the runtime arbiter and weather renderer.
+- [x] GPU-enabled Electron run records profile-filtered CPU, working-set, and FPS evidence.
+- [x] Final report saved at `artifacts-e2e-v6/performance-profile-matrix.json`.
+- [x] Performance E2E 1/1, typecheck, targeted lint, build, and process cleanup pass.
+- [ ] Physical hardware matrix, battery, 4K, multi-display/DPI, and long-soak evidence remain open.

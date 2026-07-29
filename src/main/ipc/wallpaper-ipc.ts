@@ -19,7 +19,7 @@ export function registerWallpaperIpcHandlers(deps: WallpaperIpcDependencies): vo
   });
 
   deps.ipc.handle(IPC_CHANNELS.WALLPAPER_DISPLAY_ASSIGN, (event, displayId: unknown, wallpaperId: unknown) => {
-    deps.assertTrustedSender(event, ["", "#/settings", "#/overlay"]);
+    deps.assertTrustedSender(event, ["", "#/settings", "#/overlay", "#/wallpaper"]);
     if (typeof displayId !== "string" || displayId.length > 80) throw new Error("Invalid display id");
     if (wallpaperId !== null && (typeof wallpaperId !== "string" || wallpaperId.length > 80)) {
       throw new Error("Invalid wallpaper id");

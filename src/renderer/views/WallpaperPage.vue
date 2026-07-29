@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
-import { ArrowLeft, Check, Download, Film, Image as ImageIcon, Monitor, Pause, Play, Plus, RefreshCcw, Trash2, Upload } from "lucide-vue-next";
+import { ArrowLeft, Check, CheckCircle2, Download, Film, Image as ImageIcon, LoaderCircle, Monitor, Pause, Play, Plus, RefreshCcw, Trash2, TriangleAlert, Upload } from "lucide-vue-next";
 import WallpaperStage from "../components/WallpaperStage.vue";
 import { wallpaperDisplayLabel } from "@shared/wallpaper-library";
 import type { LivePhotoImportPreview, SettingsSnapshot, WallpaperDisplayInfo, WallpaperLibraryItem } from "@shared/types";
@@ -10,6 +10,8 @@ const displays = ref<WallpaperDisplayInfo[]>([]);
 const settings = ref<SettingsSnapshot | null>(null);
 const selectedId = ref<string | null>(null);
 const statusMessage = ref("");
+type WallpaperStatusTone = "neutral" | "success" | "error";
+const statusTone = ref<WallpaperStatusTone>("success");
 const busy = ref(false);
 const previewPlaying = ref(false);
 const previewVideo = ref<HTMLVideoElement | null>(null);
@@ -35,8 +37,9 @@ function selectWallpaper(item: WallpaperLibraryItem): void {
   previewPlaying.value = false;
 }
 
-function setStatus(message: string): void {
+function setStatus(message: string, tone: WallpaperStatusTone = "success"): void {
   statusMessage.value = message;
+  statusTone.value = tone;
   window.setTimeout(() => {
     if (statusMessage.value === message) statusMessage.value = "";
   }, 4200);
@@ -56,13 +59,15 @@ async function refreshLibrary(): Promise<void> {
 
 async function applySelected(): Promise<void> {
   if (!selectedWallpaper.value || busy.value) return;
+  const item = selectedWallpaper.value;
   busy.value = true;
+  setStatus(`正在应用：${wallpaperDisplayLabel(item)}`, "neutral");
   try {
-    settings.value = await window.projectD.applyWallpaper(selectedWallpaper.value.id);
+    settings.value = await window.projectD.applyWallpaper(item.id);
     await refreshLibrary();
-    setStatus(`已应用：${wallpaperDisplayLabel(selectedWallpaper.value)}`);
+    setStatus(`已应用：${wallpaperDisplayLabel(item)}`);
   } catch (error) {
-    setStatus(`应用失败，已保留当前壁纸：${error instanceof Error ? error.message : String(error)}`);
+    setStatus(`应用失败，已保留当前壁纸：${error instanceof Error ? error.message : String(error)}`, "error");
   } finally {
     busy.value = false;
   }
@@ -71,14 +76,18 @@ async function applySelected(): Promise<void> {
 async function importWallpaper(): Promise<void> {
   if (busy.value) return;
   busy.value = true;
+  setStatus("正在打开图片选择器……", "neutral");
   try {
     const imported = await window.projectD.importWallpaper();
-    if (!imported) return;
+    if (!imported) {
+      setStatus("已取消图片导入", "neutral");
+      return;
+    }
     await refreshLibrary();
     selectedId.value = imported.id;
     setStatus(`已加入壁纸库：${imported.label}`);
   } catch (error) {
-    setStatus(`导入失败：${error instanceof Error ? error.message : String(error)}`);
+    setStatus(`导入失败：${error instanceof Error ? error.message : String(error)}`, "error");
   } finally {
     busy.value = false;
   }
@@ -87,9 +96,13 @@ async function importWallpaper(): Promise<void> {
 async function importLivePhoto(): Promise<void> {
   if (busy.value) return;
   busy.value = true;
+  setStatus("正在读取 Live Photo 配对媒体……", "neutral");
   try {
     const draft = await window.projectD.prepareLivePhotoImport();
-    if (!draft) return;
+    if (!draft) {
+      setStatus("已取消 Live Photo 导入", "neutral");
+      return;
+    }
     livePhotoDraft.value = draft;
     livePhotoDecodeState.value = "waiting";
     if (livePhotoDecodeTimer !== null) window.clearTimeout(livePhotoDecodeTimer);
@@ -97,7 +110,7 @@ async function importLivePhoto(): Promise<void> {
       if (livePhotoDecodeState.value === "waiting") livePhotoDecodeState.value = "failed";
     }, 8000);
   } catch (error) {
-    setStatus(`Live Photo 导入失败：${error instanceof Error ? error.message : String(error)}`);
+    setStatus(`Live Photo 导入失败：${error instanceof Error ? error.message : String(error)}`, "error");
   } finally {
     busy.value = false;
   }
@@ -107,6 +120,7 @@ async function confirmLivePhotoImport(): Promise<void> {
   const draft = livePhotoDraft.value;
   if (!draft || livePhotoDecodeState.value !== "ready" || busy.value) return;
   busy.value = true;
+  setStatus("正在写入壁纸库……", "neutral");
   try {
     const imported = await window.projectD.confirmLivePhotoImport(draft.token);
     livePhotoDraft.value = null;
@@ -114,7 +128,7 @@ async function confirmLivePhotoImport(): Promise<void> {
     selectedId.value = imported.id;
     setStatus(`Live Photo 已确认导入：${imported.label}`);
   } catch (error) {
-    setStatus(`Live Photo 导入失败：${error instanceof Error ? error.message : String(error)}`);
+    setStatus(`Live Photo 导入失败：${error instanceof Error ? error.message : String(error)}`, "error");
   } finally {
     busy.value = false;
   }
@@ -146,12 +160,13 @@ async function deleteSelected(): Promise<void> {
   if (!item || item.source !== "user" || busy.value) return;
   if (!window.confirm(`从壁纸库删除“${item.label}”？不会删除原始桌面文件。`)) return;
   busy.value = true;
+  setStatus(`正在删除：${item.label}`, "neutral");
   try {
     await window.projectD.deleteWallpaper(item.id);
     await refreshLibrary();
     setStatus(`已删除：${item.label}`);
   } catch (error) {
-    setStatus(`删除失败：${error instanceof Error ? error.message : String(error)}`);
+    setStatus(`删除失败：${error instanceof Error ? error.message : String(error)}`, "error");
   } finally {
     busy.value = false;
   }
@@ -159,25 +174,33 @@ async function deleteSelected(): Promise<void> {
 
 async function exportSelected(): Promise<void> {
   if (!selectedWallpaper.value || busy.value) return;
-  const result = await window.projectD.exportWallpaperOriginal(selectedWallpaper.value.id);
-  if (!result.cancelled) setStatus(`已导出：${result.filename ?? selectedWallpaper.value.label}`);
+  const item = selectedWallpaper.value;
+  setStatus(`正在准备原图：${item.label}`, "neutral");
+  try {
+    const result = await window.projectD.exportWallpaperOriginal(item.id);
+    setStatus(result.cancelled ? "已取消原图导出" : `已导出：${result.filename ?? item.label}`, result.cancelled ? "neutral" : "success");
+  } catch (error) {
+    setStatus(`导出失败：${error instanceof Error ? error.message : String(error)}`, "error");
+  }
 }
 
 async function assignDisplay(display: WallpaperDisplayInfo, wallpaperId: string): Promise<void> {
+  setStatus(`正在更新 ${display.label} 的壁纸分配……`, "neutral");
   try {
     displays.value = await window.projectD.assignWallpaperToDisplay(display.id, wallpaperId || null);
     setStatus(`${display.label} 已更新壁纸分配`);
   } catch (error) {
-    setStatus(`显示器分配失败：${error instanceof Error ? error.message : String(error)}`);
+    setStatus(`显示器分配失败：${error instanceof Error ? error.message : String(error)}`, "error");
   }
 }
 
 async function setDisplayFitMode(display: WallpaperDisplayInfo, fitMode: "cover" | "contain"): Promise<void> {
+  setStatus(`正在更新 ${display.label} 的裁剪方式……`, "neutral");
   try {
     displays.value = await window.projectD.setWallpaperDisplayFitMode(display.id, fitMode);
     setStatus(`${display.label} 已更新裁剪方式`);
   } catch (error) {
-    setStatus(`裁剪方式更新失败：${error instanceof Error ? error.message : String(error)}`);
+    setStatus(`裁剪方式更新失败：${error instanceof Error ? error.message : String(error)}`, "error");
   }
 }
 
@@ -202,7 +225,7 @@ onMounted(async () => {
   try {
     await refreshLibrary();
   } catch (error) {
-    setStatus(`壁纸库暂时不可用：${error instanceof Error ? error.message : String(error)}`);
+    setStatus(`壁纸库暂时不可用：${error instanceof Error ? error.message : String(error)}`, "error");
   }
 });
 
@@ -298,7 +321,12 @@ onUnmounted(() => {
       </aside>
     </section>
 
-    <div v-if="statusMessage" class="wallpaper-studio-toast" role="status">{{ statusMessage }}</div>
+    <div v-if="statusMessage" class="wallpaper-studio-toast" :data-tone="statusTone" role="status" aria-live="polite">
+      <LoaderCircle v-if="statusTone === 'neutral'" :size="14" class="wallpaper-status-spin" />
+      <CheckCircle2 v-else-if="statusTone === 'success'" :size="14" />
+      <TriangleAlert v-else :size="14" />
+      <span>{{ statusMessage }}</span>
+    </div>
     <div class="wallpaper-library-count"><Plus :size="13" />{{ bundledWallpapers.length }} 内置 · {{ userWallpapers.length }} 个人</div>
 
     <div v-if="livePhotoDraft" class="live-photo-preview-backdrop" role="dialog" aria-modal="true" aria-label="Live Photo 导入预览">

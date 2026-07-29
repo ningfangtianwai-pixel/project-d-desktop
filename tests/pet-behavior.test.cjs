@@ -35,10 +35,16 @@ test("character personality bubbles choose a declared action and a stable visual
   const energetic = petBubbleCue("floral-star", "energetic", "interaction", () => 0);
   const cold = petBubbleCue("lin-yuxi", "cold", "ambient", () => 0);
   const lazy = petBubbleCue("starlight", "lazy", "ambient", () => 0);
-  assert.equal(energetic.action, "interaction");
+  assert.equal(energetic.action, "happy");
   assert.equal(energetic.tone, "bright");
   assert.equal(cold.action, "idle");
   assert.equal(cold.tone, "cool");
   assert.equal(lazy.action, "sleep");
   assert.ok(energetic.text.length > 0 && cold.text.length > 0 && lazy.text.length > 0);
+});
+
+test("interaction bubbles keep the selected personality motion", () => {
+  assert.equal(petBubbleCue("lin-yuxi", "cold", "interaction", () => 0).action, "idle");
+  assert.equal(petBubbleCue("starlight", "lazy", "interaction", () => 0).action, "sleep");
+  assert.equal(petBubbleCue("floral-star", "energetic", "interaction", () => 0).action, "happy");
 });

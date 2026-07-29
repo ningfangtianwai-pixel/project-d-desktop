@@ -81,29 +81,29 @@ export function registerSettingsIpcHandlers(deps: SettingsIpcDependencies): void
   });
 
   ipc.handle(IPC_CHANNELS.WALLPAPER_IMPORT, async (event): Promise<WallpaperLibraryItem | null> => {
-    assertTrustedSender(event, ["#/settings"]);
+    assertTrustedSender(event, ["#/settings", "#/wallpaper"]);
     return deps.importWallpaper();
   });
 
   ipc.handle(IPC_CHANNELS.WALLPAPER_PREPARE_LIVE_PHOTO, async (event): Promise<LivePhotoImportPreview | null> => {
-    assertTrustedSender(event, ["#/settings"]);
+    assertTrustedSender(event, ["#/settings", "#/wallpaper"]);
     return deps.prepareLivePhotoImport();
   });
 
   ipc.handle(IPC_CHANNELS.WALLPAPER_CONFIRM_LIVE_PHOTO, async (event, token: unknown): Promise<WallpaperLibraryItem> => {
-    assertTrustedSender(event, ["#/settings"]);
+    assertTrustedSender(event, ["#/settings", "#/wallpaper"]);
     if (typeof token !== "string" || !/^[0-9a-f-]{36}$/i.test(token)) throw new Error("Invalid Live Photo preview token");
     return deps.confirmLivePhotoImport(token);
   });
 
   ipc.handle(IPC_CHANNELS.WALLPAPER_CANCEL_LIVE_PHOTO, (event, token: unknown): void => {
-    assertTrustedSender(event, ["#/settings"]);
+    assertTrustedSender(event, ["#/settings", "#/wallpaper"]);
     if (typeof token !== "string" || !/^[0-9a-f-]{36}$/i.test(token)) throw new Error("Invalid Live Photo preview token");
     deps.cancelLivePhotoImport(token);
   });
 
   ipc.handle(IPC_CHANNELS.WALLPAPER_IMPORT_GENERATED, async (event, dataUrl: unknown, label: unknown): Promise<WallpaperLibraryItem> => {
-    assertTrustedSender(event, ["#/settings"]);
+    assertTrustedSender(event, ["#/settings", "#/wallpaper"]);
     if (typeof dataUrl !== "string" || dataUrl.length > 42_000_000 || typeof label !== "string" || label.length > 120) {
       throw new Error("Invalid generated wallpaper payload");
     }
@@ -111,19 +111,19 @@ export function registerSettingsIpcHandlers(deps: SettingsIpcDependencies): void
   });
 
   ipc.handle(IPC_CHANNELS.WALLPAPER_DELETE, (event, wallpaperId: unknown): void => {
-    assertTrustedSender(event, ["#/settings"]);
+    assertTrustedSender(event, ["#/settings", "#/wallpaper"]);
     if (typeof wallpaperId !== "string" || wallpaperId.length > 80) throw new Error("Invalid wallpaper id");
     deps.deleteWallpaper(wallpaperId);
   });
 
   ipc.handle(IPC_CHANNELS.WALLPAPER_APPLY, (event, wallpaperId: unknown): SettingsSnapshot => {
-    assertTrustedSender(event, ["", "#/settings", "#/overlay"]);
+    assertTrustedSender(event, ["", "#/settings", "#/overlay", "#/wallpaper"]);
     if (typeof wallpaperId !== "string" || wallpaperId.length > 80) throw new Error("Invalid wallpaper id");
     return deps.applyWallpaper(wallpaperId);
   });
 
   ipc.handle(IPC_CHANNELS.WALLPAPER_EXPORT_ORIGINAL, async (event, wallpaperId: unknown) => {
-    assertTrustedSender(event, ["#/settings"]);
+    assertTrustedSender(event, ["#/settings", "#/wallpaper"]);
     if (typeof wallpaperId !== "string" || wallpaperId.length > 80) throw new Error("Invalid wallpaper id");
     return deps.exportWallpaperOriginal(wallpaperId);
   });

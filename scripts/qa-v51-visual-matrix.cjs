@@ -5,7 +5,12 @@ const { spawn } = require("node:child_process");
 const { chromium } = require("@playwright/test");
 
 const root = path.resolve(__dirname, "..");
-const output = path.join(root, "artifacts", "qa", "v51-visual-matrix");
+const output = process.env.PROJECTD_QA_OUTPUT
+  ? path.resolve(process.env.PROJECTD_QA_OUTPUT)
+  : path.join(root, "artifacts", "qa", "v51-visual-matrix");
+const rendererOutput = process.env.PROJECTD_QA_RENDERER
+  ? path.resolve(process.env.PROJECTD_QA_RENDERER)
+  : path.join(root, "dist", "renderer");
 const port = 4196;
 const edge = [
   path.join(process.env["PROGRAMFILES(X86)"] ?? "", "Microsoft", "Edge", "Application", "msedge.exe"),
@@ -18,6 +23,7 @@ fs.mkdirSync(output, { recursive: true });
 const vite = spawn(process.execPath, [
   path.join(root, "node_modules", "vite", "bin", "vite.js"),
   "preview",
+  "--outDir", rendererOutput,
   "--host", "127.0.0.1",
   "--port", String(port)
 ], { cwd: root, windowsHide: true, stdio: "ignore" });
@@ -40,9 +46,14 @@ async function run() {
     await page.locator(".wallpaper-stage").waitFor();
 
     await setWallpaper(page, "anime-lakeside-station");
+    await page.locator('.ambient-edge-rail button[title="进入沉浸空间"]').click();
     captures.push(await capture(page, "01-quiet-dark"));
 
-    await page.locator('.ambient-edge-rail button[title="AI 对话"]').click();
+    await page.locator('.ambient-edge-rail button[title="搜索工作区"]').click();
+    await page.locator(".search-surface").waitFor();
+    captures.push(await capture(page, "02-task-search"));
+
+    await page.locator('.ambient-edge-rail button[title="AI 助手"]').click();
     captures.push(await capture(page, "02-task-assistant"));
 
     await page.evaluate(() => { globalThis.location.hash = "#/overlay"; });
@@ -51,16 +62,27 @@ async function run() {
     await page.locator(".overlay-wallpaper-backdrop").waitFor();
     captures.push(await capture(page, "03-task-organizer"));
 
-    await page.evaluate(() => { globalThis.location.hash = ""; });
-    await page.locator(".app-shell").waitFor();
-    await page.evaluate(() => globalThis.document.querySelector(".action-button.quiet")?.click());
-    await page.waitForFunction(() => globalThis.document.querySelector(".app-shell")?.getAttribute("data-experience-mode") === "clean");
+    await page.evaluate(() => { globalThis.location.hash = "#/"; });
+    await page.locator(".overlay-page").waitFor({ state: "hidden" });
+    await page.locator(".wallpaper-stage").waitFor();
+    const closeTaskButton = page.locator('.ambient-status-capsule button[title="返回沉浸空间"]');
+    if (await closeTaskButton.count()) await closeTaskButton.click();
+    const cleanButton = page.locator('.ambient-edge-rail button[title="纯净桌面"]');
+    await cleanButton.waitFor();
+    await cleanButton.click();
+    await page.waitForFunction(() => {
+      const mode = globalThis.document.querySelector(".app-shell")?.getAttribute("data-experience-mode");
+      return mode === "clean" || mode === "safe";
+    });
     captures.push(await capture(page, "04-clean-wallpaper"));
 
-    await page.keyboard.press("Escape");
-    await page.waitForFunction(() => globalThis.document.querySelector(".app-shell")?.getAttribute("data-experience-mode") === "quiet");
-    await page.locator(".ambient-edge-rail button[title=\"壁纸与场景\"]").click();
-    await page.locator(".wallpaper-task-card").waitFor();
+    const cleanMode = await page.locator(".app-shell").getAttribute("data-experience-mode");
+    if (cleanMode === "clean") {
+      await page.keyboard.press("Escape");
+      await page.waitForFunction(() => globalThis.document.querySelector(".app-shell")?.getAttribute("data-experience-mode") === "immersive");
+    }
+    await page.locator(".ambient-edge-rail button[title=\"场景与壁纸\"]").click();
+    await page.locator(".scene-surface").waitFor();
     await setWallpaper(page, "landscape-coastal-cliffs");
     captures.push(await capture(page, "05-task-bright-wallpaper"));
 

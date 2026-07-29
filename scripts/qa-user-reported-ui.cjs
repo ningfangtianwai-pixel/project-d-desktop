@@ -5,7 +5,12 @@ const { spawn } = require("node:child_process");
 const { chromium } = require("@playwright/test");
 
 const root = path.resolve(__dirname, "..");
-const output = path.join(root, "artifacts", "qa", "user-reported-ui");
+const output = process.env.PROJECTD_QA_OUTPUT
+  ? path.resolve(process.env.PROJECTD_QA_OUTPUT)
+  : path.join(root, "artifacts", "qa", "user-reported-ui");
+const rendererOutput = process.env.PROJECTD_QA_RENDERER
+  ? path.resolve(process.env.PROJECTD_QA_RENDERER)
+  : path.join(root, "dist", "renderer");
 const port = 4191;
 const edge = [
   path.join(process.env["PROGRAMFILES(X86)"] ?? "", "Microsoft", "Edge", "Application", "msedge.exe"),
@@ -18,6 +23,8 @@ fs.mkdirSync(output, { recursive: true });
 const vite = spawn(process.execPath, [
   path.join(root, "node_modules", "vite", "bin", "vite.js"),
   "preview",
+  "--outDir",
+  rendererOutput,
   "--host",
   "127.0.0.1",
   "--port",
@@ -51,8 +58,9 @@ async function run() {
     await page.locator(".app-shell").waitFor();
     const mainWallpaperVisible = await page.locator(".wallpaper-stage").isVisible();
 
-    // V5.1 keeps the desktop quiet by default; open the assistant task surface before testing chat history.
-    await page.locator('.ambient-edge-rail button[title="AI 对话"]').click();
+    // V6.0 starts in Native and requires an explicit wake before task surfaces appear.
+    await page.locator('.ambient-edge-rail button[title="进入沉浸空间"]').click();
+    await page.locator('.ambient-edge-rail button[title="AI 助手"]').click();
     const chatInput = page.locator(".chat-input input");
     await chatInput.waitFor({ state: "visible" });
     for (let index = 0; index < 7; index += 1) {

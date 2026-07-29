@@ -12,30 +12,36 @@ import {
   Film,
   Folder,
   FolderOpen,
-  FolderKanban,
-  Inbox,
   Image as ImageIcon,
-  MonitorUp,
   Palette,
-  PanelRightOpen,
   Pencil,
   RefreshCcw,
-  Search,
-  Settings
+  Sparkles,
+  X
 } from "lucide-vue-next";
 import SettingsPage from "@settings/SettingsPage.vue";
 import OverlayPage from "./views/OverlayPage.vue";
 import WallpaperStage from "./components/WallpaperStage.vue";
 import PetPage from "./views/PetPage.vue";
 import WallpaperPage from "./views/WallpaperPage.vue";
-import ChatPanel from "./components/ChatPanel.vue";
 import OnboardingFlow from "./components/OnboardingFlow.vue";
+import EdgeRail from "./components/EdgeRail.vue";
+import AmbientStatus from "./components/AmbientStatus.vue";
+import SceneSurface from "./components/SceneSurface.vue";
+import SearchSurface from "./components/SearchSurface.vue";
+import AssistantSurface from "./components/AssistantSurface.vue";
+import OrganizerSurface from "./components/OrganizerSurface.vue";
+import CompatibilitySurface from "./components/CompatibilitySurface.vue";
 import { wallpaperDisplayLabel } from "@shared/wallpaper-library";
 import { containerAccentOption } from "@shared/container-accents";
 import { readOnboardingState, shouldShowOnboarding } from "@shared/onboarding";
 import {
   closeDesktopSurface as closeDesktopSurfaceState,
   DEFAULT_DESKTOP_EXPERIENCE,
+  enterClean as enterCleanState,
+  enterImmersive as enterImmersiveState,
+  enterNative as enterNativeState,
+  enterSafe as enterSafeState,
   modeForDesktopStatus,
   openDesktopSurface as openDesktopSurfaceState,
   type DesktopTaskSurface,
@@ -43,7 +49,7 @@ import {
 } from "@shared/desktop-experience";
 
 const appVersionFallback = __PROJECTD_VERSION__;
-import type { ActionExecution, ActionPlan, AppInfo, ContainerWithFiles, CurrentWeather, DatabaseStatus, DesktopFileRecord, DesktopStatus, ScanResult, SettingsSnapshot, SuggestionRecord, WallpaperLibraryItem, WorkspaceSearchResult } from "@shared/types";
+import type { ActionExecution, ActionPlan, AppInfo, ContainerWithFiles, CurrentWeather, DatabaseStatus, DesktopFileRecord, DesktopStatus, ScanResult, SettingsSnapshot, SuggestionRecord, WallpaperLibraryItem, WorkspaceScene, WorkspaceSearchResult } from "@shared/types";
 
 const appInfo = ref<AppInfo | null>(null);
 const databaseStatus = ref<DatabaseStatus | null>(null);
@@ -65,7 +71,11 @@ const latestSuggestion = ref<SuggestionRecord | null>(null);
 const workspaceSearchQuery = ref("");
 const workspaceSearchResults = ref<WorkspaceSearchResult[]>([]);
 const workspaceSearchStatus = ref("");
-const workspaceSearchInput = ref<HTMLInputElement | null>(null);
+const searchActionResultId = ref<string | null>(null);
+const searchSurfaceRef = ref<InstanceType<typeof SearchSurface> | null>(null);
+const compatibilitySurfaceRef = ref<InstanceType<typeof CompatibilitySurface> | null>(null);
+const searchScenes = ref<WorkspaceScene[]>([]);
+const searchScenePickerResultId = ref<string | null>(null);
 const desktopStatus = ref<DesktopStatus>({
   mode: "idle",
   lastChangedAt: new Date().toISOString()
@@ -96,25 +106,15 @@ const isSettingsRoute = computed(() => route.value === "#/settings");
 const isOverlayRoute = computed(() => route.value === "#/overlay");
 const isPetRoute = computed(() => route.value === "#/pet");
 const isWallpaperRoute = computed(() => route.value === "#/wallpaper");
-const modeLabel = computed(() => {
-  if (desktopStatus.value.mode === "activating") {
-    return "启动中";
-  }
-  if (desktopStatus.value.mode === "active") {
-    return "整理中";
-  }
-  if (desktopStatus.value.mode === "deactivating") {
-    return "归位中";
-  }
-  if (desktopStatus.value.mode === "safe-mode") {
-    return "安全模式";
-  }
-  if (desktopStatus.value.mode === "error") {
-    return "需恢复";
-  }
-  return "待机";
+const experienceModeLabel = computed(() => {
+  if (experienceMode.value === "native") return "原生桌面";
+  if (experienceMode.value === "immersive") return "沉浸空间";
+  if (experienceMode.value === "task") return taskSurfaceLabel.value || "任务面";
+  if (experienceMode.value === "clean") return "纯净桌面";
+  return "安全恢复";
 });
 const totalFiles = computed(() => containers.value.reduce((total, container) => total + container.files.length, 0));
+const currentWallpaper = computed(() => wallpaperLibrary.value.find((item) => item.id === settings.value?.wallpaper.dynamicId) ?? null);
 const currentWallpaperLabel = computed(() => {
   const currentId = settings.value?.wallpaper.dynamicId;
   return wallpaperDisplayLabel(wallpaperLibrary.value.find((item) => item.id === currentId));
@@ -141,11 +141,21 @@ const taskSurfaceLabel = computed(() => {
   const labels: Record<Exclude<DesktopTaskSurface, null>, string> = {
     search: "搜索工作区",
     organize: "桌面整理",
-    inbox: "收件箱",
+    scene: "场景与壁纸",
     assistant: "AI 助手",
-    wallpaper: "壁纸与场景"
   };
   return activeTaskSurface.value ? labels[activeTaskSurface.value] : "";
+});
+const searchActionNotice = computed(() => {
+  const resultId = searchActionResultId.value;
+  const message = workspaceSearchStatus.value;
+  if (!resultId || !message) return null;
+  const tone: "neutral" | "success" | "error" = /正在|等待|搜索中|查询中/.test(message)
+    ? "neutral"
+    : /失败|无法|不可|拒绝|错误/.test(message)
+      ? "error"
+      : "success";
+  return { resultId, tone, message };
 });
 function containerVisualStyle(container: ContainerWithFiles): Record<string, string> {
   return { "--container-accent": containerAccentOption(container.accentColor).rgb };
@@ -172,7 +182,11 @@ async function refreshStatus(): Promise<void> {
     : nextThemeMode === "light" ? "light" : "dark";
   document.documentElement.dataset.theme = resolvedTheme;
   desktopStatus.value = nextDesktopStatus;
-  if (!activeTaskSurface.value) {
+  if (nextDesktopStatus.mode === "safe-mode" || nextDesktopStatus.mode === "error") {
+    const next = enterSafeState();
+    experienceMode.value = next.mode;
+    activeTaskSurface.value = next.activeSurface;
+  } else if (!activeTaskSurface.value && experienceMode.value === "native") {
     experienceMode.value = modeForDesktopStatus(nextDesktopStatus.mode);
   }
   databaseStatus.value = nextDatabaseStatus;
@@ -190,6 +204,9 @@ async function refreshStatus(): Promise<void> {
 }
 
 function openDesktopSurface(surface: Exclude<DesktopTaskSurface, null>): void {
+  if (experienceMode.value === "native") {
+    experienceMode.value = enterImmersiveState().mode;
+  }
   const next = openDesktopSurfaceState(surface);
   experienceMode.value = next.mode;
   activeTaskSurface.value = next.activeSurface;
@@ -205,6 +222,24 @@ function closeDesktopSurface(): void {
   contextMenu.value = null;
 }
 
+function wakeImmersive(): void {
+  const next = enterImmersiveState();
+  experienceMode.value = next.mode;
+  activeTaskSurface.value = next.activeSurface;
+  pushLog("已进入沉浸空间");
+}
+
+function leaveImmersive(): void {
+  if (activeTaskSurface.value) {
+    closeDesktopSurface();
+    return;
+  }
+  const next = enterNativeState();
+  experienceMode.value = next.mode;
+  activeTaskSurface.value = next.activeSurface;
+  pushLog("已返回原生桌面");
+}
+
 function openWallpaperPage(): void {
   window.location.hash = "#/wallpaper";
 }
@@ -212,14 +247,20 @@ function openWallpaperPage(): void {
 function handleExperienceKeydown(event: KeyboardEvent): void {
   if (event.key !== "Escape") return;
   if (experienceMode.value === "clean") {
-    void window.projectD.exitCleanDesktop().finally(() => {
-      experienceMode.value = "quiet";
-      activeTaskSurface.value = null;
+    void window.projectD.exitCleanDesktop().then((nextStatus) => {
+      desktopStatus.value = nextStatus;
+      const next = nextStatus.mode === "safe-mode" ? enterSafeState() : enterImmersiveState();
+      experienceMode.value = next.mode;
+      activeTaskSurface.value = next.activeSurface;
     });
     return;
   }
   if (activeTaskSurface.value) {
     closeDesktopSurface();
+    return;
+  }
+  if (experienceMode.value === "immersive") {
+    leaveImmersive();
   }
 }
 
@@ -247,21 +288,23 @@ async function dismissRecoveryNotice(): Promise<void> {
 
 async function activateDesktop(): Promise<void> {
   desktopStatus.value = await window.projectD.activateDesktop();
-  experienceMode.value = "task";
-  activeTaskSurface.value = "organize";
+  openDesktopSurface("organize");
   pushLog("已进入整理预备状态");
 }
 
 async function deactivateDesktop(): Promise<void> {
   desktopStatus.value = await window.projectD.deactivateDesktop();
-  closeDesktopSurface();
+  const next = desktopStatus.value.mode === "safe-mode" ? enterSafeState() : enterNativeState();
+  experienceMode.value = next.mode;
+  activeTaskSurface.value = next.activeSurface;
   pushLog("桌面已安全归位");
 }
 
 async function enterCleanDesktop(): Promise<void> {
   desktopStatus.value = await window.projectD.enterCleanDesktop();
-  experienceMode.value = "clean";
-  activeTaskSurface.value = null;
+  const next = desktopStatus.value.mode === "safe-mode" ? enterSafeState() : enterCleanState();
+  experienceMode.value = next.mode;
+  activeTaskSurface.value = next.activeSurface;
   pushLog("已进入纯净桌面");
 }
 
@@ -319,17 +362,40 @@ async function disableSuggestions(): Promise<void> {
   pushLog("已关闭桌面整理建议，可在设置中重新开启");
 }
 
+async function openLatestSuggestionTask(): Promise<void> {
+  if (!latestSuggestion.value) return;
+  openDesktopSurface("organize");
+  await prepareSuggestedInbox();
+}
+
+async function dismissLatestSuggestion(): Promise<void> {
+  if (!latestSuggestion.value) return;
+  const suggestionId = latestSuggestion.value.id;
+  latestSuggestion.value = null;
+  try {
+    await window.projectD.dismissSuggestion(suggestionId);
+  } catch {
+    pushLog("建议已从当前桌面收起");
+  }
+}
+
 async function focusWorkspaceSearch(): Promise<void> {
   if (route.value) {
     window.location.hash = "";
     route.value = "";
   }
   await nextTick();
-  workspaceSearchInput.value?.focus();
+  if (experienceMode.value === "safe") {
+    await compatibilitySurfaceRef.value?.focusSearch();
+  } else {
+    await searchSurfaceRef.value?.focus();
+  }
 }
 
 async function searchWorkspace(): Promise<void> {
   const query = workspaceSearchQuery.value.trim();
+  searchScenePickerResultId.value = null;
+  searchActionResultId.value = null;
   if (!query) {
     workspaceSearchResults.value = [];
     workspaceSearchStatus.value = "";
@@ -347,9 +413,84 @@ async function searchWorkspace(): Promise<void> {
   }
 }
 
+function clearWorkspaceSearch(): void {
+  workspaceSearchQuery.value = "";
+  workspaceSearchResults.value = [];
+  workspaceSearchStatus.value = "";
+  searchScenePickerResultId.value = null;
+  searchActionResultId.value = null;
+}
+
 async function openSearchResult(result: WorkspaceSearchResult): Promise<void> {
-  await window.projectD.openWorkspaceSearchResult(result.id);
-  pushLog(`已打开：${result.title}`);
+  searchActionResultId.value = result.id;
+  try {
+    await window.projectD.openWorkspaceSearchResult(result.id);
+    workspaceSearchStatus.value = `已打开：${result.title}`;
+    pushLog(`已打开：${result.title}`);
+  } catch {
+    workspaceSearchStatus.value = `无法打开：${result.title}，结果可能已失效`;
+  }
+}
+
+async function revealSearchResult(result: WorkspaceSearchResult): Promise<void> {
+  searchActionResultId.value = result.id;
+  try {
+    await window.projectD.revealWorkspaceSearchResult(result.id);
+    workspaceSearchStatus.value = `已定位：${result.title}`;
+  } catch {
+    workspaceSearchStatus.value = `无法定位：${result.title}，结果可能已失效`;
+  }
+}
+
+async function copySearchResultPath(result: WorkspaceSearchResult): Promise<void> {
+  searchActionResultId.value = result.id;
+  try {
+    await window.projectD.copyWorkspaceSearchResultPath(result.id);
+    workspaceSearchStatus.value = `已复制路径：${result.title}`;
+  } catch {
+    workspaceSearchStatus.value = `无法复制路径：${result.title}，结果可能已失效`;
+  }
+}
+
+async function addSearchResultToPortal(result: WorkspaceSearchResult): Promise<void> {
+  searchActionResultId.value = result.id;
+  workspaceSearchStatus.value = `等待授权：${result.title}`;
+  try {
+    const portal = await window.projectD.addSearchResultToPortal(result.id);
+    workspaceSearchStatus.value = portal ? `已授权只读门户：${portal.name}` : "已取消门户授权";
+  } catch (error) {
+    workspaceSearchStatus.value = error instanceof Error ? error.message : `无法授权门户：${result.title}`;
+  }
+}
+
+async function toggleSearchScenePicker(result: WorkspaceSearchResult): Promise<void> {
+  searchActionResultId.value = null;
+  if (searchScenePickerResultId.value === result.id) {
+    searchScenePickerResultId.value = null;
+    return;
+  }
+  try {
+    searchScenes.value = await window.projectD.getWorkspaceScenes();
+  } catch {
+    workspaceSearchStatus.value = "场景列表暂时不可用，请稍后重试";
+    return;
+  }
+  if (searchScenes.value.length === 0) {
+    workspaceSearchStatus.value = "没有可用场景，请先在场景面创建一个场景";
+    return;
+  }
+  searchScenePickerResultId.value = result.id;
+}
+
+async function pinSearchResultToScene(result: WorkspaceSearchResult, scene: WorkspaceScene): Promise<void> {
+  searchActionResultId.value = result.id;
+  try {
+    await window.projectD.pinSearchResultToScene(result.id, scene.id);
+    searchScenePickerResultId.value = null;
+    workspaceSearchStatus.value = `已将“${result.title}”钉到场景“${scene.name}”`;
+  } catch {
+    workspaceSearchStatus.value = `无法钉到场景：${result.title}，结果可能已失效`;
+  }
 }
 
 async function executeInboxPlan(): Promise<void> {
@@ -518,40 +659,41 @@ onUnmounted(() => {
   <main v-else class="app-shell" :data-experience-mode="experienceMode" :data-task-surface="activeTaskSurface || undefined">
     <OnboardingFlow v-if="showOnboarding" @completed="dismissOnboarding" @skipped="dismissOnboarding" />
     <WallpaperStage />
-    <nav class="ambient-edge-rail" aria-label="桌面工具">
-      <button type="button" title="搜索工作区" aria-label="搜索工作区" @click="openDesktopSurface('search')">
-        <Search :size="18" />
-      </button>
-      <button type="button" title="启动整理" aria-label="启动整理" @click="openDesktopSurface('organize')">
-        <MonitorUp :size="18" />
-      </button>
-      <button type="button" title="收件箱" aria-label="收件箱" @click="openDesktopSurface('inbox')">
-        <Inbox :size="18" />
-      </button>
-      <button type="button" title="AI 对话" aria-label="AI 对话" @click="openDesktopSurface('assistant')">
-        <AppWindow :size="18" />
-      </button>
-      <button type="button" title="壁纸与场景" aria-label="壁纸与场景" @click="openDesktopSurface('wallpaper')">
-        <ImageIcon :size="18" />
-      </button>
-      <button type="button" title="设置" aria-label="设置" @click="openSettings">
-        <Settings :size="18" />
-      </button>
-    </nav>
-    <div class="ambient-status-capsule" aria-live="polite">
-      <span class="ambient-status-dot" :data-mode="experienceMode"></span>
-      <span>{{ currentWallpaperLabel }}</span>
-      <span class="ambient-status-divider">·</span>
-      <span>{{ currentWeather?.city || "自动定位" }}</span>
-      <button v-if="activeTaskSurface" type="button" title="退出当前任务" aria-label="退出当前任务" @click="closeDesktopSurface">×</button>
-    </div>
-    <section class="desktop-band" :data-visible="Boolean(activeTaskSurface || experienceMode !== 'quiet')">
+    <EdgeRail
+      :mode="experienceMode"
+      :active-surface="activeTaskSurface"
+      @wake="wakeImmersive"
+      @open-surface="openDesktopSurface"
+      @enter-clean="enterCleanDesktop"
+      @open-settings="openSettings"
+    />
+    <AmbientStatus
+      :mode="experienceMode"
+      :wallpaper-label="currentWallpaperLabel"
+      :city="currentWeather?.city || '自动定位'"
+      :host-label="wallpaperHostLabel"
+      :task-label="taskSurfaceLabel"
+      :active-surface="activeTaskSurface"
+      @wake="wakeImmersive"
+      @close-task="closeDesktopSurface"
+      @leave-immersive="leaveImmersive"
+    />
+    <section v-if="latestSuggestion && experienceMode === 'immersive' && !activeTaskSurface" class="ambient-suggestion" aria-live="polite">
+      <span class="ambient-suggestion-icon"><Sparkles :size="16" /></span>
+      <div>
+        <span>桌宠提醒</span>
+        <strong>{{ latestSuggestion.title }}</strong>
+        <small>{{ latestSuggestion.detail }}</small>
+      </div>
+      <button type="button" @click="openLatestSuggestionTask">查看整理</button>
+      <button type="button" class="ambient-suggestion-dismiss" title="收起提醒" aria-label="收起提醒" @click="dismissLatestSuggestion"><X :size="15" /></button>
+    </section>
+    <section class="desktop-band" :data-visible="Boolean(activeTaskSurface || !['native', 'immersive', 'clean'].includes(experienceMode))">
       <div v-if="activeTaskSurface" class="task-surface-heading">
         <div>
           <span>当前任务面</span>
           <strong>{{ taskSurfaceLabel }}</strong>
         </div>
-        <button type="button" title="退出当前任务" @click="closeDesktopSurface">退出</button>
       </div>
       <header class="topbar">
         <div class="brand-lockup">
@@ -563,9 +705,9 @@ onUnmounted(() => {
         </div>
         <div class="topbar-state">
           <span class="host-state">{{ wallpaperHostLabel }}</span>
-          <div class="status-pill" :data-mode="desktopStatus.mode">
+          <div class="status-pill" :data-mode="experienceMode">
             <span></span>
-            {{ modeLabel }}
+            {{ experienceModeLabel }}
           </div>
         </div>
       </header>
@@ -581,162 +723,122 @@ onUnmounted(() => {
         <button type="button" @click="dismissRecoveryNotice">知道了</button>
       </div>
 
-      <div class="control-grid">
-        <section class="desktop-library">
-          <div class="panel-title panel-title-spread">
-            <div>
-              <p>桌面内容</p>
-              <h2>虚拟分区</h2>
-            </div>
-            <span>{{ totalFiles }} 个文件</span>
-          </div>
-          <div class="zone-grid desktop-zone-grid" aria-label="桌面文件分区">
-            <article v-for="container in containers" :key="container.id" class="zone desktop-zone" :style="containerVisualStyle(container)">
-              <div class="zone-heading">
-                <strong>{{ container.name }}</strong>
-                <span>{{ container.files.length }}</span>
-              </div>
-              <div class="desktop-icon-grid">
-                <button
-                  v-for="file in container.files"
-                  :key="file.id"
-                  class="desktop-icon"
-                  :class="{ selected: selectedFile?.id === file.id }"
-                  type="button"
-                  :title="file.fullPath"
-                  @click="selectFile(file)"
-                  @dblclick="openFile(file.id)"
-                  @contextmenu="showFileMenu($event, file)"
-                >
-                  <span class="desktop-icon-art" :data-kind="file.category">
-                    <span v-if="file.category === 'folder'" class="desktop-folder-art" aria-hidden="true">
-                      <i class="folder-tab"></i><i class="folder-sheet"></i><i class="folder-body"></i>
-                    </span>
-                    <img v-else-if="file.iconDataUrl" class="desktop-native-icon" :src="file.iconDataUrl" :alt="fileKindLabel(file)" />
-                    <component v-else :is="fileIcon(file)" :size="32" :stroke-width="1.8" />
-                    <span v-if="file.isShortcut" class="desktop-shortcut-badge" aria-label="快捷方式">↗</span>
-                  </span>
-                  <span class="desktop-icon-name">{{ file.displayName || file.filename }}</span>
-                  <small>{{ fileKindLabel(file) }}</small>
-                </button>
-              </div>
-              <p v-if="container.files.length === 0" class="empty-zone">这里暂时没有文件</p>
-            </article>
-          </div>
-        </section>
+      <AssistantSurface
+        v-if="activeTaskSurface === 'assistant'"
+        @request-inbox-plan="prepareDesktopInbox"
+      />
+      <SearchSurface
+        v-if="activeTaskSurface === 'search'"
+        ref="searchSurfaceRef"
+        :query="workspaceSearchQuery"
+        :results="workspaceSearchResults"
+        :status="workspaceSearchStatus"
+        :scenes="searchScenes"
+        :picker-result-id="searchScenePickerResultId"
+        :action-notice="searchActionNotice"
+        @update:query="workspaceSearchQuery = $event"
+        @search="searchWorkspace"
+        @clear="clearWorkspaceSearch"
+        @open="openSearchResult"
+        @reveal="revealSearchResult"
+        @copy="copySearchResultPath"
+        @portal="addSearchResultToPortal"
+        @toggle-scene="toggleSearchScenePicker"
+        @pin-scene="pinSearchResultToScene"
+      />
+      <OrganizerSurface
+        v-if="activeTaskSurface === 'organize'"
+        :containers="containers"
+        :total-files="totalFiles"
+        :selected-file="selectedFile"
+        :action-message="actionMessage"
+        :action-busy="actionBusy"
+        :inbox-plan="inboxPlan"
+        :movable-inbox-items="movableInboxItems"
+        :latest-undoable-execution="latestUndoableExecution"
+        :file-icon="fileIcon"
+        :file-kind-label="fileKindLabel"
+        :container-visual-style="containerVisualStyle"
+        :format-bytes="formatBytes"
+        @select-file="selectFile"
+        @open-file="openFile"
+        @show-file-menu="showFileMenu"
+        @restore="deactivateDesktop"
+        @scan="scanDesktop"
+        @clean="enterCleanDesktop"
+        @settings="openSettings"
+        @prepare-inbox="prepareDesktopInbox"
+        @execute-inbox="executeInboxPlan"
+        @undo-latest="undoLatestAction"
+        @cancel-inbox="inboxPlan = null"
+      />
 
-        <aside class="command-panel">
-          <div class="panel-title">
-            <FolderKanban :size="22" />
-            <div>
-              <p>控制中心</p>
-              <h2>桌面状态</h2>
-            </div>
-          </div>
-          <form class="workspace-search" @submit.prevent="searchWorkspace">
-            <Search :size="17" />
-            <input ref="workspaceSearchInput" v-model="workspaceSearchQuery" type="search" placeholder="搜索桌面与已授权门户" @keydown.esc="workspaceSearchResults = []; workspaceSearchStatus = ''" />
-            <button type="submit" title="搜索"><Search :size="16" /></button>
-          </form>
-          <div v-if="workspaceSearchStatus" class="workspace-search-results" aria-live="polite">
-            <small>{{ workspaceSearchStatus }}</small>
-            <button v-for="result in workspaceSearchResults" :key="result.id" type="button" @dblclick="openSearchResult(result)">
-              <span><strong>{{ result.title }}</strong><small>{{ result.origin === 'desktop' ? '桌面' : '文件门户' }} · {{ result.category }}</small></span>
-              <span>打开</span>
-            </button>
-          </div>
-          <section v-if="latestSuggestion" class="inbox-review inbox-suggestion" aria-live="polite">
-            <div class="inbox-review-heading"><div><span>智能建议</span><strong>{{ latestSuggestion.title }}</strong></div></div>
-            <p>{{ latestSuggestion.detail }}</p>
-            <small v-if="latestSuggestion.explanation" class="suggestion-reason">为什么出现：{{ latestSuggestion.explanation }}</small>
-            <div class="inbox-review-actions"><button class="inbox-execute" type="button" :disabled="actionBusy" @click="prepareSuggestedInbox">查看方案</button><button class="inbox-cancel" type="button" @click="snoozeSuggestion">两小时后</button><button class="inbox-cancel" type="button" @click="disableSuggestions">不再提醒</button></div>
-          </section>
-          <div class="action-row">
-            <button class="action-button" type="button" @click="activateDesktop">
-              <MonitorUp :size="18" />
-              <span>启动整理</span>
-            </button>
-            <button class="action-button secondary" type="button" @click="deactivateDesktop">
-              <PanelRightOpen :size="18" />
-              <span>安全归位</span>
-            </button>
-            <button class="action-button quiet" type="button" @click="enterCleanDesktop">
-              <EyeOff :size="18" />
-              <span>纯净桌面</span>
-            </button>
-            <button class="action-button muted" type="button" @click="scanDesktop">
-              <FolderKanban :size="18" />
-              <span>刷新</span>
-            </button>
-            <button class="action-button inbox" type="button" :disabled="actionBusy" @click="prepareDesktopInbox">
-              <Inbox :size="18" />
-              <span>收件箱</span>
-            </button>
-            <button class="icon-button" type="button" title="设置" @click="openSettings">
-              <Settings :size="20" />
-            </button>
-          </div>
-          <dl class="status-list">
-            <div>
-              <dt>桌面层</dt>
-              <dd>{{ wallpaperHostLabel }}</dd>
-            </div>
-            <div>
-              <dt>天气</dt>
-              <dd>{{ currentWeather?.city || "自动定位" }} · {{ currentWeather?.condition || "检测中" }}</dd>
-            </div>
-            <div>
-              <dt>定位</dt>
-              <dd>{{ weatherSourceLabel }}</dd>
-            </div>
-            <div>
-              <dt>分区</dt>
-              <dd>{{ databaseStatus?.containerCount ?? 0 }} 个 · {{ totalFiles }} 个文件</dd>
-            </div>
-            <div>
-              <dt>版本</dt>
-              <dd>{{ appInfo?.version ?? appVersionFallback }} · {{ appInfo?.platform ?? "win32" }}</dd>
-            </div>
-          </dl>
-          <div v-if="selectedFile" class="file-preview">
-            <strong>{{ selectedFile.displayName || selectedFile.filename }}</strong>
-            <span>{{ selectedFile.fullPath }}</span>
-          </div>
-          <section class="inbox-review" aria-live="polite">
-            <div class="inbox-review-heading">
-              <div><span>可信整理</span><strong>桌面收件箱</strong></div>
-              <button v-if="latestUndoableExecution" class="inbox-undo" type="button" :disabled="actionBusy" @click="undoLatestAction">撤销最近一次</button>
-            </div>
-            <p v-if="!inboxPlan">{{ actionMessage || "先生成整理方案，再确认执行。" }}</p>
-            <template v-else>
-              <p>{{ inboxPlan.summary }}</p>
-              <ol>
-                <li v-for="item in inboxPlan.items" :key="item.id" :class="{ conflict: item.conflict }">
-                  <div><span>{{ item.label }}</span><small>{{ item.conflict ? `已跳过：${item.conflict}` : `${item.category} · ${formatBytes(item.sizeBytes)}` }}</small></div>
-                  <small><b>来源</b>{{ item.sourcePath }}</small>
-                  <small><b>目标</b>{{ item.targetPath }}</small>
-                </li>
-              </ol>
-              <div class="inbox-review-actions">
-                <button type="button" class="inbox-execute" :disabled="actionBusy || movableInboxItems === 0" @click="executeInboxPlan">确认整理 {{ movableInboxItems }} 项</button>
-                <button type="button" class="inbox-cancel" :disabled="actionBusy" @click="inboxPlan = null">取消</button>
-              </div>
-            </template>
-          </section>
-          <ChatPanel @request-inbox-plan="prepareDesktopInbox" />
-        </aside>
-      </div>
-      <section v-if="activeTaskSurface === 'wallpaper'" class="wallpaper-task-card">
-        <div>
-          <span>当前壁纸</span>
-          <strong>{{ currentWallpaperLabel }}</strong>
-          <small>{{ currentWeather?.city || "自动定位" }} · {{ wallpaperHostLabel }}</small>
-        </div>
-        <div class="wallpaper-task-actions">
-          <button type="button" @click="switchWallpaperStyle">切换下一张</button>
-          <button type="button" @click="openWallpaperPage">打开壁纸库</button>
-        </div>
-      </section>
+      <CompatibilitySurface
+        v-if="experienceMode === 'safe'"
+        ref="compatibilitySurfaceRef"
+        :containers="containers"
+        :total-files="totalFiles"
+        :selected-file="selectedFile"
+        :action-message="actionMessage"
+        :action-busy="actionBusy"
+        :inbox-plan="inboxPlan"
+        :movable-inbox-items="movableInboxItems"
+        :latest-undoable-execution="latestUndoableExecution"
+        :app-info="appInfo"
+        :database-status="databaseStatus"
+        :app-version="appVersionFallback"
+        :wallpaper-host-label="wallpaperHostLabel"
+        :current-weather="currentWeather"
+        :weather-source-label="weatherSourceLabel"
+        :latest-suggestion="latestSuggestion"
+        :workspace-search-query="workspaceSearchQuery"
+        :workspace-search-results="workspaceSearchResults"
+        :workspace-search-status="workspaceSearchStatus"
+        :search-scenes="searchScenes"
+        :search-scene-picker-result-id="searchScenePickerResultId"
+        :file-icon="fileIcon"
+        :file-kind-label="fileKindLabel"
+        :container-visual-style="containerVisualStyle"
+        :format-bytes="formatBytes"
+        @select-file="selectFile"
+        @open-file="openFile"
+        @show-file-menu="showFileMenu"
+        @activate="activateDesktop"
+        @restore="deactivateDesktop"
+        @clean="enterCleanDesktop"
+        @scan="scanDesktop"
+        @settings="openSettings"
+        @update:query="workspaceSearchQuery = $event"
+        @search="searchWorkspace"
+        @clear="clearWorkspaceSearch"
+        @open="openSearchResult"
+        @reveal="revealSearchResult"
+        @copy="copySearchResultPath"
+        @portal="addSearchResultToPortal"
+        @toggle-scene="toggleSearchScenePicker"
+        @pin-scene="pinSearchResultToScene"
+        @prepare-inbox="prepareDesktopInbox"
+        @execute-inbox="executeInboxPlan"
+        @undo-latest="undoLatestAction"
+        @cancel-inbox="inboxPlan = null"
+        @snooze-suggestion="snoozeSuggestion"
+        @disable-suggestions="disableSuggestions"
+      />
+      <SceneSurface
+        v-if="activeTaskSurface === 'scene'"
+        :wallpaper-label="currentWallpaperLabel"
+        :city="currentWeather?.city || '自动定位'"
+        :host-label="wallpaperHostLabel"
+        :weather-mode="settings?.weather.mode || 'auto'"
+        :weather-label="currentWeather?.condition || settings?.weather.manualWeather || 'clear'"
+        :weather-intensity="settings?.weather.particleIntensity ?? 0.55"
+        :pet-position="{ x: settings?.pet.positionX ?? 36, y: settings?.pet.positionY ?? 36 }"
+        :safe-region="currentWallpaper?.safeRegion"
+        :wallpapers="wallpaperLibrary"
+        @next-wallpaper="switchWallpaperStyle"
+        @open-library="openWallpaperPage"
+        @applied="refreshStatus"
+      />
     </section>
 
     <div v-if="contextMenu" class="context-menu" :style="{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }">

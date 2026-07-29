@@ -2,7 +2,7 @@ import { findWallpaperByInput, nextWallpaperId, WALLPAPER_LIBRARY } from "../sha
 import { petPersonalityInstruction } from "../shared/pet-behavior.js";
 import { parsePetVisualProfile, type PetVisualProfile } from "../shared/pet-visual-profile.js";
 import { PET_CHARACTERS } from "../shared/pet-characters.js";
-import type { AiConnectionTestResult, ChatMessage, ChatResponse, SettingsSnapshot } from "../shared/types.js";
+import type { AiConnectionTestResult, ChatFallbackReason, ChatMessage, ChatResponse, SettingsSnapshot } from "../shared/types.js";
 import { parseLunaIntent } from "./luna/intent-parser.js";
 import type { DatabaseService } from "./database.js";
 import type { AppLogger } from "./logger.js";
@@ -73,7 +73,8 @@ export class AiService {
     }
 
     const visualProfile = this.getPetVisualProfile(settings.pet.characterId);
-    const providerReply = await this.tryProviderReply(normalized, weather.condition, recentHistory, settings.pet.personality, visualProfile);
+    const providerAttempt = await this.tryProviderReply(normalized, weather.condition, recentHistory, settings.pet.personality, visualProfile);
+    const providerReply = providerAttempt?.reply ?? null;
     const reply = providerReply ?? this.createLocalReply(normalized, settings.pet.personality, weather.condition, visualProfile);
     const message = this.database.addChatMessage("assistant", reply, settings.pet.personality, JSON.stringify(weather));
 
@@ -86,7 +87,8 @@ export class AiService {
     return {
       message,
       provider: settings.ai.provider,
-      fallback: !providerReply
+      fallback: !providerReply,
+      ...(providerAttempt?.fallbackReason ? { fallbackReason: providerAttempt.fallbackReason } : {})
     };
   }
 
@@ -257,25 +259,39 @@ export class AiService {
     );
   }
 
-  private async tryProviderReply(input: string, weather: string, history: ChatMessage[], personality: string, visualProfile: PetVisualProfile | null): Promise<string | null> {
+  private async tryProviderReply(input: string, weather: string, history: ChatMessage[], personality: string, visualProfile: PetVisualProfile | null): Promise<{ reply: string | null; fallbackReason?: ChatFallbackReason } | null> {
     const settings = this.database.getSettings();
     if (!this.networkAllowed() || getPrivacyNetworkState(this.database).paused || !settings.ai.enabled || settings.ai.provider === "local-fallback") {
       return null;
     }
-
-    try {
-      if (settings.ai.provider === "ollama") {
-        return await this.callOllama(input, weather, history, personality, visualProfile);
-      }
-
-      return await this.callOpenAiCompatible(input, weather, history, personality, visualProfile);
-    } catch (error) {
-      this.logger.warn("ai", "provider chat failed; using local fallback", {
-        provider: settings.ai.provider,
-        message: error instanceof Error ? error.message : String(error)
-      });
+    if (!this.hasProviderConfiguration(settings)) {
       return null;
     }
+
+    try {
+      let reply: string | null;
+      if (settings.ai.provider === "ollama") {
+        reply = await this.callOllama(input, weather, history, personality, visualProfile);
+      } else {
+        reply = await this.callOpenAiCompatible(input, weather, history, personality, visualProfile);
+      }
+      return { reply, ...(reply ? {} : { fallbackReason: "provider-error" as const }) };
+    } catch (error) {
+      const fallbackReason: ChatFallbackReason = this.isTimeoutError(error) ? "provider-timeout" : "provider-error";
+      this.logger.warn("ai", "provider chat failed; using local fallback", {
+        provider: settings.ai.provider,
+        reason: fallbackReason
+      });
+      return { reply: null, fallbackReason };
+    }
+  }
+
+  private hasProviderConfiguration(settings: SettingsSnapshot): boolean {
+    if (settings.ai.provider === "ollama") return true;
+    const runtime = this.database.getAiRuntimeConfig();
+    const apiKey = runtime.apiKey || this.envKeyForProvider(settings.ai.provider);
+    const endpoint = this.endpointForProvider(settings.ai.provider, runtime.endpoint);
+    return Boolean(apiKey && endpoint);
   }
 
   private async callOpenAiCompatible(input: string, weather: string, history: ChatMessage[], personality: string, visualProfile: PetVisualProfile | null = null): Promise<string | null> {
@@ -311,7 +327,7 @@ export class AiService {
         temperature: settings.ai.temperature,
         max_tokens: settings.ai.maxTokens
       }),
-      signal: AbortSignal.timeout(12_000)
+      signal: AbortSignal.timeout(this.providerTimeoutMs())
     });
 
     if (!response.ok) {
@@ -338,7 +354,7 @@ export class AiService {
           input
         )
       }),
-      signal: AbortSignal.timeout(12_000)
+      signal: AbortSignal.timeout(this.providerTimeoutMs())
     });
 
     if (!response.ok) {
@@ -420,6 +436,16 @@ export class AiService {
       return `${provider} 服务暂时不可用（${status}）`;
     }
     return `${provider} 请求失败（${status}）`;
+  }
+
+  private providerTimeoutMs(): number {
+    const configured = Number(process.env.PROJECTD_QA_AI_TIMEOUT_MS);
+    return Number.isInteger(configured) && configured >= 50 && configured <= 2_000 ? configured : 12_000;
+  }
+
+  private isTimeoutError(error: unknown): boolean {
+    if (!(error instanceof Error)) return false;
+    return error.name === "AbortError" || error.name === "TimeoutError" || /timeout|timed out|aborted/i.test(error.message);
   }
 
   private createLocalReply(input: string, personality: string, weather: string, visualProfile: PetVisualProfile | null = null): string {
