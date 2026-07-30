@@ -86,3 +86,10 @@ test("idle shutdown does not persist a false deactivating crash marker", () => {
   assert.match(source, /const requiresRecoveryMarker = this\.status\.mode !== "idle"/);
   assert.match(source, /if \(requiresRecoveryMarker\) \{\s*this\.setStatus\("deactivating"/);
 });
+
+test("task and safe states add a readable veil without changing immersive wallpaper", () => {
+  const source = read("src/renderer/styles.css");
+  assert.match(source, /\.app-shell\[data-experience-mode="task"\]::before/);
+  assert.match(source, /backdrop-filter: blur\(2px\) saturate\(0\.94\)/);
+  assert.match(source, /pointer-events: none/);
+});

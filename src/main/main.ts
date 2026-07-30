@@ -44,7 +44,8 @@ import { OperationsTelemetryService } from "./operations/operations-telemetry.js
 import { ShortcutManager } from "./shortcut-manager.js";
 import { ProjectTrayManager } from "./tray-manager.js";
 import { SystemEventManager } from "./system-event-manager.js";
-import { setWindowsTaskbarVisible } from "./windows-taskbar.js";
+import { probeWindowsTaskbar, setWindowsTaskbarVisible, TaskbarRecoveryGuard } from "./windows-taskbar.js";
+import { DesktopIconRecoveryGuard, probeWindowsDesktopIcons, setWindowsDesktopIconsVisible, startDesktopIconRecoveryWatchdog } from "./windows-desktop-icons.js";
 import { IPC_CHANNELS, MENU_COMMANDS, type MenuCommand } from "../shared/ipc.js";
 import { registerAllIpcHandlers, type ServiceDeps } from "./ipc/register-all.js";
 import { wallpaperSafeRegion, WALLPAPER_LIBRARY } from "../shared/wallpaper-library.js";
@@ -123,6 +124,8 @@ let rendererRestartScheduled = false;
 let onboardingActive = false;
 let cleanDesktopExitPromise: Promise<DesktopStatus> | null = null;
 let cleanDesktopPowerBlockerId: number | null = null;
+let taskbarHiddenByProjectD = false;
+let earlyDesktopRecoveryWatchdogProcessId: number | null = null;
 const SHUTDOWN_DEADLINE_MS = 20_000;
 const fileIconCache = new Map<string, string | null>();
 const diagnosticsService = new DiagnosticsService();
@@ -133,6 +136,31 @@ const wallpaperAttachQueue = new WallpaperAttachQueue();
 const wallpaperRepairQueue = new WallpaperAttachQueue();
 const cleanDesktopEscapeGuard = new CleanDesktopEscapeGuard(globalShortcut, () => {
   void exitCleanDesktop("escape-key");
+});
+const desktopIconRecoveryGuard = new DesktopIconRecoveryGuard({
+  isHiddenAllowed: () => {
+    if (shutdownInProgress) return false;
+    const controllerMode = desktopController?.getStatus().mode;
+    return cleanDesktopEscapeGuard.isArmed()
+      || controllerMode === "active"
+      || controllerMode === "activating"
+      || desktopStatus.mode === "active"
+      || desktopStatus.mode === "activating";
+  },
+  probe: probeWindowsDesktopIcons,
+  restore: () => setWindowsDesktopIconsVisible(true),
+  onError: (error) => logger?.warn("desktop-state", "desktop icon recovery guard probe failed", {
+    message: error instanceof Error ? error.message : String(error)
+  })
+});
+const taskbarRecoveryGuard = new TaskbarRecoveryGuard({
+  isHiddenByOwner: () => taskbarHiddenByProjectD,
+  isHiddenAllowed: () => cleanDesktopEscapeGuard.isArmed() && desktopStatus.mode === "active",
+  probe: probeWindowsTaskbar,
+  restore: () => restoreTaskbar("visibility-drift"),
+  onError: (error) => logger?.warn("desktop-state", "taskbar recovery guard probe failed", {
+    message: error instanceof Error ? error.message : String(error)
+  })
 });
 let desktopStatus: DesktopStatus = {
   mode: "idle",
@@ -191,6 +219,25 @@ function scheduleSafeRendererRestart(event: RendererRecoveryEvent): void {
   }
   shutdownInProgress = true;
   setTimeout(() => app.exit(1), 200);
+}
+
+let fatalProcessRecoveryScheduled = false;
+
+function handleFatalProcessFailure(kind: string, reason: unknown): void {
+  if (fatalProcessRecoveryScheduled) return;
+  fatalProcessRecoveryScheduled = true;
+  const message = reason instanceof Error ? reason.message : String(reason);
+  writeBootstrapLog("fatal process failure; native desktop recovery scheduled", { kind, message });
+  logger?.error("error", "fatal process failure", { kind, message });
+  shutdownInProgress = true;
+  void restoreNativeDesktopState(`fatal:${kind}`).catch((error) => {
+    writeBootstrapLog("fatal native desktop recovery failed", {
+      kind,
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }).finally(() => {
+    setTimeout(() => process.exit(1), 500);
+  });
 }
 
 function superviseRendererWindow(
@@ -1361,6 +1408,41 @@ async function emergencyRestoreDesktop(reason: string): Promise<void> {
   sendMenuCommand(MENU_COMMANDS.DEACTIVATE_DESKTOP);
 }
 
+async function armEarlyDesktopRecovery(): Promise<void> {
+  if (process.platform !== "win32" || earlyDesktopRecoveryWatchdogProcessId !== null) return;
+
+  try {
+    // Arm recovery before database/services/windows are initialized.  A failure
+    // in that early boot window must not leave native desktop icons hidden.
+    earlyDesktopRecoveryWatchdogProcessId = await startDesktopIconRecoveryWatchdog();
+    writeBootstrapLog("early desktop recovery watchdog started", {
+      processId: earlyDesktopRecoveryWatchdogProcessId,
+      parentProcessId: process.pid
+    });
+  } catch (error) {
+    writeBootstrapLog("early desktop recovery watchdog failed", {
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }
+
+  try {
+    const iconState = await probeWindowsDesktopIcons();
+    if (!iconState.visible) {
+      const restored = await setWindowsDesktopIconsVisible(true);
+      writeBootstrapLog("early desktop icon recovery completed", {
+        iconCount: restored.iconCount,
+        shellViewHandle: restored.shellViewHandle
+      });
+    }
+  } catch (error) {
+    // DesktopController.bootRecoveryCheck() retries after Explorer has had more
+    // time to finish shell initialization.
+    writeBootstrapLog("early desktop icon probe deferred", {
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }
+}
+
 function cleanDesktopExitShortcut(): string {
   const saved = database?.getAppState("clean_desktop_exit_shortcut") ?? "Escape";
   return ["Escape", "F12", "Control+Shift+Q"].includes(saved) ? saved : "Escape";
@@ -1389,6 +1471,7 @@ async function restoreTaskbar(reason: string): Promise<void> {
   if (process.platform !== "win32") return;
   try {
     const state = await setWindowsTaskbarVisible(true);
+    taskbarHiddenByProjectD = false;
     logger?.info("desktop-state", "Windows taskbar restored", { reason, ...state });
   } catch (error) {
     logger?.error("desktop-state", "Windows taskbar restore failed", {
@@ -1396,6 +1479,19 @@ async function restoreTaskbar(reason: string): Promise<void> {
       message: error instanceof Error ? error.message : String(error)
     });
   }
+}
+
+async function restoreNativeDesktopState(reason: string): Promise<void> {
+  if (process.platform !== "win32") return;
+  await Promise.all([
+    setWindowsDesktopIconsVisible(true).then((state) => {
+      logger?.info("desktop-state", "Windows desktop icons restored", { reason, ...state });
+    }),
+    setWindowsTaskbarVisible(true).then((state) => {
+      taskbarHiddenByProjectD = false;
+      logger?.info("desktop-state", "Windows taskbar restored", { reason, ...state });
+    })
+  ]);
 }
 
 async function enterCleanDesktop(): Promise<DesktopStatus> {
@@ -1415,6 +1511,7 @@ async function enterCleanDesktop(): Promise<DesktopStatus> {
   createWallpaperWindow();
   try {
     const taskbarState = await setWindowsTaskbarVisible(false);
+    taskbarHiddenByProjectD = true;
     logger?.info("desktop-state", "Windows taskbar hidden for clean desktop", taskbarState);
   } catch (error) {
     desktopStatus = (await desktopController?.deactivate()) ?? updateDesktopStatus("idle");
@@ -1434,13 +1531,17 @@ async function enterCleanDesktop(): Promise<DesktopStatus> {
   database?.setAppState("clean_desktop_mode", "true");
   const exitShortcut = cleanDesktopExitShortcut();
   const escapeReady = cleanDesktopEscapeGuard.arm(exitShortcut);
+  if (!escapeReady) {
+    logger?.warn("desktop-state", "clean desktop rejected because its recovery shortcut is unavailable", {
+      exitShortcut
+    });
+    return exitCleanDesktop("exit-shortcut-unavailable");
+  }
   desktopStatus = {
     ...desktopStatus,
-    message: escapeReady
-      ? `纯净桌面已开启：按 ${exitShortcut} 恢复桌面。`
-      : `纯净桌面已开启：${exitShortcut} 注册冲突，请从托盘选择“恢复桌面”。`
+    message: `纯净桌面已开启：按 ${exitShortcut} 恢复桌面。`
   };
-  logger?.[escapeReady ? "info" : "warn"]("desktop-state", "clean desktop mode entered", { escapeReady, exitShortcut });
+  logger?.info("desktop-state", "clean desktop mode entered", { escapeReady, exitShortcut });
   sendMenuCommand(MENU_COMMANDS.ACTIVATE_DESKTOP);
   return desktopStatus;
 }
@@ -2634,10 +2735,12 @@ async function initializeCoreServices(): Promise<void> {
     syncWindowsFromSettings(settings);
     broadcastSettingsUpdated();
   });
-  desktopController = new DesktopController(database, logger);
-  desktopController.initialize();
-  desktopStatus = await desktopController.bootRecoveryCheck();
-  await restoreTaskbar("application-boot");
+      desktopController = new DesktopController(database, logger, earlyDesktopRecoveryWatchdogProcessId);
+      desktopController.initialize();
+      desktopStatus = await desktopController.bootRecoveryCheck();
+      await restoreTaskbar("application-boot");
+      desktopIconRecoveryGuard.start();
+      taskbarRecoveryGuard.start();
   fileScanner = new FileScanner(database, logger);
   actionEngine = new ActionEngine(database, logger, app.getPath("desktop"));
   sceneService = new SceneService(database, { getDisplays: runtimeDisplays });
@@ -2792,6 +2895,8 @@ async function activateDesktopOnStartup(): Promise<void> {
 async function shutdownSafely(): Promise<void> {
   try {
     const result = await runWithDeadline(async () => {
+      desktopIconRecoveryGuard.stop();
+      taskbarRecoveryGuard.stop();
       cleanDesktopEscapeGuard.disarm();
       livePhotoImportDrafts.clear();
       stopCleanDesktopPowerBlocker();
@@ -2857,7 +2962,20 @@ async function shutdownSafely(): Promise<void> {
 
     if (result === "completed") {
       writeBootstrapLog("shutdown completed");
-      process.exit(0);
+      // All windows, watchers, tray objects, database handles, and native
+      // desktop state have already been cleaned above.  Do not invoke the
+      // Electron quit API again
+      // here: on this Windows/Electron combination it can block the
+      // event loop after before-quit has already been intercepted.  Keep a
+      // referenced bounded terminator so a ghost Project D PID cannot remain.
+      writeBootstrapLog("shutdown forced termination scheduled");
+      setTimeout(() => {
+        try {
+          process.kill(process.pid, "SIGKILL");
+        } catch {
+          process.exit(0);
+        }
+      }, 1_000);
     }
   } catch (error) {
     writeBootstrapLog("shutdown cleanup failed", {
@@ -2894,6 +3012,8 @@ if (!singleInstanceLock) {
     .whenReady()
     .then(async () => {
       writeBootstrapLog("app ready");
+
+      await armEarlyDesktopRecovery();
 
       if (!app.isPackaged && qaRunEnabled && process.env.PROJECTD_QA_DESKTOP_PATH) {
         const qaDesktopPath = path.resolve(process.env.PROJECTD_QA_DESKTOP_PATH);
@@ -2964,6 +3084,14 @@ app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     mainWindow = createWindow();
   }
+});
+
+process.on("uncaughtException", (error) => {
+  handleFatalProcessFailure("uncaught-exception", error);
+});
+
+process.on("unhandledRejection", (reason) => {
+  handleFatalProcessFailure("unhandled-rejection", reason);
 });
 
 app.on("child-process-gone", (_event, details) => {

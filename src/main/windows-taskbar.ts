@@ -9,6 +9,53 @@ export interface WindowsTaskbarState {
   taskbarCount: number;
 }
 
+export interface TaskbarRecoveryGuardOptions {
+  isHiddenByOwner: () => boolean;
+  isHiddenAllowed: () => boolean;
+  probe: () => Promise<WindowsTaskbarState>;
+  restore: () => Promise<WindowsTaskbarState | void>;
+  onError?: (error: unknown) => void;
+  intervalMs?: number;
+}
+
+/**
+ * Repairs only a taskbar that Project D previously hid. Native Windows
+ * auto-hide remains untouched because the guard is dormant unless the app
+ * owns the hidden transition.
+ */
+export class TaskbarRecoveryGuard {
+  private timer: NodeJS.Timeout | null = null;
+  private checkInFlight = false;
+
+  constructor(private readonly options: TaskbarRecoveryGuardOptions) {}
+
+  start(): void {
+    if (this.timer) return;
+    const intervalMs = Math.max(1_000, this.options.intervalMs ?? 2_000);
+    this.timer = setInterval(() => void this.check(), intervalMs);
+    this.timer.unref?.();
+  }
+
+  stop(): void {
+    if (this.timer) clearInterval(this.timer);
+    this.timer = null;
+    this.checkInFlight = false;
+  }
+
+  private async check(): Promise<void> {
+    if (this.checkInFlight || !this.options.isHiddenByOwner() || this.options.isHiddenAllowed()) return;
+    this.checkInFlight = true;
+    try {
+      const state = await this.options.probe();
+      if (!state.visible && !this.options.isHiddenAllowed()) await this.options.restore();
+    } catch (error) {
+      this.options.onError?.(error);
+    } finally {
+      this.checkInFlight = false;
+    }
+  }
+}
+
 export async function setWindowsTaskbarVisible(visible: boolean): Promise<WindowsTaskbarState> {
   if (process.platform !== "win32") return { visible: true, taskbarCount: 0 };
   const { stdout } = await execFileAsync("powershell.exe", powershellArguments(buildWindowsTaskbarSyncScript(visible, 8)), {

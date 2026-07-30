@@ -29,7 +29,12 @@ test("weather layers render each visual state and report renderer FPS", async ()
       const layer = testApp.window.locator(".real-weather-layer");
       await expect.poll(async () => layer.getAttribute("data-weather")).toBe(mode);
       await expect.poll(async () => layer.getAttribute("data-intensity")).toBe("0.85");
-      await testApp.window.waitForTimeout(750);
+      const expectedLayer = mode === "clear" ? ".weather-grade" : `.weather-${mode}`;
+      await expect.poll(async () => layer.evaluate((element, selector) => {
+        const target = element.querySelector(selector);
+        return target ? Number.parseFloat(getComputedStyle(target).opacity) : 0;
+      }, expectedLayer), { timeout: 5_000 }).toBeGreaterThan(0);
+      await testApp.window.waitForTimeout(500);
       const state = await layer.evaluate((element) => {
         const selectors = [".weather-fog", ".weather-leaves", ".weather-rain", ".weather-snow", ".weather-light", ".weather-grade"];
         return {

@@ -1359,3 +1359,114 @@
 - [x] Final report saved at `artifacts-e2e-v6/performance-profile-matrix.json`.
 - [x] Performance E2E 1/1, typecheck, targeted lint, build, and process cleanup pass.
 - [ ] Physical hardware matrix, battery, 4K, multi-display/DPI, and long-soak evidence remain open.
+
+## Stage 110 - Desktop Icon and Taskbar Recovery Hotfix
+
+- [x] Real Windows desktop recovered after the reported missing-icon incident without moving or deleting desktop files.
+- [x] Explorer icon recovery watchdog uses an independent WMI/CIM-created process before falling back to detached PowerShell.
+- [x] Watchdog waits for parent termination using explicit polling and restores both native desktop icons and the taskbar with bounded retries.
+- [x] Taskbar drift guard is scoped to Project D-owned hidden state and does not alter normal Windows auto-hide behavior.
+- [x] Clean desktop fails closed when its configured exit shortcut cannot be registered.
+- [x] Recovery regression tests 12/12, build, type checks, targeted lint, real watchdog launch/exit, final icon/taskbar probes, and zero Project D residual process pass.
+- [x] Rebuilt packaged shortcut target and installer; isolated packaged startup/exit passes with zero packaged process residue.
+- [ ] Packaged shortcut forced-kill evidence, sleep/wake, multi-display/DPI, installer, and long-soak evidence remain open.
+
+## Stage 111 - V6 Ambient File Space and Task Readability
+
+- [x] Immersive mode displays a bounded native-like file space without introducing a second organizer or moving real files.
+- [x] Real folder art and native icon data are preserved in the immersive file surface.
+- [x] Ambient file selection, double-click open, right-click menu, overflow, and Organizer handoff are wired to existing safe actions.
+- [x] Task and Safe states improve foreground contrast while leaving the wallpaper layer visible and the veil pointer-transparent.
+- [x] Component tests 7/7, Node tests 242/242, build, full lint, ambient E2E 1/1, organizer visual E2E 1/1, and weather matrix 2/2 pass.
+- [x] Visual evidence saved under `artifacts-e2e-v6/ambient-file-space-visual/`.
+- [x] Rebuilt packaged shortcut and installer after the Stage 111 UI changes; isolated packaged startup/exit leaves zero packaged processes.
+- [ ] Packaged forced-kill recovery, multi-display/DPI, sleep/wake, installer lifecycle, and long-soak evidence remain open.
+
+## Stage 112 - V6 Scene Wallpaper Surface
+
+- [x] Current wallpaper, scene cards, and focused scene preview use real library thumbnails/posters.
+- [x] Scene selection follows the active wallpaper id and does not silently fall back to the first scene.
+- [x] User media remains behind `projectd-media:`; bundled media remains local; no schema change was introduced.
+- [x] Component 7/7, scene visual E2E 1/1, and production build pass.
+- [ ] Packaged force-kill, physical multi-display/DPI, sleep/wake, installer lifecycle, and long-soak remain open.
+
+## Stage 113 - Desktop Icon Force-Kill Recovery Closure
+
+- [x] Real Windows reproduction captured the previous watchdog failure after parent force-kill.
+- [x] Native icon writes retry Explorer transitions 12 times; probes retry 3 times; boot recovery verifies visible state instead of trusting one probe.
+- [x] Interactive file-based watchdog uses `cmd.exe /c start /b` and restores icons plus taskbar after parent termination; WMI/direct PowerShell are fallbacks.
+- [x] Force-kill E2E verifies hide -> kill -> restore -> restart and passes 1/1.
+- [x] Clean/safe E2E 2/2, Node 243/243, component 7/7, lint, build, scene E2E 1/1, packaged smoke 1/1, and final Windows icon/taskbar/process probe pass.
+- [x] Packaged executable and installer rebuilt after the fix.
+- [ ] Packaged executable force-kill, physical multi-display/DPI, sleep/wake, installer lifecycle, and 4/24-hour soak remain open.
+
+## Stage 114 - Early Boot Desktop Icon Recovery and Packaged Exit QA
+
+- [x] Early desktop recovery watchdog starts before core service initialization.
+- [x] Early boot probes and restores native desktop icons if Windows still reports hidden state.
+- [x] Desktop controller reuses the early watchdog and does not create duplicate supervisors.
+- [x] Force-kill recovery E2E passes 1/1.
+- [x] Clean desktop and organizer safe-restore E2E pass serially, 2/2.
+- [x] Packaged smoke verifies core readiness, shutdown completion, no error log entries, and zero QA-token processes.
+- [x] Final Windows probe confirms desktop icons and taskbar visible, Explorer healthy, and Project D absent.
+- [ ] Packaged executable force-kill evidence, physical multi-display/DPI, sleep/wake, installer lifecycle, and 4/24-hour soak remain open.
+
+## Stage 115 - Packaged Process Exit Residual Closure
+
+- [x] Packaged smoke caught and documented a real Project D process remaining after shutdown completion.
+- [x] Shutdown has a bounded, referenced post-cleanup termination fallback; the fallback runs only after native desktop and application resources are restored.
+- [x] Packaged smoke passes with core readiness, shutdown completion, no error log entries, and an empty QA-token process tree.
+- [x] Final Windows state has visible desktop icons, visible taskbar, healthy Explorer, and zero Project D processes.
+- [ ] Packaged executable force-kill, physical multi-display/DPI, sleep/wake, installer lifecycle, and 4/24-hour soak remain open.
+
+## Stage 116 - V6 Scene State Feedback and Desktop Icon Regression Verification
+
+- [x] Scene data persists the selected pet character id and restores it through the existing workspace-scene apply path.
+- [x] Scene Surface exposes current and saved performance profile, pet identity/personality, wallpaper mode, and weather context.
+- [x] Scene apply refreshes display mapping and provides a success feedback state.
+- [x] Scene restoration E2E 2/2 verifies real IPC state recovery; organizer E2E 1/1 and desktop icon/clean/force-kill E2E 3/3 pass serially.
+- [x] Node 246/246, component 7/7, lint, production build, and live icon/taskbar probes pass.
+- [x] Full serial Electron suite passes 32/32 in about 12.1 minutes with the expanded execution budget.
+- [ ] Packaged executable force-kill, physical multi-display/DPI, sleep/wake, installer lifecycle, and 4/24-hour soak remain open.
+
+## Stage 117 - V6 Scene Display Map and Visual Evidence
+
+- [x] Scene Surface displays one read-only card per connected display with primary status, resolution, scale factor, wallpaper mapping, and fit mode.
+- [x] Display Map uses the existing wallpaper display IPC contract and does not create a second display model.
+- [x] Scene apply feedback includes the restored scene, performance profile, and pet identity.
+- [x] Visual evidence captured at `artifacts-e2e-v6/scene-display-map/01-scene-display-map.png`.
+- [x] Build, Node 246/246, component 7/7, lint, scene E2E 2/2, dist, packaged smoke, diff check, and final icon/taskbar/process probe pass.
+- [ ] Physical dual/triple display, mixed DPI, portrait, hot-plug, sleep/wake, installer lifecycle, and 4/24-hour soak remain open.
+
+## Stage 118 - Native Desktop Icon Recovery Guard and Assistant Readability
+
+- [x] Idle Project D repairs an externally hidden native desktop icon list through a live Explorer probe.
+- [x] Fatal process paths restore native desktop icons and taskbar before termination.
+- [x] Idle icon guard E2E and force-kill recovery E2E pass against the real Windows shell.
+- [x] Assistant Surface remains legible over bright wallpaper while preserving the wallpaper as the visual background.
+- [x] Typecheck, build, targeted lint, icon/failsafe tests 14/14, idle icon guard E2E 1/1, force-kill E2E 1/1, and Assistant E2E 1/1 pass.
+- [x] Clean-desktop state race fixed by using live controller/escape-guard state; weather matrix transition sampling fixed and repeated targeted weather verification passes 6/6.
+- [x] Node 248/248, component 7/7, lint, typecheck, build, packaged smoke, and native Windows probe pass after the final patch.
+- [x] Native probe confirms 70 icons visible, taskbar visible, Explorer healthy, and no Project D or QA-token process remains.
+- [ ] Full Electron-suite final rerun produced no Playwright summary and was not counted as a pass; rerun with a bounded harness before declaring the full gate green.
+- [ ] Packaged shortcut force-kill, physical dual/triple display and DPI, portrait/hot-plug, sleep/wake, installer lifecycle, and 4/24-hour soak remain open.
+
+## Stage 120 - Fail-Safe Boot Recovery and Native Desktop Visibility
+
+- [x] Stale `active`/`is_active` desktop state is recovered to native visibility before startup auto-activation is considered.
+- [x] Unexpected recovery suppresses automatic takeover and launch-at-login until explicit user re-enablement.
+- [x] Current Windows probe: 70 desktop icons visible, taskbar visible, Explorer healthy, no Project D process.
+- [x] Packaged shortcut force-kill report passes all 8 recovery, restart, cleanup, and Explorer checks.
+- [x] Packaged smoke passes readiness, shutdown, error-log, and process-cleanup checks.
+- [x] Node 250/250, component 7/7, typecheck, lint, build, dist, desktop-icon E2E 1/1, and Assistant E2E 3/3 pass.
+- [ ] Physical dual/triple display and DPI, portrait/hot-plug, sleep/wake, installer lifecycle, and 4/24-hour soak remain external evidence gates.
+
+## Stage 119 - V6 Assistant Companion Context and Bounded Electron Gate
+
+- [x] Bounded Electron runner records exit code, timeout, Playwright totals, logs, and QA-token process cleanup.
+- [x] Result summarizer regression proves retries are not double-counted and distinguishes skipped and timed-out tests.
+- [x] Assistant Surface renders the selected pet's real local idle portrait, with a neutral hidden state and no remote asset dependency.
+- [x] Assistant targeted E2E passes 3/3 and captures `artifacts-e2e-v6/assistant-context/01-assistant-context.png`.
+- [x] Complete serial Electron E2E passes 33/33; failed 0, skipped 0, timed out 0, and remaining QA processes 0.
+- [x] Node 249/249, component 7/7, lint, typecheck, build, and diff check pass.
+- [ ] Packaged shortcut force-kill, physical dual/triple display and DPI, portrait/hot-plug, sleep/wake, installer lifecycle, and 4/24-hour soak remain open.

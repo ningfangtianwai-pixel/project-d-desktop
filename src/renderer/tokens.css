@@ -1,0 +1,67 @@
+/*
+ * Project D V6.0 设计令牌
+ * 从现有 styles.css 提取，统一视觉参数。
+ * 不修改任何现有规则，仅定义变量供后续使用。
+ */
+
+:root {
+  /* ── 圆角 ── */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --radius-pill: 999px;
+
+  /* ── 模糊 ── */
+  --blur-light: 8px;
+  --blur-medium: 14px;
+  --blur-heavy: 18px;
+
+  /* ── 间距 ── */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 14px;
+  --space-lg: 22px;
+  --space-xl: 32px;
+
+  /* ── 动效 ── */
+  --transition-fast: 120ms ease;
+  --transition-panel: 200ms ease;
+  --transition-slow: 400ms ease;
+  --transition-fade: 800ms ease;
+
+  /* ── 玻璃材质 ── */
+  --glass-bg: rgba(17, 19, 23, 0.65);
+  --glass-border: rgba(246, 243, 236, 0.12);
+  --glass-highlight: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
+
+  /* ── 安静态玻璃（更透明） ── */
+  --glass-bg-quiet: rgba(17, 19, 23, 0.42);
+  --glass-border-quiet: rgba(246, 243, 236, 0.08);
+
+  /* ── 工作态玻璃（更不透明） ── */
+  --glass-bg-active: rgba(17, 19, 23, 0.82);
+  --glass-border-active: rgba(246, 243, 236, 0.16);
+
+  /* ── 语义色 ── */
+  --color-text: #f6f3ec;
+  --color-text-muted: rgba(246, 243, 236, 0.56);
+  --color-accent: #9fd7ed;
+  --color-success: #70d8ae;
+  --color-warning: #f5c26b;
+  --color-danger: #f08778;
+  --color-safe: #70d8ae;
+
+  /* ── Luna ── */
+  --color-luna: #9fd7ed;
+  --color-luna-soft: rgba(159, 215, 237, 0.2);
+
+  /* ── 层级 ── */
+  --z-wallpaper: 0;
+  --z-ambient: 1;
+  --z-pet: 2;
+  --z-edge: 3;
+  --z-task: 5;
+  --z-safe: 8;
+  --z-toast: 9;
+}

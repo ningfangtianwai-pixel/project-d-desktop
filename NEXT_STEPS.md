@@ -599,3 +599,84 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 1. Keep the GPU-enabled profile matrix and the software-renderer safety path in the regression set; do not compare their FPS numbers as the same hardware claim.
 2. Add a bounded long-run memory-growth report for the weather layer and dynamic wallpaper, then compare it with the existing 4-hour/24-hour soak thresholds.
 3. Continue physical Intel/AMD/NVIDIA, battery, 4K, multi-display/DPI, sleep/wake, installer/upgrade/uninstall, and 4/24-hour soak gates.
+
+## After Stage 110 Desktop Icon and Taskbar Recovery Hotfix
+
+1. Rebuild the packaged shortcut target and run a packaged forced-termination drill; verify desktop icons, taskbar, Explorer, and Project D process cleanup.
+2. Run clean desktop entry/exit twice with the configured shortcut and once through the tray emergency restore path; capture the final native desktop state.
+3. Keep the new recovery tests in the release gate and rerun them whenever desktop takeover, taskbar, Explorer monitoring, or shutdown lifecycle code changes.
+4. Continue the external gates: physical multi-display/DPI, sleep/wake, lock/unlock, installer/upgrade/uninstall, and 4/24-hour soak.
+
+## After Stage 111 V6 Ambient File Space and Task Readability
+
+1. Run a packaged forced-termination drill against the rebuilt shortcut target and verify icons, taskbar, Explorer, and process cleanup.
+2. Run the next V6 iteration on Scene/Wallpaper Surface: make scene switching visibly restore wallpaper, weather, pet anchor, display mapping, and performance profile in one task state, with a real screenshot.
+3. Add a controlled ambient-file right-click/open regression to the Electron suite; keep all real file mutations behind the existing Organizer confirmation path.
+4. Continue the external gates: multi-display/DPI, sleep/wake, installer/upgrade/uninstall, and 4/24-hour soak.
+
+## After Stage 112 V6 Scene Wallpaper Surface
+
+1. Keep real wallpaper thumbnails and current-wallpaper-to-scene selection covered when WallpaperLibrary or SceneSurface changes.
+2. Run the packaged executable force-kill drill against the rebuilt shortcut target and record icons, taskbar, Explorer, and process cleanup.
+3. Continue multi-display/DPI, sleep/wake, lock/unlock, installer/upgrade/uninstall, and 4/24-hour soak evidence.
+
+## After Stage 113 Desktop Icon Force-Kill Recovery Closure
+
+1. Repeat the force-kill drill from `release\\win-unpacked\\Project D.exe`; the dev Electron E2E is green, while the packaged proof remains open.
+2. Keep the interactive `cmd.exe /c start /b` watchdog contract and bounded shell retry tests in the release gate.
+3. Do not add another desktop visibility mechanism unless packaged evidence disproves this path; focus the next code iteration on scene/pet visual polish.
+4. Continue multi-display/DPI, sleep/wake, lock/unlock, installer/upgrade/uninstall, and 4/24-hour soak evidence.
+
+## After Stage 114 Early Boot Desktop Icon Recovery and Packaged Exit QA
+
+1. Install and launch `release\\ProjectD-0.3.0-dev.0-Setup.exe` from the desktop shortcut; verify normal launch, duplicate launch, clean desktop entry/exit, and forced termination on the packaged executable.
+2. Keep all Windows desktop E2E suites serial. They mutate the real Explorer shell and must never run concurrently.
+3. Preserve the early watchdog contract and the QA-token process-tree check when changing startup, shutdown, Explorer, taskbar, or desktop takeover code.
+4. Continue external gates: physical multi-display/DPI, sleep/wake, lock/unlock, installer/upgrade/uninstall, and 4/24-hour soak.
+
+## After Stage 115 Packaged Process Exit Residual Closure
+
+1. Repeat packaged forced termination, not only scheduled shutdown: enter desktop mode, force-kill the packaged executable, and verify the watchdog restores icons and taskbar while the process tree reaches zero.
+2. Launch from the installed desktop shortcut and test duplicate launch, normal close, tray quit, and recovery after a white-screen/renderer failure.
+3. Keep the shutdown marker plus QA-token process-tree assertions in the release gate; do not weaken them to a window-only check.
+4. Continue external gates: physical multi-display/DPI, sleep/wake, lock/unlock, installer/upgrade/uninstall, and 4/24-hour soak.
+
+## After Stage 116 V6 Scene State Feedback and Desktop Icon Regression Verification
+
+1. Run packaged executable force-kill from the installed shortcut and verify the independent watchdog restores icons and taskbar before the process tree reaches zero.
+2. Capture a scene-state visual artifact showing wallpaper, weather, pet identity, performance profile, and display mapping together after apply.
+3. Continue physical multi-display/DPI, sleep/wake, lock/unlock, installer/upgrade/uninstall, and 4/24-hour soak evidence.
+
+## After Stage 117 V6 Scene Display Map and Visual Evidence
+
+1. Run the packaged force-kill drill from the installed shortcut and verify the independent watchdog restores icons and taskbar before the process tree reaches zero.
+2. Repeat the Display Map evidence on a physical dual-display setup with one 125% or 150% display and one portrait display; record mapping and fit modes.
+3. Continue wallpaper/Live Photo, weather quality, sleep/wake, installer/upgrade/uninstall, and 4/24-hour soak gates.
+
+## After Stage 118 Native Desktop Icon Recovery Guard and Assistant Readability
+
+1. Rebuild `release\\win-unpacked\\Project D.exe`, run packaged startup/normal exit, then force-kill from the installed shortcut and verify icons, taskbar, Explorer, and Project D process cleanup.
+2. Keep `desktop-icons-guard.spec.ts`, the force-kill E2E, and the fatal native-restore contract in the release gate whenever desktop takeover or shutdown code changes.
+3. Run the full Node, component, lint, Electron E2E, packaged smoke, and dist gates after the next functional change; keep Windows shell-mutating E2E serial.
+4. Continue external evidence: physical dual/triple display with mixed DPI/portrait/hot-plug, sleep/wake, installer lifecycle, and 4/24-hour soak.
+
+## After Stage 119 V6 Assistant Companion Context and Bounded Electron Gate
+
+1. Rebuild the installer after the Assistant Surface change and run packaged startup/exit plus packaged force-kill recovery from the real shortcut target.
+2. Keep `qa:e2e:bounded` as the required Electron gate; preserve its report and QA-process cleanup checks when adding or renaming tests.
+3. Capture one assistant screenshot with each of the five selectable characters only when the disposable settings fixture can be isolated; do not add user media to the repository.
+4. Continue physical dual/triple display with mixed DPI/portrait/hot-plug, sleep/wake, installer lifecycle, and 4/24-hour soak evidence.
+
+## After Stage 120 Fail-Safe Boot Recovery and Native Desktop Visibility
+
+1. Keep the stale-active recovery test in the release gate: icons and taskbar must be restored before any automatic desktop takeover decision is made.
+2. Treat Windows shell-mutating Electron tests as serial-only; concurrent runs can close an unrelated Electron first window and invalidate the test harness.
+3. Before enabling automatic takeover again, verify the user explicitly chooses it in Settings and capture the resulting icon/taskbar state.
+4. Continue the remaining external gates: physical dual/triple display with mixed DPI, portrait/hot-plug, sleep/wake, installer/upgrade/uninstall, and 4/24-hour soak.
+
+## After Stage 118 Verification Correction
+
+1. Add a bounded Electron-suite wrapper that records timeout, exit code, Playwright summary, and QA-process cleanup separately; do not infer success from a silent process exit.
+2. Run the complete serial Electron suite again after the final weather-layer test stabilization and record the actual total/pass/fail/skip counts.
+3. Perform the packaged shortcut force-kill drill with a real installed shortcut, then verify native icons, taskbar, Explorer, and all Project D descendants.
+4. Continue physical multi-display/DPI, portrait/hot-plug, sleep/wake, installer lifecycle, and 4/24-hour soak evidence.

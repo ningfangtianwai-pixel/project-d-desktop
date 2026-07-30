@@ -62,6 +62,7 @@ export class SceneService {
         manualWeather: settings.weather.manualWeather
       },
       petState: {
+        characterId: settings.pet.characterId,
         currentOutfit: settings.pet.currentOutfit,
         scale: settings.pet.scale,
         personality: settings.pet.personality,

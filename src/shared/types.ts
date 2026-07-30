@@ -383,7 +383,7 @@ export interface WorkspaceScene {
   weatherProfile?: Pick<SettingsSnapshot["weather"], "mode" | "manualWeather">;
   petAnchor?: Pick<SettingsSnapshot["pet"], "positionX" | "positionY">;
   weatherState?: Pick<SettingsSnapshot["weather"], "particleIntensity" | "enableBorderInteraction">;
-  petState?: Pick<SettingsSnapshot["pet"], "currentOutfit" | "scale" | "personality" | "autoOutfit" | "actionInterval" | "talkFrequency">;
+  petState?: Pick<SettingsSnapshot["pet"], "characterId" | "currentOutfit" | "scale" | "personality" | "autoOutfit" | "actionInterval" | "talkFrequency">;
   suggestionControls?: SuggestionDeliveryControls | null;
   pinnedResources?: DesktopResourceRef[];
   displayAssignments?: DisplayWorkAreaSnapshot[];
@@ -397,6 +397,97 @@ export interface SuggestionSuppressionHistoryEntry {
   explanation: string;
   suppressedAt: string;
 }
+
+export interface DisplayCrop {
+  fitMode: "cover" | "contain";
+  offsetX: number;
+  offsetY: number;
+}
+
+export interface SafeRegion {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  label?: string;
+}
+
+export interface PetAnchor {
+  lane: "left" | "center" | "right";
+  role: "idle" | "work" | "rest" | "roam";
+  x: number;
+  y: number;
+}
+
+export interface AmbientScene {
+  id: string;
+  name: string;
+  wallpaper: {
+    sourceId: string;
+    posterFallback?: string;
+    cropByDisplay?: Record<string, DisplayCrop>;
+  };
+  visualProfile: {
+    brightness: "dark" | "light" | "mixed";
+    subjectSafeRegions: SafeRegion[];
+    accentPalette: string[];
+    horizonY?: number;
+  };
+  weather: {
+    type: "none" | "rain" | "snow" | "fog" | "leaves" | "light";
+    intensity: number;
+    qualityPolicy: string;
+  };
+  pet: {
+    characterId: string;
+    personality: string;
+    anchorLanes: PetAnchor[];
+    actionFrequency: string;
+  };
+  ui: {
+    edgeRailPlacement: "left" | "right" | "bottom";
+    glassPreset: string;
+  };
+  workspace: {
+    virtualLayoutId?: string;
+    portalIds?: string[];
+    pinnedResourceIds?: string[];
+  };
+  performance: {
+    profile: "static" | "battery" | "balanced" | "high";
+  };
+  audio?: { ambientTrack?: string; volume: number };
+}
+
+/** V6.0 能力迁移契约：旧能力到新能力的映射 */
+export type LegacyCapabilityId =
+  | "search"
+  | "organize"
+  | "scene"
+  | "wallpaper"
+  | "assistant"
+  | "settings"
+  | "safe-restore";
+
+export interface CapabilityMigrationEntry {
+  legacyId: LegacyCapabilityId;
+  newId: string;
+  equivalenceStatus: "equivalent" | "partial" | "pending";
+  oldEntryPoint: string;
+  newEntryPoint: string;
+  testCoverage: "verified" | "partial" | "pending";
+  oldImplementationDeleted: boolean;
+}
+
+export const CAPABILITY_MIGRATION_TABLE: CapabilityMigrationEntry[] = [
+  { legacyId: "search", newId: "SearchSurface", equivalenceStatus: "equivalent", oldEntryPoint: "App+Overlay", newEntryPoint: "EdgeRail→SearchSurface", testCoverage: "verified", oldImplementationDeleted: false },
+  { legacyId: "organize", newId: "OrganizerSurface", equivalenceStatus: "equivalent", oldEntryPoint: "App+Overlay", newEntryPoint: "EdgeRail→OrganizerSurface", testCoverage: "verified", oldImplementationDeleted: false },
+  { legacyId: "scene", newId: "SceneSurface", equivalenceStatus: "equivalent", oldEntryPoint: "Overlay+Settings", newEntryPoint: "EdgeRail→SceneSurface", testCoverage: "verified", oldImplementationDeleted: false },
+  { legacyId: "wallpaper", newId: "WallpaperSurface", equivalenceStatus: "partial", oldEntryPoint: "App+Overlay+WallpaperPage", newEntryPoint: "SceneSurface→WallpaperSurface", testCoverage: "pending", oldImplementationDeleted: false },
+  { legacyId: "assistant", newId: "AssistantSurface", equivalenceStatus: "pending", oldEntryPoint: "ChatPanel+PetBubble", newEntryPoint: "EdgeRail→AssistantSurface", testCoverage: "pending", oldImplementationDeleted: false },
+  { legacyId: "settings", newId: "SettingsWindow", equivalenceStatus: "equivalent", oldEntryPoint: "App+Tray", newEntryPoint: "Tray→SettingsWindow", testCoverage: "verified", oldImplementationDeleted: false },
+  { legacyId: "safe-restore", newId: "Tray+Hotkey", equivalenceStatus: "equivalent", oldEntryPoint: "Main+Overlay+Tray+Hotkey", newEntryPoint: "Tray+Hotkey", testCoverage: "verified", oldImplementationDeleted: false }
+];
 
 export interface PortalConfig {
   id: string;

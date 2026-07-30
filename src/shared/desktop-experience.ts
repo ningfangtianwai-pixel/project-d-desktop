@@ -51,3 +51,36 @@ export function modeForDesktopStatus(
   if (statusMode === "active" || statusMode === "activating" || statusMode === "deactivating") return "immersive";
   return "native";
 }
+
+/** App.vue 编排边界：App 与组件之间的职责接口 */
+export interface AppOrchestrationState {
+  experience: DesktopExperienceState;
+  wallpaperLabel: string;
+  weatherLabel: string;
+  petLabel: string;
+  petVisible: boolean;
+  hostLabel: string;
+  city: string;
+  taskLabel: string;
+}
+
+export interface AppOrchestrationActions {
+  wake: () => void;
+  sleep: () => void;
+  openSurface: (surface: DesktopTaskSurface) => void;
+  closeSurface: () => void;
+  enterClean: () => void;
+  exitClean: () => void;
+  enterSafe: () => void;
+  restore: () => void;
+  openSettings: () => void;
+  openLogs: () => void;
+}
+
+export interface SurfaceComponent {
+  id: string;
+  surface: DesktopTaskSurface;
+  visible: boolean;
+  priority: number;
+}
+

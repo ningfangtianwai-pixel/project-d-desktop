@@ -29,6 +29,7 @@ let sampledFrameCount = 0;
 let unsubscribeSettingsUpdated: (() => void) | null = null;
 let unsubscribeRuntimeState: (() => void) | null = null;
 let unsubscribeWallpaperPlayback: (() => void) | null = null;
+let runtimeRefreshSequence = 0;
 const wallpaperLayers = ref<Array<WallpaperAsset & { active: boolean }>>([]);
 const weatherMode = ref<WeatherVisualMode>("clear");
 const weatherIntensity = ref(0.55);
@@ -428,7 +429,28 @@ function currentWeatherMode(): WeatherVisualMode {
   return "clear";
 }
 
+let runtimeRefreshPromise: Promise<void> | null = null;
+let runtimeRefreshQueued = false;
+
 async function refreshRuntime(): Promise<void> {
+  if (runtimeRefreshPromise) {
+    runtimeRefreshQueued = true;
+    await runtimeRefreshPromise;
+    return;
+  }
+
+  runtimeRefreshPromise = refreshRuntimeSnapshot().finally(() => {
+    runtimeRefreshPromise = null;
+    if (runtimeRefreshQueued) {
+      runtimeRefreshQueued = false;
+      void refreshRuntime();
+    }
+  });
+  await runtimeRefreshPromise;
+}
+
+async function refreshRuntimeSnapshot(): Promise<void> {
+  const refreshSequence = ++runtimeRefreshSequence;
   const [nextSettings, nextWeather, nextLibrary, nextRuntimeState, nextDisplays] = await Promise.all([
     window.projectD.getSettings(),
     window.projectD.getCurrentWeather(),
@@ -436,6 +458,7 @@ async function refreshRuntime(): Promise<void> {
     window.projectD.getRuntimeState(),
     window.projectD.getWallpaperDisplays()
   ]);
+  if (refreshSequence !== runtimeRefreshSequence) return;
   settings = nextSettings;
   currentWeather = nextWeather;
   wallpaperLibrary = nextLibrary;
@@ -458,6 +481,7 @@ async function refreshRuntime(): Promise<void> {
   );
   if (wallpaper) {
     await selectWallpaper(wallpaper);
+    if (refreshSequence !== runtimeRefreshSequence) return;
   } else {
     wallpaperLayers.value = [];
   }

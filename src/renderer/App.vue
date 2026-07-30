@@ -31,9 +31,11 @@ import SceneSurface from "./components/SceneSurface.vue";
 import SearchSurface from "./components/SearchSurface.vue";
 import AssistantSurface from "./components/AssistantSurface.vue";
 import OrganizerSurface from "./components/OrganizerSurface.vue";
+import AmbientFileSpace from "./components/AmbientFileSpace.vue";
 import CompatibilitySurface from "./components/CompatibilitySurface.vue";
 import { wallpaperDisplayLabel } from "@shared/wallpaper-library";
 import { containerAccentOption } from "@shared/container-accents";
+import { getPetCharacter } from "@shared/pet-characters";
 import { readOnboardingState, shouldShowOnboarding } from "@shared/onboarding";
 import {
   closeDesktopSurface as closeDesktopSurfaceState,
@@ -62,6 +64,7 @@ const recoveryNotice = ref("");
 const wallpaperHost = ref("unknown");
 const weatherLocationSource = ref("unknown");
 const currentWeather = ref<CurrentWeather | null>(null);
+const effectivePerformanceProfile = ref("balanced");
 const wallpaperLibrary = ref<WallpaperLibraryItem[]>([]);
 const inboxPlan = ref<ActionPlan | null>(null);
 const actionHistory = ref<ActionExecution[]>([]);
@@ -119,6 +122,8 @@ const currentWallpaperLabel = computed(() => {
   const currentId = settings.value?.wallpaper.dynamicId;
   return wallpaperDisplayLabel(wallpaperLibrary.value.find((item) => item.id === currentId));
 });
+const currentPetLabel = computed(() => getPetCharacter(settings.value?.pet.characterId).name);
+const currentWeatherLabel = computed(() => currentWeather.value?.condition || settings.value?.weather.manualWeather || "clear");
 const wallpaperHostLabel = computed(() => {
   if (wallpaperHost.value === "WorkerW") return "WorkerW 桌面层";
   if (wallpaperHost.value === "Progman") return "Progman 桌面层";
@@ -166,7 +171,7 @@ function pushLog(message: string): void {
 }
 
 async function refreshStatus(): Promise<void> {
-  const [nextDesktopStatus, nextDatabaseStatus, nextContainers, nextSettings, nextWallpaperHost, nextLocationSource, nextWallpaperLibrary, nextSuggestion, nextThemeMode] = await Promise.all([
+  const [nextDesktopStatus, nextDatabaseStatus, nextContainers, nextSettings, nextWallpaperHost, nextLocationSource, nextWallpaperLibrary, nextSuggestion, nextThemeMode, nextPerformanceMode, nextEffectivePerformanceProfile] = await Promise.all([
     window.projectD.getDesktopStatus(),
     window.projectD.getDatabaseStatus(),
     window.projectD.getDesktopFiles(),
@@ -175,7 +180,9 @@ async function refreshStatus(): Promise<void> {
     window.projectD.getState("weather_location_source"),
     window.projectD.getWallpaperLibrary(),
     window.projectD.getLatestSuggestion(),
-    window.projectD.getState("theme_mode").catch(() => "dark")
+    window.projectD.getState("theme_mode").catch(() => "dark"),
+    window.projectD.getState("performance_mode").catch(() => "auto"),
+    window.projectD.getState("runtime_effective_profile").catch(() => "balanced")
   ]);
   const resolvedTheme = nextThemeMode === "system"
     ? (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
@@ -196,6 +203,7 @@ async function refreshStatus(): Promise<void> {
   weatherLocationSource.value = nextLocationSource ?? "unknown";
   wallpaperLibrary.value = nextWallpaperLibrary;
   latestSuggestion.value = nextSuggestion;
+  effectivePerformanceProfile.value = nextEffectivePerformanceProfile ?? (nextPerformanceMode === "quality" || nextPerformanceMode === "batterySaver" ? nextPerformanceMode : "balanced");
   try {
     currentWeather.value = await window.projectD.getCurrentWeather();
   } catch {
@@ -674,9 +682,23 @@ onUnmounted(() => {
       :host-label="wallpaperHostLabel"
       :task-label="taskSurfaceLabel"
       :active-surface="activeTaskSurface"
+      :weather-label="currentWeatherLabel"
+      :pet-label="currentPetLabel"
+      :pet-visible="settings?.pet.isVisible ?? false"
       @wake="wakeImmersive"
       @close-task="closeDesktopSurface"
       @leave-immersive="leaveImmersive"
+    />
+    <AmbientFileSpace
+      v-if="experienceMode === 'immersive' && !activeTaskSurface"
+      :containers="containers"
+      :file-icon="fileIcon"
+      :file-kind-label="fileKindLabel"
+      :container-visual-style="containerVisualStyle"
+      @select-file="selectFile"
+      @open-file="openFile"
+      @show-file-menu="showFileMenu"
+      @open-organizer="openDesktopSurface('organize')"
     />
     <section v-if="latestSuggestion && experienceMode === 'immersive' && !activeTaskSurface" class="ambient-suggestion" aria-live="polite">
       <span class="ambient-suggestion-icon"><Sparkles :size="16" /></span>
@@ -725,6 +747,15 @@ onUnmounted(() => {
 
       <AssistantSurface
         v-if="activeTaskSurface === 'assistant'"
+        :wallpaper-label="currentWallpaperLabel"
+        :weather-label="currentWeather?.condition || settings?.weather.manualWeather || 'clear'"
+        :city="currentWeather?.city || settings?.weather.city || '自动定位'"
+        :performance-mode="effectivePerformanceProfile"
+        :pet-character-id="settings?.pet.characterId || 'luna-q'"
+        :pet-personality="settings?.pet.personality || 'gentle'"
+        :pet-visible="settings?.pet.isVisible ?? false"
+        :provider-label="settings?.ai.provider || 'AI provider'"
+        :provider-configured="Boolean(settings?.ai.enabled && settings?.ai.apiKeyConfigured)"
         @request-inbox-plan="prepareDesktopInbox"
       />
       <SearchSurface
@@ -827,12 +858,19 @@ onUnmounted(() => {
       <SceneSurface
         v-if="activeTaskSurface === 'scene'"
         :wallpaper-label="currentWallpaperLabel"
+        :wallpaper-id="currentWallpaper?.id ?? null"
         :city="currentWeather?.city || '自动定位'"
         :host-label="wallpaperHostLabel"
         :weather-mode="settings?.weather.mode || 'auto'"
         :weather-label="currentWeather?.condition || settings?.weather.manualWeather || 'clear'"
         :weather-intensity="settings?.weather.particleIntensity ?? 0.55"
+        :performance-mode="effectivePerformanceProfile"
         :pet-position="{ x: settings?.pet.positionX ?? 36, y: settings?.pet.positionY ?? 36 }"
+        :pet-visible="settings?.pet.isVisible ?? false"
+        :pet-character-id="settings?.pet.characterId ?? 'luna-q'"
+        :pet-outfit="settings?.pet.currentOutfit ?? 'default'"
+        :pet-personality="settings?.pet.personality ?? 'gentle'"
+        :pet-talk-frequency="settings?.pet.talkFrequency ?? 'normal'"
         :safe-region="currentWallpaper?.safeRegion"
         :wallpapers="wallpaperLibrary"
         @next-wallpaper="switchWallpaperStyle"

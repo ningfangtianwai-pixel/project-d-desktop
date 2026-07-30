@@ -42,3 +42,13 @@ test("committed data reset failures force a clean relaunch instead of leaving de
   assert.match(source, /resetCommitted = true/);
   assert.match(source, /reset failed after commit; forcing clean relaunch/);
 });
+
+test("packaged smoke accepts a vanished Windows process when the child exit event is stale", () => {
+  const smoke = fs.readFileSync(path.join(projectRoot, "scripts", "qa-packaged-smoke.cjs"), "utf8");
+  assert.match(smoke, /describeQaProcesses/);
+  assert.match(smoke, /shutdownCompleted/);
+  assert.match(smoke, /remainingProcesses/);
+  assert.match(smoke, /shutdownForced/);
+  assert.match(smoke, /shutdownCompleted && shutdownForced/);
+  assert.match(smoke, /stale handle/);
+});

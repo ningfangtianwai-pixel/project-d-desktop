@@ -20,8 +20,11 @@ export class DesktopController {
 
   constructor(
     private readonly database: DatabaseService,
-    private readonly logger: AppLogger
-  ) {}
+    private readonly logger: AppLogger,
+    recoveryWatchdogProcessId: number | null = null
+  ) {
+    this.watchdogProcessId = recoveryWatchdogProcessId;
+  }
 
   getStatus(): DesktopStatus {
     return this.status;
@@ -42,6 +45,9 @@ export class DesktopController {
 
     if (process.platform === "win32") {
       try {
+        // Start this before inspecting the shell so an early crash, force-kill,
+        // or renderer failure is still covered even when Project D was idle.
+        await this.ensureRecoveryWatchdog();
         const iconState = await probeWindowsDesktopIcons();
         if (!iconState.visible) {
           this.logger.warn("desktop-state", "hidden desktop icons detected during boot", {
@@ -49,12 +55,26 @@ export class DesktopController {
             iconCount: iconState.iconCount
           });
           await this.showDesktopIcons();
+          await probeWindowsDesktopIcons();
           recoveredHiddenIcons = true;
         }
       } catch (error) {
         this.logger.warn("desktop-state", "boot desktop icon probe failed", {
           message: error instanceof Error ? error.message : String(error)
         });
+        try {
+          // A probe can race Explorer during sign-in, display resume, or shell
+          // refresh.  Force the visible state through the same bounded retry
+          // path instead of accepting a hidden desktop after one failed probe.
+          await this.showDesktopIcons();
+          await probeWindowsDesktopIcons();
+          recoveredHiddenIcons = true;
+          this.logger.info("desktop-state", "boot desktop icon recovery completed after probe retry");
+        } catch (recoveryError) {
+          this.logger.error("desktop-state", "boot desktop icon recovery exhausted retries", {
+            message: recoveryError instanceof Error ? recoveryError.message : String(recoveryError)
+          });
+        }
       }
     }
 
@@ -81,6 +101,20 @@ export class DesktopController {
       }
       this.database.setAppState("desktop_state", "idle");
       this.database.setAppState("is_active", "false");
+      // A stale active marker means the previous owner did not complete its
+      // cleanup path. Require explicit user confirmation before hiding the
+      // native desktop again on this machine.
+      const autoActivationWasEnabled = this.database.getAppState("auto_activate_on_start") === "true";
+      const launchAtLoginWasEnabled = this.database.getAppState("launch_at_login") === "true";
+      if (autoActivationWasEnabled || launchAtLoginWasEnabled) {
+        this.database.setAppState("auto_activate_on_start", "false");
+        this.database.setAppState("launch_at_login", "false");
+        this.database.setAppState("desktop_auto_activation_suppressed", "true");
+        this.logger.warn("desktop-state", "automatic desktop takeover disabled after unexpected exit", {
+          autoActivationWasEnabled,
+          launchAtLoginWasEnabled
+        });
+      }
       this.database.setAppState(
         "boot_recovery_notice",
         JSON.stringify({

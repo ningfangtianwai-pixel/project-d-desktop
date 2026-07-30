@@ -1506,3 +1506,118 @@ Stage 0 intentionally keeps database, desktop icon mutation, PixiJS particles, p
 - [x] Final GPU-enabled evidence is stored at `artifacts-e2e-v6/performance-profile-matrix.json`: quality `32.1 FPS`, balanced `34.0 FPS`, battery saver `41.2 FPS`; all three profiles produced positive working-set samples.
 - [x] Verification: typecheck, targeted ESLint, build, performance E2E 1/1, and no Electron process residue.
 - [ ] This is one local QA environment only; physical Intel/AMD/NVIDIA, battery, 4K, multi-display/DPI, and 4/24-hour soak evidence remain open.
+
+## Stage 110 - Desktop Icon and Taskbar Recovery Hotfix
+
+- [x] Recovered the real Windows desktop after the reported incident: Explorer remained healthy, `HideIcons=0`, 68 desktop icon objects were visible, and the taskbar was visible.
+- [x] Diagnosed the incident as Project D-owned desktop/clean-mode visibility remaining hidden after an unexpected process termination; desktop files were not moved or deleted.
+- [x] Changed the Windows icon recovery watchdog to prefer an independently created WMI/CIM process, so Electron's process-job cleanup cannot reclaim it together with the main process.
+- [x] Replaced the watchdog's `Wait-Process` dependency with explicit parent-process polling and retained bounded icon plus taskbar restoration retries.
+- [x] Added a taskbar visibility-drift guard that only repairs a taskbar hidden by Project D and never changes a user's ordinary Windows auto-hide preference.
+- [x] Clean desktop now fails closed when its exit shortcut cannot be registered instead of leaving the taskbar hidden without a guaranteed exit path.
+- [x] Verification: main/preload build, renderer and server type checks, targeted ESLint, 12 recovery tests, full build, real WMI watchdog launch/exit, Explorer icon probe, taskbar probe, and zero Project D residual processes all pass.
+- [x] Rebuilt `release\\win-unpacked\\Project D.exe` and `ProjectD-0.3.0-dev.0-Setup.exe`; an isolated packaged startup/exit run completed with no packaged process residue and the native desktop remained visible.
+- [ ] A forced-kill run against the packaged executable and physical sleep/wake/multi-display matrix remain required before calling the recovery path release-proven.
+
+## Stage 111 - V6 Ambient File Space and Task Readability
+
+- [x] Added `AmbientFileSpace.vue` as a restrained extension of the immersive desktop: it shows a bounded number of real scanned files, keeps native icon data and the real folder illustration, and does not create a second file-management model.
+- [x] Ambient files support selection, double-click open, right-click actions, and a single path back to the existing Organizer Surface; no real file is moved by the new surface.
+- [x] Added task/safe-state readability treatment: a low-opacity dark veil and 2px backdrop blur are enabled only while a task or recovery surface is active, preserving the immersive wallpaper composition outside task mode.
+- [x] Added component coverage for group/file caps, folder rendering, action events, and organizer handoff.
+- [x] Added real Electron visual evidence under `artifacts-e2e-v6/ambient-file-space-visual/` for immersive file space and organizer transition.
+- [x] Verification: `pnpm.cmd build`, `pnpm.cmd test` 242/242, `pnpm.cmd test:component` 7/7, full lint, targeted ambient E2E 1/1, organizer visual E2E 1/1, weather matrix 2/2, and no Electron residue.
+- [x] Rebuilt `release\\win-unpacked\\Project D.exe` and `ProjectD-0.3.0-dev.0-Setup.exe` after Stage 111; isolated packaged startup/exit left zero packaged processes and preserved the native desktop.
+- [ ] Physical multi-display/DPI, sleep/wake, installer lifecycle, and 4/24-hour soak evidence remain open.
+
+## Stage 112 - V6 Scene Wallpaper Surface
+
+- [x] Scene Surface now uses real wallpaper library poster/thumbnail imagery for the current wallpaper, scene cards, and focused scene preview.
+- [x] Active scene selection follows the persisted current wallpaper id instead of silently highlighting the first scene.
+- [x] User assets continue through `projectd-media:`; bundled assets remain local, with no new schema or remote dependency.
+- [x] Component tests remain 7/7, scene visual E2E passes 1/1, and production build passes.
+- [x] Packaged artifact rebuilt after the scene and desktop recovery changes.
+- [ ] Physical multi-display/DPI, sleep/wake, installer lifecycle, and 4/24-hour soak evidence remain open.
+
+## Stage 113 - Desktop Icon Force-Kill Recovery Closure
+
+- [x] Reproduced the previous failure with a real Windows force-kill test: icons stayed hidden after the old WMI watchdog was reclaimed at parent termination.
+- [x] Native icon writes now use 12 bounded Explorer retries; probes use 3 retries; boot recovery starts the watchdog before probing and retries verified visible state.
+- [x] The watchdog uses a temporary PowerShell file launched by interactive `cmd.exe /c start /b`, with WMI/direct PowerShell fallbacks.
+- [x] Force-kill regression verifies hide, kill, restore, same-profile restart, settings persistence, and `idle` desktop status.
+- [x] Verification: Node 243/243, component 7/7, lint, build, force-kill E2E 1/1, clean/safe E2E 2/2, scene E2E 1/1, packaged smoke 1/1, and final Windows `HideIcons=0`, Explorer 1, Project D 0.
+- [x] Rebuilt `release\\win-unpacked\\Project D.exe` and `release\\ProjectD-0.3.0-dev.0-Setup.exe`.
+- [ ] Packaged executable force-kill, physical multi-display/DPI, sleep/wake, installer lifecycle, and 4/24-hour soak remain open.
+
+## Stage 114 - Early Boot Desktop Icon Recovery and Packaged Exit QA
+
+- [x] Desktop recovery watchdog is now armed immediately after Electron `ready`, before database, renderer, tray, or wallpaper services initialize.
+- [x] `DesktopController` reuses the early watchdog instead of creating a second supervisor, and performs an early icon probe with verified visible-state recovery.
+- [x] This closes the startup-failure window where a crash before `bootRecoveryCheck()` could leave Windows `HideIcons=1`.
+- [x] Packaged smoke now validates the real QA-token process tree and shutdown marker when Windows does not deliver a stale Electron child exit event.
+- [x] Verification: Node 245/245, component 7/7, lint, build/typecheck, force-kill E2E 1/1, clean desktop E2E 1/1, organizer safe-restore E2E 1/1, packaged smoke pass, and final Windows icon/taskbar probe pass.
+- [x] Final native state: desktop icons visible, taskbar visible, Explorer healthy, and no Project D process remains.
+- [x] Rebuilt `release\\win-unpacked\\Project D.exe` (225,488,384 bytes) and `release\\ProjectD-0.3.0-dev.0-Setup.exe` (152,898,152 bytes).
+- [ ] Packaged force-kill evidence, physical multi-display/DPI, sleep/wake, installer lifecycle, and 4/24-hour soak remain open.
+
+## Stage 115 - Packaged Process Exit Residual Closure
+
+- [x] Packaged smoke exposed a real Windows residual: `shutdown completed` was logged while a `Project D.exe` PID remained alive.
+- [x] Shutdown now avoids a second blocking `app.quit()` after the guarded `before-quit` cleanup and schedules a referenced one-second process termination fallback after all cleanup is complete.
+- [x] The QA smoke report distinguishes expected forced termination from an unclean crash only when the shutdown markers are present and the QA-token process tree is empty.
+- [x] Verification: rebuilt package, packaged smoke pass, no error log entries, native desktop icons visible, taskbar visible, Explorer healthy, and Project D process count 0.
+- [ ] Packaged executable force-kill evidence, physical multi-display/DPI, sleep/wake, installer lifecycle, and 4/24-hour soak remain open.
+
+## Stage 116 - V6 Scene State Feedback and Desktop Icon Regression Verification
+
+- [x] Workspace scenes now persist and restore the selected pet character id alongside outfit, personality, talk frequency, and action settings.
+- [x] Scene Surface now shows current pet identity, performance profile, weather context, wallpaper preview, and saved-scene state badges instead of treating a scene as only a wallpaper shortcut.
+- [x] Applying a scene refreshes the display mapping probe and emits a readable success state; the Electron regression verifies pet, weather, outfit, personality, and performance restoration through the real IPC path.
+- [x] Replaced a brittle organizer E2E role locator that matched both the rail entry and top-level action; scene and organizer E2E now use stable rail/action selectors.
+- [x] Verification: build, Node 246/246, component 7/7, lint, scene E2E 2/2, organizer E2E 1/1, desktop icon/clean desktop/force-kill E2E 3/3, and live Windows probes (70 icons visible, taskbar visible) pass.
+- [x] Full Electron suite rerun with a 20-minute budget passes 32/32 serially in about 12.1 minutes, including AI fallback, duplicate launch, white-screen recovery, organizer, tray, pet matrix, scene restore, search, wallpaper/Live Photo, weather, and force-kill recovery.
+- [ ] Remaining packaged force-kill evidence, physical display/DPI, sleep/wake, installer lifecycle, and 4/24-hour soak evidence remain open.
+
+## Stage 117 - V6 Scene Display Map and Visual Evidence
+
+- [x] Scene Surface now includes a compact Display Map that shows each connected display, primary status, resolution, Windows scale factor, wallpaper mapping, and Cover/Contain fit mode.
+- [x] Display Map is built from the existing live `getWallpaperDisplays()` IPC data; it introduces no second display model and remains read-only.
+- [x] Scene application feedback now exposes the restored scene name, performance profile, and pet identity in one stable success message.
+- [x] Real Electron screenshot evidence captured at `artifacts-e2e-v6/scene-display-map/01-scene-display-map.png` and visually inspected over the wallpaper stage.
+- [x] Verification: build/typecheck, Node 246/246, component 7/7, lint, scene E2E 2/2, packaged `dist`, packaged smoke, `git diff --check`, and final Windows icon/taskbar/process probe pass.
+- [ ] The screenshot is single-machine evidence; physical dual/triple display, mixed DPI, portrait display, hot-plug, sleep/wake, and long soak gates remain open.
+
+## Stage 118 - Native Desktop Icon Recovery Guard and Assistant Readability
+
+- [x] Added a live `DesktopIconRecoveryGuard` that probes the real Explorer icon list while Project D is idle and restores hidden icons only when the app does not own desktop takeover.
+- [x] Added fatal-process recovery for uncaught exceptions and unhandled rejections; native desktop icons and taskbar are restored before the process terminates.
+- [x] Added an Electron regression for externally hidden icons during an idle session and reran the force-kill recovery path; both pass against the real Windows shell.
+- [x] Increased Assistant Surface glass contrast so its header, context strip, chat history, and input remain readable over bright wallpapers while the wallpaper remains visible.
+- [x] Evidence refreshed at `artifacts-e2e-v6/assistant-context/01-assistant-context.png`; visual inspection confirms the context chips and local fallback status are legible.
+- [x] Verification: typecheck, build, targeted lint, icon/failsafe tests 14/14, idle icon guard E2E 1/1, force-kill E2E 1/1, Assistant E2E 1/1.
+- [x] Final correction pass: the clean-desktop race was fixed by consulting live controller/escape-guard state instead of stale cached mode; weather matrix sampling was stabilized by shortening weather-layer fades and waiting for the target layer.
+- [x] Final targeted verification: Node 248/248, component 7/7, lint, typecheck, build, weather matrix repeat 6/6, clean/force-kill/icon E2E 3/3, Assistant E2E 1/1, packaged smoke pass, and native Windows probe pass (70 icons, taskbar visible, Explorer healthy).
+- [x] Rebuilt `release\\win-unpacked\\Project D.exe` and `release\\ProjectD-0.3.0-dev.0-Setup.exe` after the final recovery and weather changes.
+- [ ] The last full Electron-suite rerun ended without a Playwright summary and left a test-owned QA process; that process was explicitly cleaned. Do not claim a final 33/33 full-suite result from this run until it is rerun with a bounded harness.
+- [ ] Packaged force-kill from the installed shortcut, physical multi-display/DPI, sleep/wake, installer lifecycle, and 4/24-hour soak remain external gates.
+
+## Stage 120 - Fail-Safe Boot Recovery and Native Desktop Visibility
+
+- [x] Fixed the recovery loop that restored desktop icons and then immediately hid them again because stale `desktop_state=active` was followed by `auto_activate_on_start=true`.
+- [x] When an unexpected previous takeover is detected, boot recovery now restores the native desktop and disables automatic takeover plus launch-at-login until the user explicitly enables it again.
+- [x] Restored the current machine state: `HideIcons=0`, 70 native desktop icons visible, taskbar visible, Explorer healthy, and no Project D process remaining.
+- [x] Packaged shortcut force-kill verification passed all 8 checks: shortcut creation, packaged readiness, icon recovery, taskbar recovery, same-shortcut restart, final native visibility, process cleanup, and Explorer health.
+- [x] Packaged normal startup/exit smoke passed with readiness, shutdown completion, no error-log entries, and zero QA-token processes.
+- [x] Serial Electron verification passed: desktop icon guard 1/1 and Assistant E2E 3/3; the Assistant visual evidence remains at `artifacts-e2e-v6/assistant-context/01-assistant-context.png`.
+- [x] Verification: Node 250/250, component 7/7, typecheck, lint, build, dist, packaged smoke, packaged force-kill, and native Windows probes pass. The renderer chunk-size warning remains non-blocking.
+- [ ] Physical multi-display/DPI, portrait/hot-plug, sleep/wake, installer lifecycle, and 4/24-hour soak remain external gates.
+
+## Stage 119 - V6 Assistant Companion Context and Bounded Electron Gate
+
+- [x] Added a bounded Electron runner at `scripts/qa-e2e-bounded.cjs` with a machine-readable report, timeout, stdout/stderr capture, final Playwright counts, and cleanup limited to Project D QA-token processes.
+- [x] Added a pure Playwright result summarizer and a Node regression proving retries are counted once and skipped/timed-out cases remain distinct.
+- [x] Assistant Surface now shows the selected character's real idle asset beside the context header; hidden pets use a quiet placeholder instead of a broken or unrelated image.
+- [x] Captured updated assistant evidence at `artifacts-e2e-v6/assistant-context/01-assistant-context.png`; the wallpaper remains the dominant visual and the Luna Spring portrait is legible.
+- [x] Verification: Node 249/249, component 7/7, lint, typecheck, build, assistant E2E 3/3, and complete bounded Electron E2E 33/33 in about 13.2 minutes.
+- [x] Bounded report: `artifacts\\qa\\e2e-bounded-2026-07-29T12-46-38-787Z\\report.json`; failed 0, skipped 0, timed out 0, remaining QA processes 0.
+- [ ] Packaged force-kill from the installed shortcut, physical multi-display/DPI, sleep/wake, installer lifecycle, and 4/24-hour soak remain external gates.

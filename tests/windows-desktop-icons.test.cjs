@@ -4,10 +4,37 @@ const path = require("node:path");
 const test = require("node:test");
 
 const {
+  DesktopIconRecoveryGuard,
   buildDesktopIconProbeScript,
   buildDesktopIconSyncScript,
   createDesktopIconRecoveryBatch
 } = require("../dist/main/windows-desktop-icons.js");
+
+test("desktop icon recovery guard repairs hidden icons only outside owned desktop mode", async () => {
+  let hiddenAllowed = false;
+  let probes = 0;
+  let restores = 0;
+  const guard = new DesktopIconRecoveryGuard({
+    isHiddenAllowed: () => hiddenAllowed,
+    probe: async () => {
+      probes += 1;
+      return { visible: false, iconCount: 70, shellViewHandle: 1, listViewHandle: 2 };
+    },
+    restore: async () => {
+      restores += 1;
+      return { visible: true, iconCount: 70, shellViewHandle: 1, listViewHandle: 2 };
+    }
+  });
+
+  await guard.check();
+  assert.equal(probes, 1);
+  assert.equal(restores, 1);
+
+  hiddenAllowed = true;
+  await guard.check();
+  assert.equal(probes, 1);
+  assert.equal(restores, 1);
+});
 
 test("desktop icon synchronization verifies the real Explorer list view", () => {
   const show = buildDesktopIconSyncScript(true);
@@ -25,6 +52,13 @@ test("desktop icon synchronization verifies the real Explorer list view", () => 
   const probe = buildDesktopIconProbeScript();
   assert.match(probe, /\$desired = \$null/);
   assert.doesNotMatch(probe, /Set-ItemProperty/);
+});
+
+test("desktop icon probes and writes use bounded shell retries", () => {
+  const probe = buildDesktopIconProbeScript();
+  assert.match(probe, /\$attempt -le 3/);
+  assert.match(probe, /\$attempt -le 3/);
+  assert.match(buildDesktopIconSyncScript(true, 12), /\$attempt -le 12/);
 });
 
 test("manual recovery uses Explorer's icon command without killing Explorer", () => {

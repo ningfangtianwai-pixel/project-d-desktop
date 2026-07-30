@@ -1938,6 +1938,25 @@
 - Commands and results: `pnpm.cmd typecheck` pass; targeted ESLint pass; `pnpm.cmd build` pass with the existing 555.29 kB renderer chunk warning; `wallpaper-library-disposable.spec.ts` 1/1; visual inspection pass; no Electron process remained.
 - No commit, tag, or remote push was made.
 
+## 2026-07-29 - Stage 115 Packaged Process Exit Residual Closure
+
+- Packaged smoke initially caught a genuine lifecycle issue: after `shutdown completed`, a Project D PID remained alive. `Get-CimInstance` captured the exact PID and QA token, so this was not treated as a false positive.
+- The first `app.exit(0)` attempt did not clear the native process. The final shutdown path now schedules a referenced one-second `SIGKILL` fallback only after all application cleanup and native desktop restoration have completed. This prevents the invisible process that previously made the app difficult to close.
+- The packaged smoke contract now accepts the expected Windows forced-termination exit code only with both shutdown markers and an empty QA-token process tree. Ordinary nonzero exits remain failures.
+- Final result: `pnpm.cmd dist` passed; `pnpm.cmd qa:packaged-smoke` passed; report `artifacts\\qa\\packaged-smoke-2026-07-29T09-12-33-317Z\\report.json`; final native probe reported 70 visible desktop icons, taskbar visible, Explorer PID 9288, Project D PID 0.
+- No commit, tag, or remote push was made.
+
+## 2026-07-29 - Stage 114 Early Boot Desktop Icon Recovery and Packaged Exit QA
+
+- User reported that native desktop icons disappeared again. The live machine probe showed Explorer healthy, 68-70 icons visible, the taskbar visible, and no Project D process; the remaining risk was the startup crash window before the old recovery check ran.
+- Added `armEarlyDesktopRecovery()` in `src/main/main.ts`. It starts the file-based interactive watchdog and probes/restores native icons immediately after Electron `ready`, before core service initialization. `DesktopController` receives and reuses that watchdog PID.
+- Added a regression contract proving early recovery is armed before service initialization and that the controller adopts the existing watchdog.
+- Two desktop E2E suites were first started in parallel and one clean-desktop assertion was correctly rejected because both tests were mutating the same real Windows shell. The same tests were then rerun serially: force-kill 1/1, clean desktop 1/1, organizer safe restore 1/1.
+- Rebuilt the packaged artifact. Packaged smoke initially exposed a Windows child-process exit-event false negative: logs showed `shutdown completed` and the Project D process was gone, but Node did not receive the exit event. The smoke script now checks the real QA-token process tree plus the shutdown marker. The corrected packaged smoke passed with no error log entries.
+- Final Windows probe: desktop icons visible, taskbar visible, Explorer count 1, Project D count 0.
+- Commands: `pnpm.cmd build`, `pnpm.cmd test` 245/245, `pnpm.cmd test:component` 7/7, `pnpm.cmd lint`, force-kill/clean/safe E2E serially, `pnpm.cmd dist`, and `pnpm.cmd qa:packaged-smoke` all passed.
+- No commit, tag, or remote push was made.
+
 ## 2026-07-29 - Stage 107 V6 Live Photo Pairing and Recovery Evidence
 
 - Added two QA-only environment keys for a cover/video pair. The seam is active only when the app is not packaged and the explicit QA run marker is present; without both paths the existing native file-picker flow remains unchanged.
@@ -1968,3 +1987,110 @@
 - The report now calculates CPU median/P95 and working-set peak from samples belonging to the current profile. Final artifact: `artifacts-e2e-v6/performance-profile-matrix.json`.
 - Commands and results: `pnpm.cmd typecheck` pass; targeted ESLint pass; `pnpm.cmd build` pass with the existing 555.71 kB renderer chunk warning; performance E2E 1/1; no Electron process remained.
 - No commit, tag, or remote push was made.
+
+## 2026-07-29 - Stage 110 Desktop Icon and Taskbar Recovery Hotfix
+
+- Reproduced and investigated the reported Windows incident. Project D had hidden the native desktop icon list and taskbar for desktop/clean mode; the desktop files were still present and Explorer was responsive. The observed state was `HideIcons=1`/hidden icon list after an unexpected application termination.
+- Restored the real machine with the compiled recovery adapters. The final probe reported `visible=true`, `iconCount=68`, taskbar `visible=true`, and Explorer remained alive. No Project D process remained.
+- Root cause was the old detached PowerShell watchdog's lifetime: Windows/Electron could reclaim the child during a hard termination before it executed its restore script. This is a recovery-path bug, not a file deletion or Explorer data-loss bug.
+- Updated `src/main/windows-desktop-icons.ts` to create the watchdog with `Invoke-CimMethod -ClassName Win32_Process -MethodName Create`, which places the watcher outside Electron's process job. The watchdog now explicitly polls the parent PID, waits a bounded grace period, and restores both desktop icons and the taskbar with the existing bounded retries. A detached fallback remains for systems without CIM support.
+- Added `TaskbarRecoveryGuard` in `src/main/windows-taskbar.ts`. It is dormant unless Project D owns a hidden transition, and it repairs only an unexpected visibility drift after clean mode has ceased to be valid.
+- Clean desktop now rejects activation if the configured exit shortcut cannot be registered. This closes the dangerous path where the UI could be hidden without a working local recovery shortcut.
+- Commands and results: `pnpm.cmd build:main` pass; `pnpm.cmd exec vue-tsc --noEmit` pass; `pnpm.cmd exec tsc -p tsconfig.node.json --noEmit` pass; `pnpm.cmd exec tsc -p tsconfig.server.json` pass; targeted ESLint pass; recovery tests 12/12; `pnpm.cmd build` pass; real WMI watchdog launch returned PID 1532 and exited after the parent; final desktop/taskbar probe pass.
+- Packaged verification: `pnpm.cmd dist` rebuilt the shortcut target `release\\win-unpacked\\Project D.exe` and `release\\ProjectD-0.3.0-dev.0-Setup.exe`. An isolated packaged QA run started version `0.3.0-dev.0`, completed desktop scan, quit cleanly, left zero packaged processes, and the final native icon/taskbar probe remained visible.
+- Final regression: `pnpm.cmd test` 241/241 and `pnpm.cmd lint` passed. The existing Vite warning about the approximately 555.71 kB renderer chunk remains a performance optimization item, not a build failure.
+- The current working tree contains these hotfix edits plus the pre-existing untracked QA directories `artifacts-e2e-v6/` and `dist-v6-qa/`. No commit or remote push was made.
+
+## 2026-07-29 - Stage 111 V6 Ambient File Space and Task Readability
+
+- Audited the V6 visual baseline against the reference direction. Immersive mode showed wallpaper, weather, and four entries, but no desktop content until the user opened the organizer. That made the experience feel like a wallpaper viewer rather than a natural desktop extension.
+- Added `src/renderer/components/AmbientFileSpace.vue`. It presents up to four visible groups and six files per group as native-like desktop icons on a quiet, low-opacity glass surface. Overflow remains explicit through a single “整理” route; empty groups are not rendered.
+- Reused the existing `DesktopFileRecord`, native `iconDataUrl`, real folder art, selection/open/context-menu handlers, container accents, and Organizer Surface. The component has no filesystem write path and cannot bypass ActionPlan confirmation.
+- Added `tests/component/ambient-file-space.test.ts` for file/group caps, folder rendering, double-click routing, and organizer handoff.
+- Added `tests/e2e/ambient-file-space.spec.ts`. With an isolated desktop fixture, it entered immersive mode, verified real files and the folder visual, captured `artifacts-e2e-v6/ambient-file-space-visual/01-immersive-files.png`, opened Organizer, and captured `02-organizer-entry.png`.
+- Improved `src/renderer/styles.css` task/safe states with a subtle full-surface veil and 2px blur. The treatment is pointer-transparent and does not apply to Native, Immersive, or Clean, so wallpaper remains the visual subject outside a task.
+- The first visual review caught the organizer surface was too low-contrast over the wallpaper; the task veil was added, rebuilt, and the organizer visual regression passed afterward.
+- Commands and results: `pnpm.cmd build` pass; Node tests 242/242; component tests 7/7; full ESLint pass; ambient E2E 1/1; organizer visual E2E 1/1; weather matrix 2/2; `git diff --check` pass; no Electron process residue.
+- Packaged verification: `pnpm.cmd dist` rebuilt the current shortcut target and installer. An isolated packaged run completed with `application quitting` in its app log and zero packaged executable processes afterward; the final native icon/taskbar state remained healthy.
+- No commit, tag, remote push, or material asset change was made. The current working tree still includes the earlier desktop recovery hotfix and untracked QA evidence directories.
+
+## 2026-07-29 - Stage 112 V6 Scene Wallpaper Surface
+
+- Connected `SceneSurface.vue` to the existing wallpaper library. Current wallpaper art, scene cards, and focused scene canvas now use real bundled posters or the app-owned `projectd-media:` thumbnail protocol.
+- Passed the current wallpaper id from `App.vue` and made scene loading/watch logic follow it, removing the stale-first-scene mismatch.
+- Kept the change renderer-only and schema-free. Component tests 7/7, scene visual E2E 1/1, and production build passed.
+- Rebuilt the packaged artifact after this iteration. No commit, tag, or remote push was made.
+
+## 2026-07-29 - Stage 113 Desktop Icon Force-Kill Recovery Closure
+
+- Reproduced the missing-icon regression with real Windows E2E. The old WMI watchdog produced a PID but was reclaimed at parent termination, leaving `HideIcons=1`.
+- Changed icon writes to 12 bounded Explorer retries and probes to 3 retries. Boot recovery now starts supervision before the first probe and forces a verified visible-state retry after shell races.
+- Changed the watchdog launch to a temporary `.ps1` through `cmd.exe /d /c start "" /b powershell.exe`. It polls the parent, restores icons and taskbar in the logged-in Explorer session, removes the temporary script, and leaves WMI/direct PowerShell as fallbacks.
+- Added the exact hide -> force-kill -> restore -> restart assertion to `tests/e2e/force-kill-recovery.spec.ts`.
+- Results: `pnpm.cmd build`, `pnpm.cmd lint`, `pnpm.cmd test` 243/243, component 7/7, force-kill E2E 1/1, clean/safe E2E 2/2, scene E2E 1/1, `pnpm.cmd qa:packaged-smoke`, and `pnpm.cmd dist` all passed.
+- Final Windows state: `HideIcons=0`, Explorer count 1, Project D count 0. Rebuilt `release\\win-unpacked\\Project D.exe` and `release\\ProjectD-0.3.0-dev.0-Setup.exe`.
+- Remaining evidence: packaged executable force-kill, physical display/DPI, sleep/wake, installer lifecycle, and long soak. No commit, tag, or remote push was made.
+
+## 2026-07-29 - Stage 116 V6 Scene State Feedback and Desktop Icon Regression Verification
+
+- Audited the scene/settings chain and found that scenes did not persist `pet.characterId`, while the Scene Surface did not expose the current performance profile or pet identity. Added the character id to the shared scene contract and save payload.
+- Connected the renderer to the effective performance profile and current pet settings. Scene cards now expose static/dynamic wallpaper, performance, pet identity/personality, and the focused preview renders the actual character asset.
+- Applying a scene now refreshes the display probe and reports a stable success message. Added a real Electron test that changes state after saving and verifies IPC restore of rain, intensity, Luna Q, cheerful personality, raincoat, and quality mode.
+- Full Node tests passed at 246/246, component tests 7/7, lint passed, scene E2E 2/2, organizer E2E 1/1, and desktop icon/clean/force-kill E2E 3/3 passed serially. The first full Electron run exceeded the 10-minute command budget because the suite contains 32 real shell tests. After fixing the duplicate-role organizer locator, the full serial Electron suite reran with a 20-minute budget and passed 32/32 in about 12.1 minutes.
+- Live Windows probe after the runs: 70 native desktop icons visible, taskbar visible, Explorer healthy. No changes were made to user files, no commit/tag/push was performed.
+
+## 2026-07-29 - Stage 117 V6 Scene Display Map and Visual Evidence
+
+- Added a read-only Display Map to `SceneSurface.vue`. It consumes the existing `WallpaperDisplayInfo[]` stream and renders one card per display with primary marker, resolution, scale factor, current wallpaper label, and Cover/Contain mode.
+- Kept the display map subordinate to the wallpaper: it is a compact glass strip with no extra page, no new IPC channel, no filesystem write, and no second display state model.
+- Added responsive styles for narrow windows and a stable screenshot assertion. Evidence: `artifacts-e2e-v6/scene-display-map/01-scene-display-map.png`; visual review confirmed the map remains legible without replacing the wallpaper composition.
+- Fixed a type error caught by the first build (`WallpaperLibraryItem.label` is the canonical field), then reran the build successfully. Also added the final scene feedback assignment so duplicate legacy feedback cannot overwrite the restored-state message.
+- Commands and results: `pnpm.cmd build` pass; `pnpm.cmd test` 246/246; `pnpm.cmd test:component` 7/7; `pnpm.cmd lint` pass; scene E2E 2/2; `pnpm.cmd dist` pass; `pnpm.cmd qa:packaged-smoke` pass with report `artifacts\\qa\\packaged-smoke-2026-07-29T10-37-20-217Z\\report.json`; `git diff --check` pass.
+- Final native probe: 70 desktop icons visible, taskbar visible, Explorer count 1, Project D/Electron count 0. No commit, tag, or remote push was made.
+
+## 2026-07-29 - Stage 118 Native Desktop Icon Recovery Guard and Assistant Readability
+
+- User reported the native desktop software icons disappeared again. The live probe at the start of this cycle showed Explorer healthy, 70 icons visible, taskbar visible, and no Project D process; this ruled out data loss and narrowed the fix to stale native visibility state.
+- Added `DesktopIconRecoveryGuard` in `src/main/windows-desktop-icons.ts`. It polls the real `SHELLDLL_DefView` list while the app is idle and repairs hidden icons without interfering with Project D-owned active takeover or clean desktop mode.
+- Added fatal-process handling in `src/main/main.ts`. `uncaughtException` and `unhandledRejection` now schedule direct icon/taskbar restoration before bounded process termination, covering white-screen, initialization, and shutdown-deadline paths.
+- Added `tests/e2e/desktop-icons-guard.spec.ts`. It hides the real Windows icon list while an idle Electron session is alive and verifies automatic restoration. The existing force-kill E2E was rerun after the change and still passes.
+- The targeted icon/failsafe suite passed 14/14. `pnpm.cmd typecheck`, `pnpm.cmd build`, targeted ESLint, idle icon guard E2E 1/1, force-kill E2E 1/1, and Assistant E2E 1/1 passed. The existing Vite warning remains the known renderer chunk-size warning, not a build failure.
+- Assistant Surface was also darkened slightly and its context strip strengthened after visual review showed low contrast over bright wallpaper. Refreshed evidence is `artifacts-e2e-v6/assistant-context/01-assistant-context.png`.
+- No user files were moved or deleted. No commit, tag, merge, or remote push was made.
+
+## 2026-07-29 - Stage 120 Fail-Safe Boot Recovery and Native Desktop Visibility
+
+- Investigated the report that native desktop software icons disappeared again. The live Windows shell was healthy, but the persisted Project D state still contained `desktop_state=active`, `is_active=true`, `auto_activate_on_start=true`, and `launch_at_login=true`. That combination could restore icons during boot recovery and then hide them again 900 ms later.
+- Updated `src/main/desktop-controller.ts`: when a stale active/takeover state is recovered, the controller restores native icons first, clears the active state, and disables automatic takeover plus launch-at-login. This is a fail-safe pause requiring explicit user confirmation before desktop takeover resumes.
+- Added a regression contract to `tests/desktop-icon-failsafe.test.cjs` for the automatic-takeover suppression path.
+- Repaired the current user database state to `desktop_state=idle`, `is_active=false`, `clean_desktop_mode=false`, `auto_activate_on_start=false`, `launch_at_login=false`, and `desktop_auto_activation_suppressed=true`. No user files were moved or deleted.
+- Native repair command result: desktop icons `visible=true`, `iconCount=70`, Explorer handles valid; taskbar `visible=true`, one taskbar window.
+- Commands and results:
+  - `pnpm.cmd typecheck` pass.
+  - `pnpm.cmd test` pass, 250/250.
+  - `pnpm.cmd test:component` pass, 7/7.
+  - `pnpm.cmd lint` pass.
+  - `pnpm.cmd build` pass; existing Vite warning remains for the approximately 567 kB renderer chunk.
+  - `pnpm.cmd dist` pass; Electron 43.1.1 package rebuilt.
+  - `pnpm.cmd qa:packaged-smoke` pass: readiness, clean shutdown, no error log entries, zero QA processes.
+  - `pnpm.cmd qa:packaged-force-kill` pass, all 8 checks true. Report: `artifacts\\qa\\packaged-force-kill-2026-07-29T13-26-57-885Z\\report.json`.
+  - Serial `node scripts/qa-e2e-bounded.cjs --grep desktop-icons` pass, 1/1. Serial `--grep assistant` pass, 3/3. The earlier concurrent run produced one first-window closure; it was rerun serially and is not counted as a product failure.
+- Visual evidence: `artifacts-e2e-v6/assistant-context/01-assistant-context.png` was inspected after the rebuild; wallpaper remains dominant and the assistant context capsule does not occlude the task surface.
+- No commit, tag, merge, or remote push was made.
+
+## 2026-07-29 - Stage 118 Verification Correction and Final Native Probe
+
+- The first expanded Electron regression exposed two testable issues rather than silently accepting them: clean desktop could restore icons because the recovery guard read stale cached mode, and the weather matrix could sample during the old 800 ms cross-fade.
+- Fixed the clean-desktop guard to use the live desktop controller mode plus the active Escape guard. Reduced weather-layer transition time to 420 ms and changed the matrix test to wait for the expected layer opacity before sampling.
+- Targeted results after the fixes: clean/force-kill/icon recovery E2E 3/3, weather matrix repeat 6/6, Assistant Surface E2E 1/1. Node 248/248, component 7/7, lint, typecheck, build, and `git diff --check` passed.
+- Rebuilt the installer and ran `pnpm.cmd qa:packaged-smoke`: process exited cleanly, core readiness was logged, shutdown completed, and no error log entries were found.
+- Native Windows probe after cleanup: 70 desktop icons visible, taskbar visible, Explorer healthy, no Project D process, and no test-owned QA Electron process. The last full Electron rerun ended without a Playwright summary, so final full-suite 33/33 is intentionally not claimed.
+
+## 2026-07-29 - Stage 119 V6 Assistant Companion Context and Bounded Electron Gate
+
+- Added `scripts/qa-e2e-bounded.cjs`. It runs the serial Electron suite with a 20-minute bound, captures stdout/stderr and Playwright JSON, summarizes final test states, and removes only processes carrying `--projectd-qa-run=`. A silent exit can no longer be mistaken for a green gate.
+- Added `scripts/e2e-report.cjs` plus `tests/e2e-bounded-report.test.cjs`; retries are counted once, and passed, failed, skipped, flaky, timed-out, and unknown states are recorded separately.
+- Added the selected pet's real idle portrait to `AssistantSurface.vue`. A visible pet uses its actual local action asset; a hidden pet renders a neutral Sparkles placeholder. No network asset or new IPC route was introduced.
+- The targeted assistant run passed 3/3. The complete serial run passed 33/33 in about 13.2 minutes. Report: `artifacts\\qa\\e2e-bounded-2026-07-29T12-46-38-787Z\\report.json`; no test-owned QA process remained.
+- `pnpm.cmd typecheck`, `pnpm.cmd test` 249/249, `pnpm.cmd test:component` 7/7, `pnpm.cmd lint`, `pnpm.cmd build`, and `git diff --check` passed. The existing renderer chunk warning is approximately 566.59 kB after minification.
+- No user files were moved or deleted. No commit, tag, merge, or remote push was made.
