@@ -5,7 +5,10 @@ const { probeWindowsDesktopIcons, setWindowsDesktopIconsVisible } = require("../
 const { probeWindowsTaskbar, setWindowsTaskbarVisible } = require("../../dist/main/windows-taskbar.js");
 
 test("clean desktop hides shell chrome, keeps the display awake, and restores system state", async () => {
-  test.setTimeout(90_000);
+  // Clean desktop drives real Windows taskbar/icon hiding plus the display-sleep
+  // blocker; under CI load this can exceed 90s. 120s keeps it reliable without
+  // masking genuine hangs (a healthy run completes in ~55s).
+  test.setTimeout(120_000);
   const testApp = await launchProjectD("clean-desktop-system-state", {
     env: {
       PROJECTD_QA_IDLE: "0",

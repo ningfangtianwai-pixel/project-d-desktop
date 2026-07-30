@@ -13,7 +13,9 @@ test("organizer safety restore works from the shell and restores Explorer icons"
     await testApp.window.evaluate(() => window.projectD.activateDesktop());
     await expect(testApp.window.locator(".organizer-surface")).toBeVisible();
 
-    await testApp.window.locator('button[title="安全归位"]').click({ noWaitAfter: true }).catch((error: unknown) => {
+    const restoreButton = testApp.window.locator(".organizer-command-panel button", { hasText: "安全归位" });
+    await expect(restoreButton).toBeVisible();
+    await restoreButton.click({ noWaitAfter: true }).catch((error: unknown) => {
       if (!String(error).includes("closed")) throw error;
     });
     await expect(testApp.window.locator(".app-shell")).toBeVisible();

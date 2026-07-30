@@ -680,3 +680,57 @@ There is no current code blocker. Items above are ordered by acceptance risk and
 2. Run the complete serial Electron suite again after the final weather-layer test stabilization and record the actual total/pass/fail/skip counts.
 3. Perform the packaged shortcut force-kill drill with a real installed shortcut, then verify native icons, taskbar, Explorer, and all Project D descendants.
 4. Continue physical multi-display/DPI, portrait/hot-plug, sleep/wake, installer lifecycle, and 4/24-hour soak evidence.
+
+## After V6.0 W1/W2 Immersive Shell Takeover and Overlay Retirement
+
+Completed in this stage (commits `f4d08b9`, `204afb6`):
+
+- W1 equivalence audit (`docs/V6.0_W1_等价性审计报告.md`) corrected the original Phase H
+  deletion scope: `PetPage` (`#/pet`) is the live companion window body and
+  `WallpaperPage` (`#/wallpaper`) is the only wallpaper workbench — both are retained.
+  Only `OverlayPage` (`#/overlay`) was a retirable legacy console.
+- W2 wiring: tray activation, startup autorun, demo autorun and `DESKTOP_ACTIVATE`
+  no longer create an overlay window. They call `enterImmersiveShell()`, which shows the
+  main shell and fits it to the primary work area, then broadcasts `ACTIVATE_DESKTOP`.
+- W2 capability parity: `OrganizerSurface` gained folder portals and rich file preview
+  (text / image / folder entries / metadata) with matching glassmorphism styles.
+- W2 retirement: `OverlayPage.vue`, `createOverlayWindow`, `closeOverlayWindow`,
+  `overlayWindow` state, the `#/overlay` trusted-route entry, the `"overlay"` window role
+  and 41 dead `.overlay-*` CSS rules are gone. `#/overlay` was removed from the
+  `assertTrustedSender` allowlists of nine IPC modules.
+- Fail-closed safety was migrated, not dropped: an unexpected close of the main shell
+  while the desktop is active now triggers `emergencyRestoreDesktop("shell-window-closed")`.
+
+Next:
+
+1. Re-run the packaged force-kill drill from a real installed shortcut now that the
+   overlay window is gone — the watchdog contract changed owner from overlay to main shell.
+2. Verify multi-display behaviour of `enterImmersiveShell()` / `reconcileDesktopRuntimeBounds`
+   on a physical mixed-DPI dual-display setup: the shell must follow the primary work area
+   on hot-plug and DPI change without covering the taskbar when the desktop is inactive.
+3. Decide the fate of `WallpaperPage` (`#/wallpaper`): W1 flagged its import / Live Photo /
+   per-display assignment / export capabilities as still absent from `SceneSurface`.
+   Either port them into a `WallpaperSurface` or formally keep the window as a workbench.
+4. Same decision for the legacy scene UI still hosted in Settings
+   (`CAPABILITY_MIGRATION_TABLE.scene.oldImplementationDeleted` is still `false`).
+
+### Environment hazard discovered — read before touching this repo
+
+The host `safe-delete` shim (`genie-safe-delete.cjs`) intercepts `fs.rmSync` /
+`fs.promises.rm` / `shutil.rmtree` and reroutes them to the Windows Recycle Bin.
+Its directory handling is destructive and unreliable:
+
+- It deleted the entire `src/` tree during this session (recovered from the Recycle Bin;
+  all 111 tracked files plus uncommitted edits were intact).
+- It repeatedly deleted `.git/refs/heads/codex/` when git pruned the empty ref directory,
+  leaving commits reachable only through `.git/logs/HEAD`.
+  Mitigation applied: `git pack-refs --all` — refs now live in a single `.git/packed-refs`
+  file, so there is no loose ref directory to destroy.
+- It breaks `vite build` (`emptyOutDir` on `dist/`) and `playwright test`
+  (`test-results/`) with `Error during a 'trash' operation: Some operations were aborted`.
+  Workaround: `mv dist .workbuddy/dist_stale_<ts>` / `mv test-results ...` before running,
+  never `rm -rf`.
+
+If a directory disappears unexpectedly, check
+`D:\$RECYCLE.BIN\S-1-5-21-...\` — `$I*` files hold the original path metadata and the
+matching `$R*` entries hold the content.
