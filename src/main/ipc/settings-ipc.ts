@@ -48,12 +48,12 @@ export function registerSettingsIpcHandlers(deps: SettingsIpcDependencies): void
   const { ipc, assertTrustedSender, getDatabase } = deps;
 
   ipc.handle(IPC_CHANNELS.SETTINGS_GET_ALL, (event): SettingsSnapshot | undefined => {
-    assertTrustedSender(event, ["", "#/settings", "#/overlay", "#/wallpaper", "#/pet"]);
+    assertTrustedSender(event, ["", "#/settings", "#/wallpaper", "#/pet"]);
     return getDatabase()?.getSettings();
   });
 
   ipc.handle(IPC_CHANNELS.SETTINGS_UPDATE, (event, patch: unknown): SettingsSnapshot => {
-    assertTrustedSender(event, ["", "#/settings", "#/overlay"]);
+    assertTrustedSender(event, ["", "#/settings"]);
     const validated = deps.validateSettingsPatch(patch);
     const settings = getDatabase()?.updateSettings(validated);
     if (!settings) throw new Error("Database is not initialized");
@@ -63,20 +63,20 @@ export function registerSettingsIpcHandlers(deps: SettingsIpcDependencies): void
   });
 
   ipc.handle(IPC_CHANNELS.STATE_GET, (event, key: unknown) => {
-    assertTrustedSender(event, ["", "#/settings", "#/overlay", "#/wallpaper", "#/pet"]);
+    assertTrustedSender(event, ["", "#/settings", "#/wallpaper", "#/pet"]);
     if (typeof key !== "string" || !READABLE_STATE_KEYS.has(key)) throw new Error("State key is not readable");
     return getDatabase()?.getAppState(key) ?? null;
   });
 
   ipc.handle(IPC_CHANNELS.STATE_SET, (event, key: unknown, value: unknown) => {
-    assertTrustedSender(event, ["", "#/settings", "#/overlay", "#/wallpaper", "#/pet"]);
+    assertTrustedSender(event, ["", "#/settings", "#/wallpaper", "#/pet"]);
     if (typeof key !== "string" || !WRITABLE_STATE_KEYS.has(key)) throw new Error("State key is not writable");
     if (typeof value !== "string" || value.length > 8_000) throw new Error("Invalid state value");
     getDatabase()?.setAppState(key, value);
   });
 
   ipc.handle(IPC_CHANNELS.WALLPAPER_LIBRARY_GET, (event) => {
-    assertTrustedSender(event, ["", "#/settings", "#/overlay", "#/wallpaper"]);
+    assertTrustedSender(event, ["", "#/settings", "#/wallpaper"]);
     return deps.getWallpaperLibrary();
   });
 
@@ -117,7 +117,7 @@ export function registerSettingsIpcHandlers(deps: SettingsIpcDependencies): void
   });
 
   ipc.handle(IPC_CHANNELS.WALLPAPER_APPLY, (event, wallpaperId: unknown): SettingsSnapshot => {
-    assertTrustedSender(event, ["", "#/settings", "#/overlay", "#/wallpaper"]);
+    assertTrustedSender(event, ["", "#/settings", "#/wallpaper"]);
     if (typeof wallpaperId !== "string" || wallpaperId.length > 80) throw new Error("Invalid wallpaper id");
     return deps.applyWallpaper(wallpaperId);
   });
@@ -129,7 +129,7 @@ export function registerSettingsIpcHandlers(deps: SettingsIpcDependencies): void
   });
 
   ipc.handle(IPC_CHANNELS.WEATHER_GET_CURRENT, async (event): Promise<CurrentWeather> => {
-    assertTrustedSender(event, ["", "#/settings", "#/overlay", "#/wallpaper", "#/pet"]);
+    assertTrustedSender(event, ["", "#/settings", "#/wallpaper", "#/pet"]);
     return deps.getWeather();
   });
 

@@ -480,13 +480,13 @@ export interface CapabilityMigrationEntry {
 }
 
 export const CAPABILITY_MIGRATION_TABLE: CapabilityMigrationEntry[] = [
-  { legacyId: "search", newId: "SearchSurface", equivalenceStatus: "equivalent", oldEntryPoint: "App+Overlay", newEntryPoint: "EdgeRail→SearchSurface", testCoverage: "verified", oldImplementationDeleted: false },
-  { legacyId: "organize", newId: "OrganizerSurface", equivalenceStatus: "equivalent", oldEntryPoint: "App+Overlay", newEntryPoint: "EdgeRail→OrganizerSurface", testCoverage: "verified", oldImplementationDeleted: false },
+  { legacyId: "search", newId: "SearchSurface", equivalenceStatus: "equivalent", oldEntryPoint: "App+Overlay", newEntryPoint: "EdgeRail→SearchSurface", testCoverage: "verified", oldImplementationDeleted: true },
+  { legacyId: "organize", newId: "OrganizerSurface", equivalenceStatus: "equivalent", oldEntryPoint: "App+Overlay", newEntryPoint: "EdgeRail→OrganizerSurface", testCoverage: "verified", oldImplementationDeleted: true },
   { legacyId: "scene", newId: "SceneSurface", equivalenceStatus: "equivalent", oldEntryPoint: "Overlay+Settings", newEntryPoint: "EdgeRail→SceneSurface", testCoverage: "verified", oldImplementationDeleted: false },
   { legacyId: "wallpaper", newId: "WallpaperSurface", equivalenceStatus: "partial", oldEntryPoint: "App+Overlay+WallpaperPage", newEntryPoint: "SceneSurface→WallpaperSurface", testCoverage: "pending", oldImplementationDeleted: false },
   { legacyId: "assistant", newId: "AssistantSurface", equivalenceStatus: "pending", oldEntryPoint: "ChatPanel+PetBubble", newEntryPoint: "EdgeRail→AssistantSurface", testCoverage: "pending", oldImplementationDeleted: false },
   { legacyId: "settings", newId: "SettingsWindow", equivalenceStatus: "equivalent", oldEntryPoint: "App+Tray", newEntryPoint: "Tray→SettingsWindow", testCoverage: "verified", oldImplementationDeleted: false },
-  { legacyId: "safe-restore", newId: "Tray+Hotkey", equivalenceStatus: "equivalent", oldEntryPoint: "Main+Overlay+Tray+Hotkey", newEntryPoint: "Tray+Hotkey", testCoverage: "verified", oldImplementationDeleted: false }
+  { legacyId: "safe-restore", newId: "Tray+Hotkey", equivalenceStatus: "equivalent", oldEntryPoint: "Main+Overlay+Tray+Hotkey", newEntryPoint: "Tray+Hotkey", testCoverage: "verified", oldImplementationDeleted: true }
 ];
 
 export interface PortalConfig {

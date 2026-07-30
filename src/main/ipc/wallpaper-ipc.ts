@@ -14,12 +14,12 @@ export interface WallpaperIpcDependencies {
 
 export function registerWallpaperIpcHandlers(deps: WallpaperIpcDependencies): void {
   deps.ipc.handle(IPC_CHANNELS.WALLPAPER_DISPLAYS_GET, (event) => {
-    deps.assertTrustedSender(event, ["", "#/settings", "#/overlay", "#/wallpaper"]);
+    deps.assertTrustedSender(event, ["", "#/settings", "#/wallpaper"]);
     return deps.getDisplays();
   });
 
   deps.ipc.handle(IPC_CHANNELS.WALLPAPER_DISPLAY_ASSIGN, (event, displayId: unknown, wallpaperId: unknown) => {
-    deps.assertTrustedSender(event, ["", "#/settings", "#/overlay", "#/wallpaper"]);
+    deps.assertTrustedSender(event, ["", "#/settings", "#/wallpaper"]);
     if (typeof displayId !== "string" || displayId.length > 80) throw new Error("Invalid display id");
     if (wallpaperId !== null && (typeof wallpaperId !== "string" || wallpaperId.length > 80)) {
       throw new Error("Invalid wallpaper id");
@@ -28,7 +28,7 @@ export function registerWallpaperIpcHandlers(deps: WallpaperIpcDependencies): vo
   });
 
   deps.ipc.handle(IPC_CHANNELS.WALLPAPER_DISPLAY_FIT, (event, displayId: unknown, fitMode: unknown) => {
-    deps.assertTrustedSender(event, ["", "#/settings", "#/overlay", "#/wallpaper"]);
+    deps.assertTrustedSender(event, ["", "#/settings", "#/wallpaper"]);
     if (typeof displayId !== "string" || displayId.length > 80) throw new Error("Invalid display id");
     if (fitMode !== "cover" && fitMode !== "contain") throw new Error("Invalid wallpaper fit mode");
     return deps.setDisplayFitMode(displayId, fitMode);

@@ -8,7 +8,8 @@ const root = path.resolve(__dirname, "..");
 test("all desktop renderer windows keep the sandbox and web security enabled", () => {
   const source = fs.readFileSync(path.join(root, "src", "main", "main.ts"), "utf8");
   const windows = source.match(/new BrowserWindow\s*\(/g) ?? [];
-  assert.ok(windows.length >= 5);
+  // main shell / settings / wallpaper / pet — the overlay window was retired in V6.
+  assert.ok(windows.length >= 4);
   assert.equal((source.match(/contextIsolation:\s*true/g) ?? []).length, windows.length);
   assert.equal((source.match(/nodeIntegration:\s*false/g) ?? []).length, windows.length);
   assert.equal((source.match(/sandbox:\s*true/g) ?? []).length, windows.length);

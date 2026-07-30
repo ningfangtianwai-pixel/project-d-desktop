@@ -23,18 +23,18 @@ export function registerSuggestionIpcHandlers(deps: SuggestionIpcDependencies): 
   const { ipc, assertTrustedSender } = deps;
 
   ipc.handle(IPC_CHANNELS.SUGGESTIONS_GET_LATEST, (event): SuggestionRecord | null => {
-    assertTrustedSender(event, ["", "#/settings", "#/overlay", "#/pet"]);
+    assertTrustedSender(event, ["", "#/settings", "#/pet"]);
     return deps.getLatestSuggestion();
   });
 
   ipc.handle(IPC_CHANNELS.SUGGESTIONS_DISMISS, async (event, suggestionId: unknown): Promise<void> => {
-    assertTrustedSender(event, ["", "#/overlay"]);
+    assertTrustedSender(event, [""]);
     if (typeof suggestionId !== "string" || suggestionId.length < 12 || suggestionId.length > 120) throw new Error("Invalid suggestion id");
     await deps.serializeOp(() => deps.dismissSuggestion(suggestionId));
   });
 
   ipc.handle(IPC_CHANNELS.SUGGESTIONS_GET_CONTROLS, (event): SuggestionDeliveryControls => {
-    assertTrustedSender(event, ["", "#/settings", "#/overlay"]);
+    assertTrustedSender(event, ["", "#/settings"]);
     return deps.getSuggestionControls();
   });
 
@@ -50,7 +50,7 @@ export function registerSuggestionIpcHandlers(deps: SuggestionIpcDependencies): 
   });
 
   ipc.handle(IPC_CHANNELS.SUGGESTIONS_SET_ENABLED, async (event, enabled: unknown): Promise<void> => {
-    assertTrustedSender(event, ["", "#/settings", "#/overlay"]);
+    assertTrustedSender(event, ["", "#/settings"]);
     if (typeof enabled !== "boolean") throw new Error("Invalid suggestion enabled state");
     await deps.serializeOp(() => deps.setSuggestionEnabled(enabled));
   });

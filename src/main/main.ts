@@ -76,8 +76,7 @@ if (safeRendererMode || qaSoftwareRenderer) {
 
 let mainWindow: BrowserWindow | null = null;
 let settingsWindow: BrowserWindow | null = null;
-let overlayWindow: BrowserWindow | null = null;
-let overlayCloseWasExpected = false;
+let shellCloseWasExpected = false;
 let petWindow: BrowserWindow | null = null;
 let wallpaperWindow: BrowserWindow | null = null;
 const wallpaperWindows = new Map<string, BrowserWindow>();
@@ -270,7 +269,6 @@ function scheduleQaRendererFaultInjection(): void {
   const windowsByRole: Partial<Record<WindowRole, BrowserWindow | null>> = {
     main: mainWindow,
     settings: settingsWindow,
-    overlay: overlayWindow,
     wallpaper: wallpaperWindow,
     pet: petWindow
   };
@@ -370,7 +368,6 @@ function assertTrustedIpcSender(event: IpcMainInvokeEvent, allowedHashes: readon
     const windowByHash: Record<string, BrowserWindow | null> = {
       "": mainWindow,
       "#/settings": settingsWindow,
-      "#/overlay": overlayWindow,
       "#/pet": petWindow,
       "#/wallpaper": wallpaperWindow
     };
@@ -450,7 +447,16 @@ function createWindow(): BrowserWindow {
   });
 
   window.on("closed", () => {
+    const unexpectedCloseWhileActive = !shellCloseWasExpected
+      && !shutdownInProgress
+      && desktopController?.getStatus().mode === "active";
+    shellCloseWasExpected = false;
     mainWindow = null;
+    logger?.info("desktop-state", "shell window destroyed");
+    if (unexpectedCloseWhileActive) {
+      logger?.warn("desktop-state", "shell window closed while desktop was active; restoring native desktop");
+      void emergencyRestoreDesktop("shell-window-closed");
+    }
   });
 
   return window;
@@ -468,6 +474,18 @@ function showMainWindow(): void {
   mainWindow.show();
   mainWindow.focus();
   sendMenuCommand(MENU_COMMANDS.SHOW_MAIN);
+}
+
+// The immersive shell replaces the retired overlay window: on activation it takes
+// over the full primary work area so the desktop experience stays edge-to-edge.
+function enterImmersiveShell(): void {
+  showMainWindow();
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const workArea = screen.getPrimaryDisplay().workArea;
+  if (mainWindow.isMaximized()) mainWindow.unmaximize();
+  mainWindow.setBounds(workArea, false);
+  mainWindow.focus();
+  logger?.info("desktop-state", "immersive shell entered", { workArea });
 }
 
 function showMainWindowAndFocusSearch(): void {
@@ -530,77 +548,6 @@ function createSettingsWindow(): BrowserWindow {
   });
 
   settingsWindow = window;
-  return window;
-}
-
-function createOverlayWindow(safeMode: boolean): BrowserWindow {
-  if (overlayWindow && !overlayWindow.isDestroyed()) {
-    overlayWindow.show();
-    overlayWindow.focus();
-    return overlayWindow;
-  }
-
-  const display = screen.getPrimaryDisplay();
-  const bounds = display.workArea;
-  const window = new BrowserWindow({
-    x: bounds.x,
-    y: bounds.y,
-    width: bounds.width,
-    height: bounds.height,
-    minWidth: Math.min(900, bounds.width),
-    minHeight: Math.min(600, bounds.height),
-    title: safeMode ? "Project D Safe Mode" : "Project D Desktop",
-    frame: safeMode,
-    transparent: !safeMode,
-    fullscreen: false,
-    fullscreenable: false,
-    resizable: safeMode,
-    movable: safeMode,
-    skipTaskbar: !safeMode,
-    show: false,
-    backgroundColor: safeMode ? "#101114" : "#00000000",
-    autoHideMenuBar: true,
-    webPreferences: {
-      preload: preloadPath(),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-      webSecurity: true
-    }
-  });
-
-  secureRendererWindow(window);
-  superviseRendererWindow(window, "overlay", ".overlay-page");
-  loadRendererWindow(window, "#/overlay", "overlay");
-
-  window.once("ready-to-show", () => {
-    window.show();
-    window.focus();
-    if (!safeMode) {
-      window.setAlwaysOnTop(true, "normal");
-      setTimeout(() => {
-        if (!window.isDestroyed()) {
-          window.setAlwaysOnTop(false);
-        }
-      }, 800);
-    }
-  });
-
-  window.on("closed", () => {
-    const unexpectedCloseWhileActive = !overlayCloseWasExpected
-      && !shutdownInProgress
-      && desktopController?.getStatus().mode === "active";
-    overlayCloseWasExpected = false;
-    overlayWindow = null;
-    logger?.info("desktop-state", "overlay window destroyed");
-    if (unexpectedCloseWhileActive) {
-      logger?.warn("desktop-state", "overlay window closed while desktop was active; restoring native desktop");
-      void emergencyRestoreDesktop("overlay-window-closed");
-    }
-  });
-
-  overlayWindow = window;
-  logger?.info("desktop-state", "overlay window created", { safeMode, bounds });
   return window;
 }
 
@@ -1137,17 +1084,6 @@ function resizePetWindowForScale(scale: number): void {
   savePetBounds(next);
 }
 
-function closeOverlayWindow(): void {
-  if (!overlayWindow || overlayWindow.isDestroyed()) {
-    overlayWindow = null;
-    return;
-  }
-
-  overlayCloseWasExpected = true;
-  overlayWindow.close();
-  overlayWindow = null;
-}
-
 function closePetWindow(): void {
   if (!petWindow || petWindow.isDestroyed()) {
     petWindow = null;
@@ -1247,8 +1183,14 @@ async function performWallpaperHostRepair(reason: string): Promise<void> {
 
 function reconcileDesktopRuntimeBounds(reason: string): void {
   const primary = screen.getPrimaryDisplay();
-  if (overlayWindow && !overlayWindow.isDestroyed()) {
-    overlayWindow.setBounds(primary.workArea, false);
+  if (
+    mainWindow
+    && !mainWindow.isDestroyed()
+    && desktopController?.getStatus().mode === "active"
+    && !mainWindow.isMinimized()
+  ) {
+    // Keep the immersive shell aligned with the work area across display changes.
+    mainWindow.setBounds(primary.workArea, false);
   }
   if (database?.getSettings().wallpaper.isDynamic) createWallpaperWindow();
   const displays = new Map(screen.getAllDisplays().map((display) => [String(display.id), display]));
@@ -1391,7 +1333,6 @@ function createRuntimeMetricsService(): RuntimeMetricsService {
 async function emergencyRestoreDesktop(reason: string): Promise<void> {
   logger?.warn("desktop-state", "emergency desktop restore requested", { reason });
   cleanDesktopEscapeGuard.disarm();
-  closeOverlayWindow();
   closeWallpaperWindow();
   database?.setAppState("clean_desktop_mode", "false");
   stopCleanDesktopPowerBlocker();
@@ -1526,7 +1467,6 @@ async function enterCleanDesktop(): Promise<DesktopStatus> {
     };
   }
   startCleanDesktopPowerBlocker();
-  closeOverlayWindow();
   mainWindow?.hide();
   database?.setAppState("clean_desktop_mode", "true");
   const exitShortcut = cleanDesktopExitShortcut();
@@ -1654,13 +1594,14 @@ function scheduleDemoAutorun(): void {
     void (async () => {
       logger?.info("app", "demo autorun activating");
       desktopStatus = (await desktopController?.activate()) ?? updateDesktopStatus("safe-mode");
-      createOverlayWindow(desktopStatus.mode === "safe-mode");
+      showMainWindow();
+      sendMenuCommand(MENU_COMMANDS.ACTIVATE_DESKTOP);
 
       setTimeout(() => {
         void (async () => {
           logger?.info("app", "demo autorun deactivating");
           desktopStatus = (await desktopController?.deactivate()) ?? updateDesktopStatus("idle");
-          closeOverlayWindow();
+          showMainWindow();
 
           if (process.env.PROJECTD_DEMO_EXIT === "1") {
             setTimeout(() => app.quit(), 1500);
@@ -1968,7 +1909,7 @@ async function authorizeSearchResultPortal(resultId: string) {
   const selectedFolder = qaRunEnabled && !app.isPackaged && process.env.PROJECTD_QA_AUTO_AUTHORIZE_PORTAL === "1"
     ? defaultPath
     : await (async () => {
-      const owner = overlayWindow && !overlayWindow.isDestroyed() ? overlayWindow : mainWindow;
+      const owner = mainWindow;
       const selection = owner && !owner.isDestroyed()
         ? await dialog.showOpenDialog(owner, options)
         : await dialog.showOpenDialog(options);
@@ -2039,8 +1980,7 @@ function startTray(): void {
     },
     deactivateDesktop: async () => {
       desktopStatus = (await desktopController?.deactivate()) ?? updateDesktopStatus("idle");
-      closeOverlayWindow();
-      mainWindow?.show();
+      showMainWindow();
       sendMenuCommand(MENU_COMMANDS.DEACTIVATE_DESKTOP);
     },
     enterCleanDesktop: async () => { await enterCleanDesktop(); },
@@ -2361,8 +2301,7 @@ function buildIpcDeps(): ServiceDeps {
       getContainersWithIcons: containersWithNativeIcons,
       readFilePreview: readFilePreviewImpl,
       updateDesktopStatus,
-      createOverlayWindow,
-      closeOverlayWindow,
+      enterImmersiveShell,
       showMainWindow: showMainWindowAndFocusSearch,
       hideMainWindow: () => mainWindow?.hide(),
       enterCleanDesktop,
@@ -2603,7 +2542,7 @@ async function resetAllUserData(): Promise<void> {
     systemEventManager = null;
     wallpaperSupervisor?.stop();
     stopWallpaperRepairTimer();
-    closeOverlayWindow();
+    shellCloseWasExpected = true;
     closePetWindow();
     closeWallpaperWindow();
     database?.close();
@@ -2944,7 +2883,7 @@ async function shutdownSafely(): Promise<void> {
       operationsTelemetry = null;
       portalWatcher = null;
       rendererResilience.disposeAll();
-      closeOverlayWindow();
+      shellCloseWasExpected = true;
       closeWallpaperWindow();
       closePetWindow();
       shortcutManager?.dispose();

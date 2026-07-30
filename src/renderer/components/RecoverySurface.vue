@@ -2,7 +2,7 @@
 import { AlertTriangle, RefreshCcw } from "lucide-vue-next";
 import type { DesktopExperienceMode } from "@shared/desktop-experience";
 
-const props = defineProps<{
+defineProps<{
   mode: DesktopExperienceMode;
   errorMessage: string;
   recovered: boolean;

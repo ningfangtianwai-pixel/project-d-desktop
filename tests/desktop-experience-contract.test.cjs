@@ -13,7 +13,9 @@ test("desktop IPC opens real entries, reports shell errors, and uses the live wo
   assert.match(source, /getDesktopWorkArea\(\)/);
   assert.match(source, /workArea\.width/);
   assert.match(source, /workArea\.height/);
-  assert.match(source, /assertTrustedSender\(event, \["", "#\/settings", "#\/overlay"\]\)/);
+  assert.match(source, /assertTrustedSender\(event, \["", "#\/settings"\]\)/);
+  // The retired overlay route must no longer be a trusted IPC origin.
+  assert.doesNotMatch(source, /#\/overlay/);
 });
 
 test("desktop organizer renders recognizable folders, previews them, and surfaces portal authorization", () => {

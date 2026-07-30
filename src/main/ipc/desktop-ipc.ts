@@ -15,8 +15,7 @@ export interface DesktopIpcDependencies {
   getContainersWithIcons: () => Promise<ContainerWithFiles[]>;
   readFilePreview: (fileId: number) => Promise<FilePreviewData>;
   updateDesktopStatus: (mode: DesktopStatus["mode"]) => DesktopStatus;
-  createOverlayWindow: (safeMode: boolean) => void;
-  closeOverlayWindow: () => void;
+  enterImmersiveShell: () => void;
   showMainWindow: () => void;
   hideMainWindow: () => void;
   enterCleanDesktop: () => Promise<DesktopStatus>;
@@ -29,20 +28,20 @@ export function registerDesktopIpcHandlers(deps: DesktopIpcDependencies): void {
   const { ipc, assertTrustedSender, getDatabase } = deps;
 
   ipc.handle(IPC_CHANNELS.DESKTOP_STATUS, (event): DesktopStatus => {
-    assertTrustedSender(event, ["", "#/overlay"]);
+    assertTrustedSender(event, [""]);
     return deps.getDesktopController()?.getStatus() ?? deps.updateDesktopStatus("idle");
   });
 
   ipc.handle(IPC_CHANNELS.DESKTOP_ACTIVATE, async (event): Promise<DesktopStatus> => {
     assertTrustedSender(event);
     const status = (await deps.getDesktopController()?.activate()) ?? deps.updateDesktopStatus("safe-mode");
-    deps.showMainWindow();
+    deps.enterImmersiveShell();
     deps.sendMenuCommand(MENU_COMMANDS.ACTIVATE_DESKTOP);
     return status;
   });
 
   ipc.handle(IPC_CHANNELS.DESKTOP_DEACTIVATE, async (event): Promise<DesktopStatus> => {
-    assertTrustedSender(event, ["", "#/settings", "#/overlay"]);
+    assertTrustedSender(event, ["", "#/settings"]);
     const status = (await deps.getDesktopController()?.deactivate()) ?? deps.updateDesktopStatus("idle");
     deps.showMainWindow();
     return status;
@@ -59,19 +58,19 @@ export function registerDesktopIpcHandlers(deps: DesktopIpcDependencies): void {
   });
 
   ipc.handle(IPC_CHANNELS.DESKTOP_SCAN, async (event) => {
-    assertTrustedSender(event, ["", "#/overlay"]);
+    assertTrustedSender(event, [""]);
     const scanner = deps.getFileScanner();
     if (!scanner) throw new Error("File scanner is not initialized");
     return scanner.scanDesktop();
   });
 
   ipc.handle(IPC_CHANNELS.DESKTOP_GET_FILES, async (event) => {
-    assertTrustedSender(event, ["", "#/overlay"]);
+    assertTrustedSender(event, [""]);
     return deps.getContainersWithIcons();
   });
 
   ipc.handle(IPC_CHANNELS.DESKTOP_OPEN_FILE, async (event, fileId: unknown) => {
-    assertTrustedSender(event, ["", "#/overlay"]);
+    assertTrustedSender(event, [""]);
     if (typeof fileId !== "number" || !Number.isInteger(fileId) || fileId <= 0) throw new Error("Invalid file id");
     const file = getDatabase()?.getDesktopFileById(fileId);
     if (!file) throw new Error("File record was not found");
@@ -83,7 +82,7 @@ export function registerDesktopIpcHandlers(deps: DesktopIpcDependencies): void {
   });
 
   ipc.handle(IPC_CHANNELS.DESKTOP_OPEN_FILE_LOCATION, (event, fileId: unknown) => {
-    assertTrustedSender(event, ["", "#/overlay"]);
+    assertTrustedSender(event, [""]);
     if (typeof fileId !== "number" || !Number.isInteger(fileId) || fileId <= 0) throw new Error("Invalid file id");
     const file = getDatabase()?.getDesktopFileById(fileId);
     if (!file) throw new Error("File record was not found");
@@ -91,7 +90,7 @@ export function registerDesktopIpcHandlers(deps: DesktopIpcDependencies): void {
   });
 
   ipc.handle(IPC_CHANNELS.DESKTOP_MOVE_FILE, (event, fileId: unknown, containerId: unknown) => {
-    assertTrustedSender(event, ["", "#/overlay"]);
+    assertTrustedSender(event, [""]);
     if (typeof fileId !== "number" || !Number.isInteger(fileId) || fileId <= 0) throw new Error("Invalid file id");
     if (typeof containerId !== "number" || !Number.isInteger(containerId) || containerId <= 0) throw new Error("Invalid container id");
     getDatabase()?.moveFileToContainer(fileId, containerId);
@@ -99,7 +98,7 @@ export function registerDesktopIpcHandlers(deps: DesktopIpcDependencies): void {
   });
 
   ipc.handle(IPC_CHANNELS.DESKTOP_RENAME_ALIAS, (event, fileId: unknown, displayName: unknown) => {
-    assertTrustedSender(event, ["", "#/overlay"]);
+    assertTrustedSender(event, [""]);
     if (typeof fileId !== "number" || !Number.isInteger(fileId) || fileId <= 0) throw new Error("Invalid file id");
     if (typeof displayName !== "string" || displayName.length > 120) throw new Error("Invalid display name");
     getDatabase()?.renameFileAlias(fileId, displayName);
@@ -107,7 +106,7 @@ export function registerDesktopIpcHandlers(deps: DesktopIpcDependencies): void {
   });
 
   ipc.handle(IPC_CHANNELS.DESKTOP_HIDE_FILE, (event, fileId: unknown) => {
-    assertTrustedSender(event, ["", "#/overlay"]);
+    assertTrustedSender(event, [""]);
     if (typeof fileId !== "number" || !Number.isInteger(fileId) || fileId <= 0) throw new Error("Invalid file id");
     getDatabase()?.hideFile(fileId);
     deps.broadcastDesktopFiles();
@@ -119,12 +118,12 @@ export function registerDesktopIpcHandlers(deps: DesktopIpcDependencies): void {
   });
 
   ipc.handle(IPC_CHANNELS.CONTAINERS_GET_ALL, (event) => {
-    assertTrustedSender(event, ["", "#/settings", "#/overlay"]);
+    assertTrustedSender(event, ["", "#/settings"]);
     return getDatabase()?.getContainers() ?? [];
   });
 
   ipc.handle(IPC_CHANNELS.CONTAINERS_UPDATE_POSITION, (event, containerId: unknown, x: unknown, y: unknown, width: unknown, height: unknown, isCollapsed: unknown) => {
-    assertTrustedSender(event, ["", "#/overlay"]);
+    assertTrustedSender(event, [""]);
     if (typeof containerId !== "number" || !Number.isInteger(containerId) || containerId <= 0) throw new Error("Invalid container id");
     if (typeof x !== "number" || !Number.isFinite(x)) throw new Error("Invalid x");
     if (typeof y !== "number" || !Number.isFinite(y)) throw new Error("Invalid y");
@@ -134,7 +133,7 @@ export function registerDesktopIpcHandlers(deps: DesktopIpcDependencies): void {
   });
 
   ipc.handle(IPC_CHANNELS.CONTAINERS_UPDATE_ACCENT, (event, containerId: unknown, accentColor: unknown) => {
-    assertTrustedSender(event, ["", "#/overlay"]);
+    assertTrustedSender(event, [""]);
     if (typeof containerId !== "number" || !Number.isInteger(containerId) || containerId <= 0) throw new Error("Invalid container id");
     if (!isContainerAccent(accentColor)) throw new Error("Invalid container accent");
     getDatabase()?.updateContainerAccent(containerId, accentColor);
@@ -142,19 +141,19 @@ export function registerDesktopIpcHandlers(deps: DesktopIpcDependencies): void {
   });
 
   ipc.handle(IPC_CHANNELS.LAYOUTS_GET_ALL, (event) => {
-    assertTrustedSender(event, ["", "#/settings", "#/overlay"]);
+    assertTrustedSender(event, ["", "#/settings"]);
     return getDatabase()?.getLayouts() ?? [];
   });
 
   ipc.handle(IPC_CHANNELS.LAYOUTS_APPLY, (event, layoutId: unknown) => {
-    assertTrustedSender(event, ["", "#/settings", "#/overlay"]);
+    assertTrustedSender(event, ["", "#/settings"]);
     if (typeof layoutId !== "number" || !Number.isInteger(layoutId) || layoutId <= 0) throw new Error("Invalid layout id");
     const workArea = deps.getDesktopWorkArea();
     getDatabase()?.applyLayout(layoutId, workArea.width, workArea.height);
   });
 
   ipc.handle(IPC_CHANNELS.PREVIEW_FILE, async (event, fileId: unknown): Promise<FilePreviewData> => {
-    assertTrustedSender(event, ["", "#/overlay"]);
+    assertTrustedSender(event, [""]);
     if (typeof fileId !== "number" || !Number.isInteger(fileId) || fileId <= 0) throw new Error("Invalid file id");
     return deps.readFilePreview(fileId);
   });

@@ -23,7 +23,7 @@ export function registerActionIpcHandlers(deps: ActionIpcDependencies): void {
   const { ipc, assertTrustedSender } = deps;
 
   ipc.handle(IPC_CHANNELS.ACTION_PLAN_INBOX, (event): ActionPlan => {
-    assertTrustedSender(event, ["", "#/overlay"]);
+    assertTrustedSender(event, [""]);
     const engine = deps.getEngine();
     if (!engine || !deps.isPlanAvailable()) throw new Error("Action engine is not initialized");
     const plan = engine.createDesktopInboxPlan(deps.getDesktopFiles());
@@ -33,7 +33,7 @@ export function registerActionIpcHandlers(deps: ActionIpcDependencies): void {
   });
 
   ipc.handle(IPC_CHANNELS.ACTION_EXECUTE, async (event, planId: unknown): Promise<ActionExecution> => {
-    assertTrustedSender(event, ["", "#/overlay"]);
+    assertTrustedSender(event, [""]);
     const engine = deps.getEngine();
     if (!engine || !deps.isRescanAvailable()) throw new Error("Action engine is not initialized");
     if (typeof planId !== "string" || planId.length < 8 || planId.length > 80) throw new Error("Invalid action plan id");
@@ -46,7 +46,7 @@ export function registerActionIpcHandlers(deps: ActionIpcDependencies): void {
   });
 
   ipc.handle(IPC_CHANNELS.ACTION_UNDO, async (event, executionId: unknown): Promise<ActionExecution> => {
-    assertTrustedSender(event, ["", "#/overlay"]);
+    assertTrustedSender(event, [""]);
     const engine = deps.getEngine();
     if (!engine || !deps.isRescanAvailable()) throw new Error("Action engine is not initialized");
     if (typeof executionId !== "string" || executionId.length < 8 || executionId.length > 80) throw new Error("Invalid action execution id");
@@ -79,7 +79,7 @@ export function registerActionIpcHandlers(deps: ActionIpcDependencies): void {
   });
 
   ipc.handle(IPC_CHANNELS.ACTION_HISTORY, (event): ActionExecution[] => {
-    assertTrustedSender(event, ["", "#/settings", "#/overlay"]);
+    assertTrustedSender(event, ["", "#/settings"]);
     return deps.getEngine()?.getHistory() ?? [];
   });
 

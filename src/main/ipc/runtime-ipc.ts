@@ -15,12 +15,12 @@ export interface RuntimeIpcDependencies {
 
 export function registerRuntimeIpcHandlers(deps: RuntimeIpcDependencies): void {
   deps.ipc.handle(IPC_CHANNELS.RUNTIME_GET_STATE, (event) => {
-    deps.assertTrustedSender(event, ["", "#/settings", "#/overlay", "#/wallpaper", "#/pet"]);
+    deps.assertTrustedSender(event, ["", "#/settings", "#/wallpaper", "#/pet"]);
     return deps.getState();
   });
 
   deps.ipc.handle(IPC_CHANNELS.RUNTIME_SET_MANUAL_PAUSED, (event, paused: unknown) => {
-    deps.assertTrustedSender(event, ["", "#/settings", "#/overlay"]);
+    deps.assertTrustedSender(event, ["", "#/settings"]);
     if (typeof paused !== "boolean") throw new Error("Invalid runtime pause state");
     return deps.setManualPaused(paused);
   });

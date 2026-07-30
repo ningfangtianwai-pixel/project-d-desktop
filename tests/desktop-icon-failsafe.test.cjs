@@ -22,10 +22,13 @@ test("desktop icon watchdog retries shell recovery after an unexpected process e
   assert.match(source, /buildDesktopIconProbeScript\(3\)/);
 });
 
-test("Explorer restart and unexpected overlay closure fail closed to the native desktop", () => {
+test("Explorer restart and unexpected shell closure fail closed to the native desktop", () => {
   assert.match(mainSource, /emergencyRestoreDesktop\("explorer-restarted"\)/);
-  assert.match(mainSource, /emergencyRestoreDesktop\("overlay-window-closed"\)/);
-  assert.match(mainSource, /overlay window closed while desktop was active; restoring native desktop/);
+  assert.match(mainSource, /emergencyRestoreDesktop\("shell-window-closed"\)/);
+  assert.match(mainSource, /shell window closed while desktop was active; restoring native desktop/);
+  // The retired overlay window must not come back as a second desktop surface.
+  assert.doesNotMatch(mainSource, /createOverlayWindow/);
+  assert.doesNotMatch(mainSource, /closeOverlayWindow/);
 });
 
 test("startup activation shows the immersive shell and fails closed to the native desktop", () => {

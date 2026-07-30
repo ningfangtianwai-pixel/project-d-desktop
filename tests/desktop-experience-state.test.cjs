@@ -36,6 +36,7 @@ test("immersive -> task (organize)", () => {
 
 test("task -> immersive (closeSurface)", () => {
   const task = openDesktopSurface("search");
+  assert.equal(task.mode, "task");
   const immersive = closeDesktopSurface();
   assert.equal(immersive.mode, "immersive");
   assert.equal(immersive.activeSurface, null);

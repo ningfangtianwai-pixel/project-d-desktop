@@ -1,6 +1,6 @@
 import type { BrowserWindow } from "electron";
 
-export type WindowRole = "main" | "settings" | "overlay" | "wallpaper" | "pet";
+export type WindowRole = "main" | "settings" | "wallpaper" | "pet";
 export type RendererRecoveryReason = "render-process-gone" | "did-fail-load" | "unresponsive" | "health-probe" | "preload-error";
 
 export interface RendererRecoveryEvent {

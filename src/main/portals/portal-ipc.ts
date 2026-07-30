@@ -22,7 +22,7 @@ export function registerPortalIpcHandlers(deps: PortalIpcDependencies): void {
   const now = deps.now ?? Date.now;
 
   ipc.handle(IPC_CHANNELS.PORTALS_CHOOSE_FOLDER, async (event): Promise<string | null> => {
-    assertTrustedSender(event, ["", "#/settings", "#/overlay"]);
+    assertTrustedSender(event, ["", "#/settings"]);
     const options: OpenDialogOptions = { title: "选择要以只读方式展示的文件夹", properties: ["openDirectory"] };
     const senderWindow = BrowserWindow.fromWebContents(event.sender);
     const result = senderWindow && !senderWindow.isDestroyed()
@@ -34,12 +34,12 @@ export function registerPortalIpcHandlers(deps: PortalIpcDependencies): void {
   });
 
   ipc.handle(IPC_CHANNELS.PORTALS_GET_ALL, (event): PortalConfig[] => {
-    assertTrustedSender(event, ["", "#/settings", "#/overlay"]);
+    assertTrustedSender(event, ["", "#/settings"]);
     return deps.getService()?.list() ?? [];
   });
 
   ipc.handle(IPC_CHANNELS.PORTALS_ADD, async (event, folderPath: unknown, name: unknown): Promise<PortalConfig> => {
-    assertTrustedSender(event, ["", "#/settings", "#/overlay"]);
+    assertTrustedSender(event, ["", "#/settings"]);
     const service = deps.getService();
     if (!service || typeof folderPath !== "string" || typeof name !== "string" || folderPath.length > 500 || name.length > 60) {
       throw new Error("Invalid folder portal input");
@@ -58,7 +58,7 @@ export function registerPortalIpcHandlers(deps: PortalIpcDependencies): void {
   });
 
   ipc.handle(IPC_CHANNELS.PORTALS_REMOVE, (event, portalId: unknown): void => {
-    assertTrustedSender(event, ["", "#/settings", "#/overlay"]);
+    assertTrustedSender(event, ["", "#/settings"]);
     const service = deps.getService();
     if (!service || typeof portalId !== "string" || portalId.length < 8 || portalId.length > 80) {
       throw new Error("Invalid folder portal id");
@@ -70,7 +70,7 @@ export function registerPortalIpcHandlers(deps: PortalIpcDependencies): void {
   });
 
   ipc.handle(IPC_CHANNELS.PORTALS_GET_RESOURCES, async (event, portalId: unknown): Promise<PortalResource[]> => {
-    assertTrustedSender(event, ["", "#/settings", "#/overlay"]);
+    assertTrustedSender(event, ["", "#/settings"]);
     const service = deps.getService();
     if (!service || typeof portalId !== "string" || portalId.length < 8 || portalId.length > 80) {
       throw new Error("Invalid folder portal id");
@@ -79,7 +79,7 @@ export function registerPortalIpcHandlers(deps: PortalIpcDependencies): void {
   });
 
   ipc.handle(IPC_CHANNELS.PORTALS_OPEN_RESOURCE, async (event, portalId: unknown, relativePath: unknown): Promise<void> => {
-    assertTrustedSender(event, ["", "#/settings", "#/overlay"]);
+    assertTrustedSender(event, ["", "#/settings"]);
     const service = deps.getService();
     if (!service || typeof portalId !== "string" || typeof relativePath !== "string") {
       throw new Error("Invalid folder portal resource");
