@@ -20,7 +20,6 @@ import {
   X
 } from "lucide-vue-next";
 import SettingsPage from "@settings/SettingsPage.vue";
-import OverlayPage from "./views/OverlayPage.vue";
 import WallpaperStage from "./components/WallpaperStage.vue";
 import PetPage from "./views/PetPage.vue";
 import WallpaperPage from "./views/WallpaperPage.vue";
@@ -106,7 +105,6 @@ let unsubscribeSearchFocus: (() => void) | null = null;
 let unsubscribeSuggestionUpdate: (() => void) | null = null;
 
 const isSettingsRoute = computed(() => route.value === "#/settings");
-const isOverlayRoute = computed(() => route.value === "#/overlay");
 const isPetRoute = computed(() => route.value === "#/pet");
 const isWallpaperRoute = computed(() => route.value === "#/wallpaper");
 const experienceModeLabel = computed(() => {
@@ -619,7 +617,7 @@ onMounted(async () => {
 
   unsubscribeMenu = window.projectD.onMenuCommand((command) => {
     if (command === "activate-desktop") {
-      desktopStatus.value = { mode: "active", lastChangedAt: new Date().toISOString() };
+      openDesktopSurface("organize");
       pushLog("托盘触发启动整理");
     }
     if (command === "deactivate-desktop") {
@@ -660,7 +658,6 @@ onUnmounted(() => {
 
 <template>
   <SettingsPage v-if="isSettingsRoute" />
-  <OverlayPage v-else-if="isOverlayRoute" />
   <PetPage v-else-if="isPetRoute" />
   <WallpaperPage v-else-if="isWallpaperRoute" />
 

@@ -2034,8 +2034,7 @@ function startTray(): void {
     showMain: showMainWindowAndFocusSearch,
     activateDesktop: async () => {
       desktopStatus = (await desktopController?.activate()) ?? updateDesktopStatus("safe-mode");
-      createOverlayWindow(desktopStatus.mode === "safe-mode");
-      mainWindow?.hide();
+      showMainWindow();
       sendMenuCommand(MENU_COMMANDS.ACTIVATE_DESKTOP);
     },
     deactivateDesktop: async () => {
@@ -2368,7 +2367,8 @@ function buildIpcDeps(): ServiceDeps {
       hideMainWindow: () => mainWindow?.hide(),
       enterCleanDesktop,
       exitCleanDesktop,
-      broadcastDesktopFiles: broadcastDesktopFilesUpdated
+      broadcastDesktopFiles: broadcastDesktopFilesUpdated,
+      sendMenuCommand
     },
     settings: {
       getDatabase: () => database,
@@ -2879,16 +2879,14 @@ async function activateDesktopOnStartup(): Promise<void> {
   }
 
   try {
-    const overlay = createOverlayWindow(false);
-    if (overlay.isDestroyed()) throw new Error("Desktop overlay was destroyed during startup");
-    mainWindow?.hide();
+    showMainWindow();
     sendMenuCommand(MENU_COMMANDS.ACTIVATE_DESKTOP);
     logger?.info("desktop-state", "desktop activated from startup preference", { mode: desktopStatus.mode });
   } catch (error) {
-    logger?.error("desktop-state", "startup overlay creation failed; restoring native desktop", {
+    logger?.error("desktop-state", "startup shell show failed; restoring native desktop", {
       message: error instanceof Error ? error.message : String(error)
     });
-    await emergencyRestoreDesktop("startup-overlay-failed");
+    await emergencyRestoreDesktop("startup-shell-failed");
   }
 }
 

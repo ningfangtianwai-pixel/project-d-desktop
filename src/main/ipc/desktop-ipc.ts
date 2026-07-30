@@ -1,5 +1,5 @@
 import type { IpcMain, IpcMainInvokeEvent } from "electron";
-import { IPC_CHANNELS } from "../../shared/ipc.js";
+import { IPC_CHANNELS, MENU_COMMANDS, type MenuCommand } from "../../shared/ipc.js";
 import type { ContainerWithFiles, DatabaseStatus, DesktopFileRecord, DesktopStatus, FilePreviewData, LayoutRecord, ScanResult } from "../../shared/types.js";
 import { isContainerAccent, type ContainerAccent } from "../../shared/container-accents.js";
 
@@ -22,6 +22,7 @@ export interface DesktopIpcDependencies {
   enterCleanDesktop: () => Promise<DesktopStatus>;
   exitCleanDesktop: () => Promise<DesktopStatus>;
   broadcastDesktopFiles: () => void;
+  sendMenuCommand: (command: MenuCommand) => void;
 }
 
 export function registerDesktopIpcHandlers(deps: DesktopIpcDependencies): void {
@@ -35,15 +36,14 @@ export function registerDesktopIpcHandlers(deps: DesktopIpcDependencies): void {
   ipc.handle(IPC_CHANNELS.DESKTOP_ACTIVATE, async (event): Promise<DesktopStatus> => {
     assertTrustedSender(event);
     const status = (await deps.getDesktopController()?.activate()) ?? deps.updateDesktopStatus("safe-mode");
-    deps.createOverlayWindow(status.mode === "safe-mode");
-    deps.hideMainWindow();
+    deps.showMainWindow();
+    deps.sendMenuCommand(MENU_COMMANDS.ACTIVATE_DESKTOP);
     return status;
   });
 
   ipc.handle(IPC_CHANNELS.DESKTOP_DEACTIVATE, async (event): Promise<DesktopStatus> => {
     assertTrustedSender(event, ["", "#/settings", "#/overlay"]);
     const status = (await deps.getDesktopController()?.deactivate()) ?? deps.updateDesktopStatus("idle");
-    deps.closeOverlayWindow();
     deps.showMainWindow();
     return status;
   });

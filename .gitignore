@@ -3,6 +3,9 @@ dist/
 release/
 logs/*.log
 artifacts/
+artifacts-e2e-v6/
+dist-v6-qa/
+.workbuddy/
 test-results/
 playwright-report/
 .codex-remote-attachments/

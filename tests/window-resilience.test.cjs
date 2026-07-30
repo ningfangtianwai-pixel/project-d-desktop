@@ -111,7 +111,7 @@ test("repeated renderer failure escalates instead of looping forever", async () 
     recoveryWindowMs: 60_000,
     onExhausted: () => { escalations += 1; }
   });
-  supervisor.register({ window, role: "overlay", healthSelector: ".overlay-page" });
+  supervisor.register({ window, role: "organizer", healthSelector: ".organizer-surface" });
 
   window.emit("unresponsive");
   await tick();

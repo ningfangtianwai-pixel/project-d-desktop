@@ -1903,6 +1903,182 @@ h1 {
   white-space: nowrap;
 }
 
+.file-preview-head {
+  display: grid;
+  gap: 2px;
+}
+.file-preview-head strong {
+  color: rgba(246, 243, 236, 0.92);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-preview-head span {
+  color: rgba(246, 243, 236, 0.5);
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-preview-body {
+  margin-top: 8px;
+  max-height: 220px;
+  overflow: auto;
+  border-top: 1px solid rgba(246, 243, 236, 0.1);
+  padding-top: 8px;
+}
+.preview-loading,
+.preview-unsupported {
+  color: rgba(246, 243, 236, 0.55);
+  font-size: 11px;
+  margin: 0;
+}
+.preview-text {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: rgba(246, 243, 236, 0.82);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+.preview-image {
+  display: block;
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+.folder-preview {
+  display: grid;
+  gap: 6px;
+}
+.folder-preview > p {
+  margin: 0;
+  font-size: 10px;
+  color: rgba(246, 243, 236, 0.5);
+}
+.folder-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 6px;
+}
+.folder-preview-grid article {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  padding: 6px 4px;
+  border: 1px solid rgba(246, 243, 236, 0.1);
+  border-radius: 6px;
+  background: rgba(246, 243, 236, 0.05);
+}
+.folder-preview-grid strong {
+  font-size: 10px;
+  color: rgba(246, 243, 236, 0.82);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.folder-preview-grid small {
+  font-size: 9px;
+  color: rgba(246, 243, 236, 0.5);
+}
+.file-preview-meta {
+  display: block;
+  margin-top: 6px;
+  font-size: 10px;
+  color: rgba(246, 243, 236, 0.42);
+}
+.organizer-portals {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+.organizer-portals-empty {
+  font-size: 11px;
+  color: rgba(246, 243, 236, 0.5);
+  border: 1px dashed rgba(246, 243, 236, 0.16);
+  border-radius: 8px;
+  padding: 10px;
+  margin: 0;
+}
+.organizer-portal-list {
+  display: grid;
+  gap: 8px;
+}
+.organizer-portal {
+  border: 1px solid rgba(159, 215, 237, 0.16);
+  border-radius: 8px;
+  padding: 8px;
+  background: rgba(8, 16, 23, 0.22);
+}
+.organizer-portal > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.organizer-portal-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: rgba(246, 243, 236, 0.85);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.organizer-portal-resources {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 6px;
+}
+.organizer-portal-resources button {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  text-align: left;
+  padding: 6px 7px;
+  border: 1px solid rgba(246, 243, 236, 0.1);
+  border-radius: 6px;
+  background: rgba(246, 243, 236, 0.05);
+  color: rgba(246, 243, 236, 0.82);
+  cursor: pointer;
+}
+.organizer-portal-resources button:hover:not(:disabled) {
+  border-color: rgba(159, 215, 237, 0.4);
+  background: rgba(159, 215, 237, 0.1);
+}
+.organizer-portal-resources button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.portal-resource-icon {
+  color: rgba(159, 215, 237, 0.8);
+}
+.organizer-portal-resources strong {
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.organizer-portal-resources small {
+  font-size: 9px;
+  color: rgba(246, 243, 236, 0.5);
+}
+.organizer-portal-empty {
+  font-size: 10px;
+  color: rgba(246, 243, 236, 0.45);
+  margin: 0;
+}
+.organizer-command-panel {
+  overflow-y: auto;
+}
+
 .inbox-review {
   display: grid;
   gap: 8px;

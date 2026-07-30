@@ -16,13 +16,14 @@ test("desktop IPC opens real entries, reports shell errors, and uses the live wo
   assert.match(source, /assertTrustedSender\(event, \["", "#\/settings", "#\/overlay"\]\)/);
 });
 
-test("desktop overlay renders recognizable folders, previews them, and surfaces open failures", () => {
-  const source = read("src/renderer/views/OverlayPage.vue");
+test("desktop organizer renders recognizable folders, previews them, and surfaces portal authorization", () => {
+  const source = read("src/renderer/components/OrganizerSurface.vue");
   assert.match(source, /file\.category === 'folder'/);
   assert.match(source, /class="desktop-folder-art"/);
   assert.match(source, /preview\.type === ['"]folder['"]/);
   assert.match(source, /preview\.entries/);
-  assert.match(source, /message: error instanceof Error \? error\.message : String\(error\)/);
+  assert.match(source, /getFolderPortals\(\)/);
+  assert.match(source, /organizer-portals/);
 });
 
 test("pet behavior exposes the expanded action set without synthetic outfit stickers", () => {

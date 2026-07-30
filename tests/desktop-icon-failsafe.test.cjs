@@ -28,10 +28,13 @@ test("Explorer restart and unexpected overlay closure fail closed to the native 
   assert.match(mainSource, /overlay window closed while desktop was active; restoring native desktop/);
 });
 
-test("startup activation never hides the main window after a failed overlay creation", () => {
+test("startup activation shows the immersive shell and fails closed to the native desktop", () => {
   const startup = mainSource.match(/async function activateDesktopOnStartup\(\): Promise<void> \{[\s\S]*?\n}\n\nasync function shutdownSafely/)?.[0] ?? "";
   assert.match(startup, /try \{/);
-  assert.match(startup, /await emergencyRestoreDesktop\("startup-overlay-failed"\)/);
+  assert.match(startup, /showMainWindow\(\)/);
+  assert.match(startup, /sendMenuCommand\(MENU_COMMANDS\.ACTIVATE_DESKTOP\)/);
+  assert.doesNotMatch(startup, /createOverlayWindow/);
+  assert.match(startup, /await emergencyRestoreDesktop\("startup-shell-failed"\)/);
 });
 
 test("desktop recovery is armed before service initialization and reused by the controller", () => {
