@@ -1,5 +1,6 @@
 import { createApp } from "vue";
 import App from "./App.vue";
+import "./tokens.css";
 import "./styles.css";
 import { findWallpaperByInput, nextWallpaperId, WALLPAPER_LIBRARY } from "../shared/wallpaper-library";
 import type { ActionExecution, ActionPlan, ChatMessage, PortalConfig, PortalResource, ProjectDApi, SettingsSnapshot, WorkspaceScene } from "../shared/types";

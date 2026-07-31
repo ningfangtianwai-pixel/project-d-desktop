@@ -1,0 +1,88 @@
+/*
+ * task-surface.css — 任务表面编排与全局窄屏响应式（须最后加载）
+ * 来源：styles.css 第 3413-3461 行（任务表面标题与显隐编排）、
+ *       3481-3487 行（organize 任务表面显隐）、
+ *       3670-3687 行（@media (max-width: 760px) 全局响应式，收归本文件以保持单一来源）。
+ * 加载顺序：本文件须为最后一层，确保任务表面编排规则优先级最高。
+ */
+
+/* Task surfaces keep one clear job in view while preserving the underlying capabilities. */
+.task-surface-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(1120px, calc(100% - 36px));
+  margin: 0 auto 12px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  background: rgba(13, 22, 34, 0.18);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.task-surface-heading div { display: grid; gap: 2px; }
+.task-surface-heading span { color: rgba(255, 255, 255, 0.52); font-size: 11px; }
+.task-surface-heading strong { color: rgba(255, 255, 255, 0.94); font-size: 17px; }
+
+/* 注：.scene-current-actions button:hover 的悬停样式由原 styles.css 第 3579 行定义
+ * （border-color: rgba(220,238,192,.46); background: rgba(220,238,192,.14)），
+ * 该规则在原文中位于第 3430 行同选择器规则之后并完全覆盖之，故此处不重复，
+ * 交由 scene.css（领域层）统一承载，避免加载顺序改变导致的视觉差异。 */
+
+.app-shell[data-task-surface="search"] .desktop-library,
+.app-shell[data-task-surface="assistant"] .desktop-library,
+.app-shell[data-task-surface="scene"] .control-grid { display: none; }
+
+.app-shell[data-task-surface="search"] .command-panel > .panel-title,
+.app-shell[data-task-surface="search"] .command-panel > .action-row,
+.app-shell[data-task-surface="search"] .command-panel > .status-list,
+.app-shell[data-task-surface="search"] .command-panel > .file-preview,
+.app-shell[data-task-surface="search"] .command-panel > .inbox-review,
+.app-shell[data-task-surface="search"] .command-panel > .inbox-suggestion,
+.app-shell[data-task-surface="search"] .command-panel > .chat-panel,
+.app-shell[data-task-surface="assistant"] .command-panel > .workspace-search,
+.app-shell[data-task-surface="assistant"] .command-panel > .workspace-search-results,
+.app-shell[data-task-surface="assistant"] .command-panel > .action-row,
+.app-shell[data-task-surface="assistant"] .command-panel > .status-list,
+.app-shell[data-task-surface="assistant"] .command-panel > .file-preview,
+.app-shell[data-task-surface="assistant"] .command-panel > .inbox-review,
+.app-shell[data-task-surface="assistant"] .command-panel > .inbox-suggestion,
+.app-shell[data-task-surface="scene"] .command-panel { display: none; }
+
+.app-shell[data-task-surface="search"] .command-panel,
+.app-shell[data-task-surface="assistant"] .command-panel,
+.app-shell[data-task-surface="scene"] .command-panel {
+  grid-column: 1 / -1;
+  width: min(760px, 100%);
+  min-height: 0;
+  margin: 0 auto;
+}
+.app-shell[data-task-surface="search"] .command-panel { display: none; }
+.app-shell[data-task-surface="assistant"] .command-panel .chat-panel { display: block; }
+
+.app-shell[data-task-surface="organize"] .command-panel > .workspace-search,
+.app-shell[data-task-surface="organize"] .command-panel > .workspace-search-results,
+.app-shell[data-task-surface="organize"] .command-panel > .status-list,
+.app-shell[data-task-surface="organize"] .command-panel > .file-preview,
+.app-shell[data-task-surface="organize"] .command-panel > .inbox-suggestion,
+.app-shell[data-task-surface="organize"] .command-panel > .chat-panel { display: none; }
+.app-shell[data-task-surface="organize"] .command-panel { align-content: start; }
+
+@media (max-width: 760px) {
+  .task-surface-heading { width: calc(100% - 24px); }
+  .scene-surface { width: calc(100% - 24px); padding: 16px; }
+  .assistant-surface { width: calc(100% - 24px); padding: 16px; }
+  .assistant-surface-header { flex-direction: column; }
+  .assistant-context-strip { grid-template-columns: 1fr 1fr; }
+  .scene-surface-header { align-items: flex-start; flex-direction: column; }
+  .scene-current-glance { align-items: flex-start; flex-wrap: wrap; }
+  .scene-current-actions { width: 100%; margin-left: 54px; }
+  .scene-live-profile { grid-template-columns: 1fr; }
+  .scene-profile-facts { grid-template-columns: 1fr 1fr 1fr; }
+  .scene-display-grid { grid-template-columns: 1fr; }
+  .scene-detail-grid { grid-template-columns: 1fr 1fr; }
+  .scene-card { align-items: flex-start; flex-wrap: wrap; }
+  .scene-card-actions { width: 100%; margin-left: 41px; }
+  .organizer-state-strip { flex-wrap: wrap; }
+  .organizer-state-metrics { width: 100%; padding-left: 36px; }
+}

@@ -1,0 +1,258 @@
+/*
+ * organizer.css — 整理门户 / 收件箱复核 / 整理命令面板 / 整理状态条
+ * 来源：styles.css 第 1993-2177 行（整理门户与收件箱复核）+ 3488-3554 行（整理表面与状态条）。
+ * 注意：.organizer-command-panel 在原文件中出现两次（2077、3489），均保留以维持原有样式。
+ */
+
+.organizer-portals {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+.organizer-portals-empty {
+  font-size: 11px;
+  color: rgba(246, 243, 236, 0.5);
+  border: 1px dashed rgba(246, 243, 236, 0.16);
+  border-radius: 8px;
+  padding: 10px;
+  margin: 0;
+}
+.organizer-portal-list {
+  display: grid;
+  gap: 8px;
+}
+.organizer-portal {
+  border: 1px solid rgba(159, 215, 237, 0.16);
+  border-radius: 8px;
+  padding: 8px;
+  background: rgba(8, 16, 23, 0.22);
+}
+.organizer-portal > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.organizer-portal-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: rgba(246, 243, 236, 0.85);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.organizer-portal-resources {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 6px;
+}
+.organizer-portal-resources button {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  text-align: left;
+  padding: 6px 7px;
+  border: 1px solid rgba(246, 243, 236, 0.1);
+  border-radius: 6px;
+  background: rgba(246, 243, 236, 0.05);
+  color: rgba(246, 243, 236, 0.82);
+  cursor: pointer;
+}
+.organizer-portal-resources button:hover:not(:disabled) {
+  border-color: rgba(159, 215, 237, 0.4);
+  background: rgba(159, 215, 237, 0.1);
+}
+.organizer-portal-resources button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.portal-resource-icon {
+  color: rgba(159, 215, 237, 0.8);
+}
+.organizer-portal-resources strong {
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.organizer-portal-resources small {
+  font-size: 9px;
+  color: rgba(246, 243, 236, 0.5);
+}
+.organizer-portal-empty {
+  font-size: 10px;
+  color: rgba(246, 243, 236, 0.45);
+  margin: 0;
+}
+.organizer-command-panel {
+  overflow-y: auto;
+}
+
+.inbox-review {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(135, 218, 172, 0.2);
+  border-radius: 8px;
+  margin-top: 12px;
+  padding: 10px;
+  background: linear-gradient(135deg, rgba(61, 136, 92, 0.14), rgba(15, 18, 21, 0.4));
+}
+
+.inbox-review-heading,
+.inbox-review-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.inbox-review-heading > div {
+  display: grid;
+  gap: 1px;
+}
+
+.inbox-review-heading span,
+.inbox-review p,
+.inbox-review small {
+  color: rgba(246, 243, 236, 0.62);
+  font-size: 11px;
+}
+
+.inbox-review-heading strong {
+  color: #e5f7eb;
+  font-size: 13px;
+}
+
+.inbox-review p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.inbox-review ol {
+  display: grid;
+  gap: 6px;
+  max-height: 180px;
+  overflow: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.inbox-review li {
+  display: grid;
+  gap: 3px;
+  border-top: 1px solid rgba(246, 243, 236, 0.07);
+  padding-top: 5px;
+  color: rgba(246, 243, 236, 0.88);
+  font-size: 11px;
+}
+
+.inbox-review li > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.inbox-review li span,
+.inbox-review li > small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inbox-review li > small { font-size: 10px; }
+.inbox-review li > small b { margin-right: 5px; color: rgba(159, 215, 237, 0.7); font-weight: 500; }
+
+.inbox-review li.conflict small { color: #ffc49c; }
+
+.inbox-review button {
+  min-height: 28px;
+  border-radius: 6px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+
+.inbox-execute {
+  border: 0;
+  color: #0f1712;
+  background: #9ee0b3;
+}
+
+.inbox-cancel,
+.inbox-undo {
+  border: 1px solid rgba(246, 243, 236, 0.15);
+  color: rgba(246, 243, 236, 0.86);
+  background: rgba(246, 243, 236, 0.07);
+}
+
+.organizer-surface { width: min(1120px, calc(100% - 36px)); margin: 0 auto; }
+.organizer-command-panel { max-height: min(680px, calc(100vh - 190px)); }
+.organizer-state-strip {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 11px 12px;
+  border: 1px solid rgba(194, 219, 232, 0.16);
+  border-radius: 10px;
+  background: rgba(8, 16, 23, 0.28);
+}
+.organizer-state-strip[data-state="review"] {
+  border-color: rgba(237, 215, 119, 0.42);
+  background: rgba(92, 73, 21, 0.18);
+}
+.organizer-state-strip[data-state="undoable"] {
+  border-color: rgba(120, 211, 176, 0.38);
+  background: rgba(17, 84, 66, 0.18);
+}
+.organizer-state-icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  margin-top: 1px;
+  border: 1px solid rgba(154, 169, 180, 0.28);
+  border-radius: 8px;
+  color: #b9c7cf;
+  background: rgba(154, 169, 180, 0.1);
+}
+.organizer-state-strip[data-state="review"] .organizer-state-icon {
+  border-color: rgba(234, 215, 119, 0.38);
+  color: #ead777;
+  background: rgba(234, 215, 119, 0.12);
+}
+.organizer-state-strip[data-state="undoable"] .organizer-state-icon {
+  border-color: rgba(120, 211, 176, 0.38);
+  color: #78d3b0;
+  background: rgba(120, 211, 176, 0.12);
+}
+.organizer-state-copy { display: grid; flex: 1; gap: 3px; min-width: 0; }
+.organizer-state-heading { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.organizer-state-heading span {
+  padding: 2px 6px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 999px;
+  color: rgba(224, 233, 238, 0.58);
+  font-size: 9px;
+  white-space: nowrap;
+}
+.organizer-state-strip[data-state="review"] .organizer-state-heading span { border-color: rgba(234, 215, 119, 0.28); color: #ead777; }
+.organizer-state-strip[data-state="undoable"] .organizer-state-heading span { border-color: rgba(120, 211, 176, 0.28); color: #78d3b0; }
+.organizer-state-heading strong,
+.organizer-state-copy small { display: block; }
+.organizer-state-heading strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.organizer-state-strip strong { color: #f5f7f8; font-size: 12px; }
+.organizer-state-copy small {
+  margin-top: 3px;
+  color: rgba(224, 233, 238, 0.68);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.organizer-state-metrics { display: flex; flex: 0 0 auto; align-items: center; gap: 10px; padding-left: 8px; color: rgba(224, 233, 238, 0.52); font-size: 10px; white-space: nowrap; }
+.organizer-state-metrics span { display: grid; gap: 2px; }
+.organizer-state-metrics b { color: rgba(245, 247, 248, 0.9); font-size: 13px; font-weight: 650; }

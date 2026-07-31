@@ -21,3 +21,6 @@ public/pet/**/_preview.*
 .env
 .env.*
 !.env.example
+# W3 CSS split debug artifacts
+src/renderer/styles/_*.py
+_verify_styles_orig.css

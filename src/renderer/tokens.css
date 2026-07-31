@@ -64,4 +64,19 @@
   --z-task: 5;
   --z-safe: 8;
   --z-toast: 9;
+
+  /* ── 文档级根样式（原 styles.css 第 1-8 行，全局生效）── */
+  color: #f6f3ec;
+  background: #101114;
+  font-family:
+    Inter, "Segoe UI", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+
+  /* ── V5.1 体验模式令牌（原 styles.css 第 3133-3139 行）── */
+  --experience-quiet-glass: rgba(13, 22, 34, 0.13);
+  --experience-glass-border: rgba(255, 255, 255, 0.2);
+  --experience-glass-shadow: 0 14px 42px rgba(4, 10, 18, 0.18);
+  --experience-blur: 12px;
+  --experience-edge-gap: 18px;
 }

@@ -783,6 +783,7 @@ function startCanvasFallback(container: HTMLDivElement): void {
       :data-weather="weatherMode"
       :data-performance="performanceProfile"
       :data-intensity="weatherIntensity"
+      :data-paused="String(runtimePaused)"
       :style="{ '--weather-intensity': String(weatherIntensity) }"
     >
       <div class="weather-fog" aria-hidden="true">

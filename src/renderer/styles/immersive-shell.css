@@ -1,0 +1,206 @@
+/*
+ * immersive-shell.css — 应用外壳、体验模式与氛围状态胶囊/文件空间
+ * 来源：styles.css 第 119-140 行（.app-shell 基础）、
+ *       3141-3143 行（native/immersive/clean 透明背景）、
+ *       3224-3292 行（.ambient-status-capsule 氛围状态胶囊）、
+ *       3294-3372 行（.ambient-file-space 氛围文件空间）、
+ *       3374-3391 行（desktop-band 体验模式可见性）。
+ * 注：第 3392 行 .wallpaper-stage[data-fit-mode="contain"] 规则归属 wallpaper.css，此处不重复。
+ */
+
+.app-shell {
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+  padding-top: 38px;
+  background:
+    linear-gradient(135deg, rgba(32, 78, 98, 0.28), transparent 42%),
+    radial-gradient(circle at 85% 8%, rgba(176, 209, 118, 0.12), transparent 34%),
+    #101114;
+}
+
+.app-shell > :not(.wallpaper-stage) {
+  position: relative;
+  z-index: 1;
+}
+
+/* The ambient controls are viewport-anchored overlays, not part of the task-flow layout. */
+.app-shell > .ambient-edge-rail,
+.app-shell > .ambient-status-capsule {
+  position: fixed;
+  z-index: 30;
+}
+
+.app-shell[data-experience-mode="native"],
+.app-shell[data-experience-mode="immersive"],
+.app-shell[data-experience-mode="clean"] { background: transparent; }
+
+.ambient-status-capsule {
+  position: fixed;
+  z-index: 30;
+  top: var(--experience-edge-gap);
+  right: var(--experience-edge-gap);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 6px 8px 6px 12px;
+  border: 1px solid var(--experience-glass-border);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 12px;
+  letter-spacing: 0;
+  background: var(--experience-quiet-glass);
+  box-shadow: var(--experience-glass-shadow);
+  backdrop-filter: blur(var(--experience-blur));
+  -webkit-backdrop-filter: blur(var(--experience-blur));
+}
+
+.ambient-status-divider { opacity: 0.48; }
+.ambient-status-host { max-width: 112px; overflow: hidden; color: rgba(255, 255, 255, 0.5); text-overflow: ellipsis; white-space: nowrap; }
+.ambient-status-context { display: inline-flex; align-items: center; gap: 7px; max-width: 190px; color: rgba(255,255,255,.72); font-size: 10px; }
+.ambient-status-context span { display: inline-flex; align-items: center; gap: 3px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ambient-status-context svg { flex: 0 0 auto; color: rgba(216,230,187,.9); }
+.ambient-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #9cc9d6;
+  box-shadow: 0 0 0 3px rgba(156, 201, 214, 0.16);
+}
+.ambient-status-dot[data-mode="immersive"],
+.ambient-status-dot[data-mode="task"] { background: #f2d47d; }
+.ambient-status-dot[data-mode="native"] { background: #9cc9d6; }
+.ambient-status-dot[data-mode="clean"] { background: #c8d8b1; }
+.ambient-status-dot[data-mode="attention"] { background: #ef9d88; }
+.ambient-status-dot[data-mode="safe"] { background: #a7d8ab; }
+
+.ambient-suggestion {
+  position: fixed;
+  right: 22px;
+  bottom: 24px;
+  z-index: 31;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  width: min(430px, calc(100vw - 44px));
+  padding: 10px 11px;
+  border: 1px solid rgba(220, 238, 192, 0.28);
+  border-radius: 14px;
+  color: rgba(255,255,255,.9);
+  background: rgba(13, 22, 34, .46);
+  box-shadow: 0 18px 48px rgba(2, 8, 14, .24);
+  backdrop-filter: blur(18px) saturate(1.08);
+  -webkit-backdrop-filter: blur(18px) saturate(1.08);
+}
+.ambient-suggestion-icon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; color: #d8e6bb; background: rgba(216,230,187,.12); }
+.ambient-suggestion > div { display: grid; min-width: 0; gap: 2px; }
+.ambient-suggestion > div > span { color: rgba(255,255,255,.48); font-size: 10px; }
+.ambient-suggestion strong,
+.ambient-suggestion small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ambient-suggestion strong { font-size: 12px; }
+.ambient-suggestion small { color: rgba(255,255,255,.58); font-size: 10px; }
+.ambient-suggestion > button:not(.ambient-suggestion-dismiss) { min-height: 30px; padding: 0 9px; border: 1px solid rgba(220,238,192,.3); border-radius: 8px; color: #d8e6bb; background: rgba(220,238,192,.1); cursor: pointer; }
+.ambient-suggestion > button:not(.ambient-suggestion-dismiss):hover { background: rgba(220,238,192,.18); }
+.ambient-suggestion-dismiss { display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 7px; color: rgba(255,255,255,.52); background: transparent; cursor: pointer; }
+.ambient-suggestion-dismiss:hover { color: #fff; background: rgba(255,255,255,.1); }
+
+/* A light desktop extension: recognizable native icons without recreating the organizer grid. */
+.ambient-file-space {
+  position: fixed;
+  z-index: 24;
+  top: 96px;
+  left: 84px;
+  width: min(540px, calc(100vw - 180px));
+  max-height: min(430px, calc(100vh - 180px));
+  overflow: auto;
+  padding: 12px 14px 14px;
+  color: rgba(255, 250, 240, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  background: rgba(10, 18, 27, 0.11);
+  box-shadow: 0 18px 54px rgba(2, 8, 14, 0.14);
+  backdrop-filter: blur(10px) saturate(1.08);
+  -webkit-backdrop-filter: blur(10px) saturate(1.08);
+  scrollbar-width: none;
+}
+
+.ambient-file-space::-webkit-scrollbar { display: none; }
+.ambient-file-space-header,
+.ambient-file-group-heading { display: flex; align-items: center; }
+.ambient-file-space-header { justify-content: space-between; gap: 16px; margin-bottom: 10px; }
+.ambient-file-space-header > div { display: grid; gap: 2px; }
+.ambient-file-space-header span { color: rgba(255, 255, 255, 0.48); font-size: 10px; letter-spacing: 0.08em; }
+.ambient-file-space-header strong { font-size: 15px; font-weight: 650; }
+.ambient-file-space-header > button,
+.ambient-file-group-heading > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 9px;
+  padding: 0 9px;
+  color: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+}
+.ambient-file-space-header > button:hover,
+.ambient-file-group-heading > button:hover { border-color: rgba(216, 230, 187, 0.38); color: #d8e6bb; background: rgba(216, 230, 187, 0.1); }
+.ambient-file-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; }
+.ambient-file-group { min-width: 0; padding: 8px 3px 6px; border-top: 1px solid rgb(var(--container-accent, 190 199 207) / 0.52); }
+.ambient-file-group-heading { gap: 7px; min-width: 0; }
+.ambient-file-group-dot { width: 7px; height: 7px; flex: 0 0 auto; border-radius: 50%; background: rgb(var(--container-accent, 190 199 207)); box-shadow: 0 0 0 3px rgb(var(--container-accent, 190 199 207) / 0.16); }
+.ambient-file-group-heading strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.ambient-file-group-heading small { color: rgba(255, 255, 255, 0.45); font-size: 10px; }
+.ambient-file-group-heading > button { width: 26px; min-height: 26px; margin-left: auto; padding: 0; border-color: transparent; background: transparent; }
+.ambient-file-icons { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px; }
+.ambient-file-icon,
+.ambient-file-more {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 3px;
+  width: 68px;
+  min-height: 78px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 5px 3px;
+  color: rgba(255, 250, 240, 0.9);
+  background: transparent;
+  cursor: pointer;
+  text-align: center;
+}
+.ambient-file-icon:hover,
+.ambient-file-icon:focus-visible,
+.ambient-file-more:hover,
+.ambient-file-more:focus-visible { border-color: rgba(255, 255, 255, 0.18); background: rgba(255, 255, 255, 0.1); outline: none; }
+.ambient-file-art { position: relative; display: grid; place-items: center; width: 42px; height: 42px; color: #d9ebf2; }
+.ambient-file-art[data-kind="folder"] { color: #ffd56b; }
+.ambient-file-art .desktop-folder-art { transform: scale(0.86); }
+.ambient-file-art .desktop-native-icon { width: 29px; height: 29px; }
+.ambient-file-art svg { width: 26px; height: 26px; filter: drop-shadow(0 4px 7px rgba(0,0,0,.25)); }
+.ambient-file-name { display: -webkit-box; width: 100%; min-height: 25px; overflow: hidden; color: rgba(255, 250, 240, 0.88); font-size: 10px; line-height: 1.24; text-shadow: 0 1px 4px rgba(0,0,0,.7); overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.ambient-file-more { align-content: center; color: rgba(216, 230, 187, 0.82); font-size: 11px; }
+.ambient-file-more span { font-weight: 650; }
+
+.app-shell[data-experience-mode="native"] .desktop-band,
+.app-shell[data-experience-mode="immersive"] .desktop-band,
+.app-shell[data-experience-mode="clean"] .desktop-band {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px) scale(0.985);
+}
+.app-shell[data-experience-mode="task"] .desktop-band,
+.app-shell[data-experience-mode="safe"] .desktop-band {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+}
+.desktop-band { transition: opacity 180ms ease, transform 220ms ease; }
+.app-shell[data-experience-mode="task"] .topbar,
+.app-shell[data-experience-mode="task"] .wallpaper-pull-cord { display: none; }

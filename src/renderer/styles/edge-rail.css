@@ -1,0 +1,90 @@
+/*
+ * edge-rail.css — 氛围侧边导航栏与窄屏响应式
+ * 来源：styles.css 第 3160-3222 行（.ambient-edge-rail 与按钮/分隔/原生态）、
+ *       3394-3411 行（@media (max-width: 760px) 全局氛围组件响应式）。
+ * 注：该媒体查询同时覆盖 .ambient-status-capsule / .ambient-suggestion / .ambient-file-space，
+ *     整体收归本文件以维持单一来源。
+ */
+
+.ambient-edge-rail {
+  position: fixed;
+  z-index: 30;
+  top: 50%;
+  left: var(--experience-edge-gap);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 7px;
+  transform: translateY(-50%);
+  border: 1px solid var(--experience-glass-border);
+  border-radius: 16px;
+  background: var(--experience-quiet-glass);
+  box-shadow: var(--experience-glass-shadow);
+  backdrop-filter: blur(var(--experience-blur));
+  -webkit-backdrop-filter: blur(var(--experience-blur));
+}
+
+.ambient-edge-rail button,
+.ambient-status-capsule button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.86);
+  background: transparent;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.ambient-edge-rail button:hover,
+.ambient-edge-rail button:focus-visible,
+.ambient-status-capsule button:hover,
+.ambient-status-capsule button:focus-visible {
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.16);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.ambient-edge-rail button.active {
+  border-color: rgba(220, 239, 206, 0.42);
+  color: #f4e6ac;
+  background: rgba(221, 239, 207, 0.16);
+}
+.ambient-edge-rail .edge-rail-divider {
+  width: 22px;
+  height: 1px;
+  margin: 2px auto;
+  background: rgba(255, 255, 255, 0.16);
+}
+.ambient-edge-rail[data-mode="native"] {
+  padding: 9px;
+  border-color: rgba(210, 232, 242, 0.28);
+  background: rgba(19, 33, 43, 0.12);
+}
+.ambient-edge-rail[data-mode="native"] .edge-rail-wake {
+  color: #e8ebaf;
+  background: rgba(229, 223, 150, 0.1);
+}
+
+@media (max-width: 760px) {
+  .ambient-edge-rail {
+    top: auto;
+    right: 50%;
+    bottom: 14px;
+    left: auto;
+    flex-direction: row;
+    transform: translateX(50%);
+  }
+  .ambient-status-capsule {
+    top: 12px;
+    right: 12px;
+    max-width: calc(100vw - 24px);
+  }
+  .ambient-suggestion { right: 12px; bottom: 72px; width: calc(100vw - 24px); }
+  .ambient-file-space { top: 78px; left: 12px; width: calc(100vw - 24px); max-height: 300px; }
+  .ambient-file-groups { grid-template-columns: 1fr; }
+}

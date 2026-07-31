@@ -1,0 +1,212 @@
+/*
+ * base.css — 基础层：reset / 滚动条 / body / 窗口 body 类 / 任务带骨架 / 右键菜单
+ * 来源：styles.css 第 10-45、82-88、108-117、1021-1087、1134-1169、2394-2438 行
+ * pet 相关窗口 body/html 规则迁至 pet.css；light 主题覆盖迁至 theme-light.css。
+ */
+
+* {
+  box-sizing: border-box;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(196, 214, 220, 0.3) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(196, 214, 220, 0.3);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(196, 214, 220, 0.48);
+  background-clip: padding-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: #101114;
+}
+
+html.settings-window-root,
+body.settings-window-body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0d0f12;
+}
+
+body.wallpaper-window-body {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #101114;
+}
+
+button {
+  font: inherit;
+}
+
+.desktop-band {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 38px);
+  min-height: 0;
+  padding: 18px 24px 20px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 52px;
+  margin-bottom: 12px;
+  padding-right: 76px;
+}
+
+.brand-lockup,
+.brand-lockup > div,
+.topbar-state {
+  display: flex;
+  align-items: center;
+}
+
+.brand-lockup {
+  gap: 12px;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  color: #101114;
+  background: #9fd7ed;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.brand-lockup > div {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.brand-lockup strong {
+  font-size: 16px;
+}
+
+.brand-lockup > div span {
+  color: rgba(246, 243, 236, 0.58);
+  font-size: 12px;
+}
+
+.topbar-state {
+  gap: 10px;
+}
+
+.host-state {
+  color: rgba(246, 243, 236, 0.62);
+  font-size: 12px;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 0;
+  font-size: 34px;
+  line-height: 1.1;
+  letter-spacing: 0;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 96px;
+  justify-content: center;
+  border: 1px solid rgba(246, 243, 236, 0.18);
+  border-radius: 999px;
+  padding: 9px 14px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.status-pill span {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #c9d56a;
+}
+
+.status-pill[data-mode="active"] span {
+  background: #69d0ff;
+}
+
+.context-menu {
+  position: fixed;
+  z-index: 20;
+  display: grid;
+  min-width: 214px;
+  max-height: min(520px, calc(100vh - 24px));
+  overflow: auto;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  padding: 6px;
+  background: rgba(13, 15, 18, 0.9);
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(24px);
+}
+
+.context-menu button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 34px;
+  border: 0;
+  border-radius: 6px;
+  padding: 0 12px;
+  color: rgba(246, 243, 236, 0.92);
+  background: transparent;
+  text-align: left;
+  font-size: 13px;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.context-menu button svg {
+  flex: 0 0 15px;
+  color: rgba(159, 215, 237, 0.72);
+}
+
+.context-menu button:hover:not(:disabled) {
+  background: rgba(105, 208, 255, 0.14);
+  color: #f6f3ec;
+}
+
+.context-menu button:disabled {
+  color: rgba(246, 243, 236, 0.28);
+}

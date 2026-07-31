@@ -1,0 +1,33 @@
+/*
+ * theme-light.css — light 主题覆盖
+ * 来源：styles.css 第 47-73 行（html[data-theme="light"] 全部规则）
+ * 必须在领域文件之后加载。
+ */
+
+html[data-theme="light"] body:not(.pet-window-body):not(.wallpaper-window-body) {
+  color: #20262b;
+  background: #eef2f4;
+}
+
+html[data-theme="light"] .app-shell {
+  color: #20262b;
+  background: #eef2f4;
+}
+
+html[data-theme="light"] .desktop-band {
+  color: #20262b;
+}
+
+html[data-theme="light"] .command-panel,
+html[data-theme="light"] .zone {
+  color: #20262b;
+  border-color: rgba(21, 37, 47, 0.16);
+  background: rgba(248, 251, 252, 0.66);
+}
+
+html[data-theme="light"] .desktop-icon-name,
+html[data-theme="light"] .zone strong,
+html[data-theme="light"] .panel-title h2 {
+  color: #172027;
+  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.8);
+}

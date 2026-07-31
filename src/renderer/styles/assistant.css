@@ -1,0 +1,159 @@
+/*
+ * assistant.css — 助手聊天面板 / 助手表面与上下文条
+ * 来源：styles.css 第 2183-2328 行（聊天面板）+ 3462-3480 行（助手表面）。
+ * 处理：排除 2198-2203（误置的 .command-panel 基础规则，已在 ui-kit.css）、
+ *       2295-2297（共享 spin 动画，已在 ui-kit.css）、2287-2289（.chat-error 死代码，已删除）。
+ */
+
+.chat-panel {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid rgba(246, 243, 236, 0.12);
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.command-panel .chat-panel {
+  grid-template-rows: auto minmax(120px, 1fr) auto;
+  flex: 0 0 320px;
+  min-height: 320px;
+  overflow: hidden;
+}
+
+.command-panel .chat-history {
+  min-height: 0;
+  max-height: none;
+}
+
+.chat-panel header,
+.chat-panel header div,
+.chat-input {
+  display: flex;
+  align-items: center;
+}
+
+.chat-panel header {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.chat-panel header div {
+  gap: 8px;
+}
+
+.chat-panel header span {
+  color: rgba(246, 243, 236, 0.6);
+  font-size: 13px;
+}
+
+.chat-history {
+  display: grid;
+  gap: 8px;
+  min-height: 190px;
+  max-height: 250px;
+  overflow: auto;
+}
+
+.chat-history article {
+  border-radius: 8px;
+  padding: 9px 10px;
+  color: #f6f3ec;
+  background: rgba(246, 243, 236, 0.08);
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.chat-history article[data-role="assistant"] {
+  background: rgba(159, 215, 237, 0.14);
+}
+
+.chat-intent-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 9px;
+  border: 1px solid rgba(135, 218, 172, 0.28);
+  border-radius: 7px;
+  background: rgba(61, 136, 92, 0.14);
+}
+
+.chat-intent-preview span { display: grid; min-width: 0; gap: 2px; }
+.chat-intent-preview strong { color: #e5f7eb; font-size: 12px; }
+.chat-intent-preview small { color: rgba(246, 243, 236, 0.62); font-size: 10px; line-height: 1.35; }
+.chat-intent-preview button {
+  flex: 0 0 auto;
+  min-height: 28px;
+  border: 0;
+  border-radius: 6px;
+  padding: 0 8px;
+  color: #0f1712;
+  font-size: 11px;
+  background: #9ee0b3;
+}
+
+.chat-empty,
+.chat-error,
+.chat-status {
+  margin: 0;
+  color: rgba(246, 243, 236, 0.56);
+  font-size: 13px;
+}
+
+.chat-status { display: flex; align-items: center; gap: 6px; color: #b7e7bd; }
+.chat-status svg { flex: 0 0 auto; }
+.chat-status[data-tone="neutral"] { color: #b8d9eb; }
+.chat-status[data-tone="error"] { color: #ffc1aa; }
+
+.chat-input {
+  gap: 8px;
+}
+
+.chat-input input {
+  min-width: 0;
+  flex: 1;
+  min-height: 36px;
+  border: 1px solid rgba(246, 243, 236, 0.14);
+  border-radius: 8px;
+  padding: 0 10px;
+  color: #f6f3ec;
+  background: rgba(246, 243, 236, 0.08);
+}
+
+.chat-input button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 36px;
+  border: 0;
+  border-radius: 8px;
+  color: #101114;
+  background: #9fd7ed;
+}
+
+.chat-input button:disabled {
+  opacity: 0.45;
+}
+
+.assistant-surface { display: none; width: min(760px, calc(100% - 36px)); margin: 0 auto; padding: 22px; border: 1px solid rgba(255,255,255,.28); border-radius: 22px; color: rgba(255,255,255,.96); background: linear-gradient(145deg, rgba(15,29,39,.76), rgba(7,14,20,.62)); box-shadow: 0 24px 72px rgba(3,8,12,.42); backdrop-filter: blur(24px) saturate(1.12); -webkit-backdrop-filter: blur(24px) saturate(1.12); }
+.app-shell[data-task-surface="assistant"] .assistant-surface { display: block; }
+.app-shell[data-task-surface="assistant"] .command-panel { display: none; }
+.assistant-surface-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.assistant-pet-portrait { display: grid; flex: 0 0 54px; width: 54px; height: 54px; place-items: center; overflow: hidden; border: 1px solid rgba(216,230,187,.3); border-radius: 16px; color: #d8e6bb; background: linear-gradient(145deg, rgba(216,230,187,.16), rgba(159,215,237,.08)); box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 10px 24px rgba(3,8,12,.2); }
+.assistant-pet-portrait[data-visible="false"] { border-color: rgba(255,255,255,.18); color: rgba(255,255,255,.62); background: rgba(255,255,255,.06); }
+.assistant-pet-art { width: 100%; height: 100%; background-position: center 32%; background-repeat: no-repeat; background-size: 112% auto; filter: drop-shadow(0 6px 7px rgba(0,0,0,.3)); }
+.assistant-surface-heading { min-width: 0; flex: 1 1 auto; }
+.assistant-surface-header h2 { margin: 6px 0 4px; font-size: 24px; letter-spacing: 0; }
+.assistant-surface-header p { margin: 0; color: rgba(255,255,255,.72); font-size: 13px; }
+.assistant-surface-badge { flex: 0 0 auto; padding: 6px 8px; border: 1px solid rgba(216,230,187,.24); border-radius: 8px; color: #d8e6bb; background: rgba(216,230,187,.08); font-size: 10px; }
+.assistant-context-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; margin-bottom: 14px; padding: 8px; border: 1px solid rgba(255,255,255,.16); border-radius: 13px; background: rgba(6,14,20,.44); }
+.assistant-context-chip { display: grid; gap: 3px; min-width: 0; padding: 8px; border: 1px solid rgba(255,255,255,.13); border-radius: 9px; background: rgba(255,255,255,.075); }
+.assistant-context-chip small { color: rgba(220,238,192,.86); font-size: 9px; letter-spacing: .06em; text-transform: uppercase; }
+.assistant-context-chip strong,
+.assistant-context-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.assistant-context-chip strong { color: rgba(255,255,255,.9); font-size: 11px; }
+.assistant-context-chip span { color: rgba(255,255,255,.72); font-size: 9px; }
+.assistant-surface .chat-panel { max-height: min(620px, calc(100vh - 230px)); }

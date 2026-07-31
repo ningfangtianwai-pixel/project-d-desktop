@@ -1,0 +1,211 @@
+/*
+ * ui-kit.css — 共享原子：通用按钮 / 状态列表 / 文件与文件夹预览 / 共享 kicker / 共享 spin 动画
+ * 来源：styles.css 第 1811-1862、1864-1992、2178-2181、2198-2203、2295-2297、3103-3106、3575 行
+ * folder-preview 保留第 1952-1986 行版本（第 1504-1557 行为 OverlayPage 死代码，已删除）。
+ */
+
+.action-button,
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  border: 0;
+  border-radius: 8px;
+  color: #101114;
+  background: #9fd7ed;
+  cursor: pointer;
+}
+
+.action-button {
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.action-button.secondary {
+  background: #d7d28d;
+}
+
+.action-button.quiet {
+  color: #f6f3ec;
+  border: 1px solid rgba(246, 243, 236, 0.14);
+  background: rgba(246, 243, 236, 0.12);
+}
+
+.action-button.muted {
+  color: #f6f3ec;
+  background: rgba(246, 243, 236, 0.14);
+}
+
+.action-button.inbox {
+  color: #dff6e8;
+  border: 1px solid rgba(135, 218, 172, 0.34);
+  background: rgba(69, 144, 102, 0.32);
+}
+
+.action-button:disabled,
+.inbox-review button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.icon-button {
+  width: 38px;
+  color: #f6f3ec;
+  background: rgba(246, 243, 236, 0.12);
+  border: 1px solid rgba(246, 243, 236, 0.14);
+}
+
+.status-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.status-list div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid rgba(246, 243, 236, 0.1);
+  padding-bottom: 8px;
+  font-size: 12.5px;
+}
+
+.status-list dd {
+  margin: 0;
+  overflow: hidden;
+  color: rgba(246, 243, 236, 0.86);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-preview {
+  display: grid;
+  gap: 6px;
+  border: 1px solid rgba(246, 243, 236, 0.12);
+  border-radius: 8px;
+  margin-top: 12px;
+  padding: 10px;
+  background: rgba(246, 243, 236, 0.08);
+}
+
+.file-preview strong,
+.file-preview span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-preview-head {
+  display: grid;
+  gap: 2px;
+}
+.file-preview-head strong {
+  color: rgba(246, 243, 236, 0.92);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-preview-head span {
+  color: rgba(246, 243, 236, 0.5);
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-preview-body {
+  margin-top: 8px;
+  max-height: 220px;
+  overflow: auto;
+  border-top: 1px solid rgba(246, 243, 236, 0.1);
+  padding-top: 8px;
+}
+.preview-loading,
+.preview-unsupported {
+  color: rgba(246, 243, 236, 0.55);
+  font-size: 11px;
+  margin: 0;
+}
+.preview-text {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: rgba(246, 243, 236, 0.82);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+.preview-image {
+  display: block;
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+.folder-preview {
+  display: grid;
+  gap: 6px;
+}
+.folder-preview > p {
+  margin: 0;
+  font-size: 10px;
+  color: rgba(246, 243, 236, 0.5);
+}
+.folder-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 6px;
+}
+.folder-preview-grid article {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  padding: 6px 4px;
+  border: 1px solid rgba(246, 243, 236, 0.1);
+  border-radius: 6px;
+  background: rgba(246, 243, 236, 0.05);
+}
+.folder-preview-grid strong {
+  font-size: 10px;
+  color: rgba(246, 243, 236, 0.82);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.folder-preview-grid small {
+  font-size: 9px;
+  color: rgba(246, 243, 236, 0.5);
+}
+.file-preview-meta {
+  display: block;
+  margin-top: 6px;
+  font-size: 10px;
+  color: rgba(246, 243, 236, 0.42);
+}
+
+.file-preview span {
+  color: rgba(246, 243, 236, 0.64);
+  font-size: 13px;
+}
+
+.command-panel > .panel-title,
+.command-panel > .action-row,
+.command-panel > .status-list,
+.command-panel > .file-preview {
+  flex-shrink: 0;
+}
+
+.chat-status-spin,
+.wallpaper-status-spin { animation: projectd-status-spin 1s linear infinite; }
+@keyframes projectd-status-spin { to { transform: rotate(360deg); } }
+
+.preview-unsupported {
+  color: rgba(246, 243, 236, 0.56);
+  font-size: 13px;
+}
+
+.surface-kicker { display: inline-flex; align-items: center; gap: 6px; color: #d8e6bb; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
