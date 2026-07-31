@@ -6,6 +6,7 @@ import { findWallpaperByInput, nextWallpaperId, WALLPAPER_LIBRARY } from "../sha
 import type { ActionExecution, ActionPlan, ChatMessage, PortalConfig, PortalResource, ProjectDApi, SettingsSnapshot, WorkspaceScene } from "../shared/types";
 import type { AutoRule } from "../shared/auto-rules";
 import type { UpdateStatus } from "../shared/update";
+import { installGlobalErrorHandlers, createErrorHandlerPlugin } from "./crash/error-handler";
 
 const APP_VERSION = __PROJECTD_VERSION__;
 
@@ -624,10 +625,20 @@ if (!window.projectD) {
         updateListeners.delete(handler);
       };
     },
-    onRuntimeStateChanged: () => () => undefined
+    onRuntimeStateChanged: () => () => undefined,
+    // Crash log mocks
+    addCrashLog: async () => ({ id: 0, type: "", message: "", stack: null, crashedAt: "", appVersion: "", osInfo: "", memoryInfo: "", breadcrumbs: null, rendererPid: null, uploaded: 0, createdAt: "" }),
+    getCrashLogs: async () => [],
+    deleteCrashLog: async () => { /* mock */ },
+    clearCrashLogs: async () => { /* mock */ },
+    uploadCrashLogs: async () => ({ uploaded: 0 }),
+    getUnuploadedCrashCount: async () => 0
   };
 
   window.projectD = mockApi;
 }
 
-createApp(App).mount("#app");
+// 全局错误捕获（在 Vue mount 前安装，确保初始化期错误也能捕获）
+installGlobalErrorHandlers();
+
+createApp(App).use(createErrorHandlerPlugin()).mount("#app");

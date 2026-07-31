@@ -28,6 +28,7 @@ import { DiagnosticsService } from "./diagnostics/diagnostics-service.js";
 import { readRecentLogMetadata } from "./diagnostics/diagnostics-source.js";
 import { SystemPresenceMonitor } from "./system-presence.js";
 import { DesktopRuntimeRecovery } from "./desktop-runtime-recovery.js";
+import { initCrashCapture, captureCrash, registerRendererCrashListeners } from "./crash/crash-capture.js";
 import { ExplorerProcessMonitor, probeWindowsExplorerProcess } from "./explorer-monitor.js";
 import { getPrivacyNetworkState, setPrivacyNetworkPaused } from "./privacy-network.js";
 import { inspectInterruptedAction } from "./actions/action-recovery.js";
@@ -226,6 +227,8 @@ function handleFatalProcessFailure(kind: string, reason: unknown): void {
   if (fatalProcessRecoveryScheduled) return;
   fatalProcessRecoveryScheduled = true;
   const message = reason instanceof Error ? reason.message : String(reason);
+  // 崩溃日志捕获：持久化到 SQLite 后再走恢复流程
+  captureCrash({ type: kind, error: reason instanceof Error ? reason : new Error(message) });
   writeBootstrapLog("fatal process failure; native desktop recovery scheduled", { kind, message });
   logger?.error("error", "fatal process failure", { kind, message });
   shutdownInProgress = true;
@@ -2495,6 +2498,9 @@ function buildIpcDeps(): ServiceDeps {
       getDisplays: getWallpaperDisplays,
       assignDisplay: assignWallpaperToDisplay,
       setDisplayFitMode: setWallpaperDisplayFitMode
+    },
+    crash: {
+      getDatabase: () => database
     }
   };
 }
@@ -2985,6 +2991,7 @@ if (!singleInstanceLock) {
       }
 
       await initializeCoreServices();
+      initCrashCapture({ database: database!, logger: logger!, version: app.getVersion() });
       registerWallpaperRepairTriggers();
       startRuntimePresenceMonitor();
       registerIpc();
@@ -2995,6 +3002,7 @@ if (!singleInstanceLock) {
         createWallpaperWindow();
       }
       mainWindow = createWindow();
+      registerRendererCrashListeners(mainWindow);
       if (process.env.PROJECTD_QA_OPEN_SETTINGS === "1") {
         createSettingsWindow();
       }

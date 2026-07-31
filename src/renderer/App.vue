@@ -32,6 +32,7 @@ import AssistantSurface from "./components/AssistantSurface.vue";
 import OrganizerSurface from "./components/OrganizerSurface.vue";
 import AmbientFileSpace from "./components/AmbientFileSpace.vue";
 import CompatibilitySurface from "./components/CompatibilitySurface.vue";
+import CrashLogManager from "./components/CrashLogManager.vue";
 import { wallpaperDisplayLabel } from "@shared/wallpaper-library";
 import { containerAccentOption } from "@shared/container-accents";
 import { getPetCharacter } from "@shared/pet-characters";
@@ -84,6 +85,7 @@ const desktopStatus = ref<DesktopStatus>({
 });
 const route = ref(window.location.hash);
 const showOnboarding = ref(!route.value && shouldShowOnboarding(readOnboardingState(localStorage, 5)));
+const showDiagnostics = ref(false);
 const activityLog = ref<string[]>(["Project D shell ready"]);
 const experienceMode = ref<DesktopExperienceMode>(DEFAULT_DESKTOP_EXPERIENCE.mode);
 const activeTaskSurface = ref<DesktopTaskSurface>(DEFAULT_DESKTOP_EXPERIENCE.activeSurface);
@@ -671,6 +673,7 @@ onUnmounted(() => {
       @open-surface="openDesktopSurface"
       @enter-clean="enterCleanDesktop"
       @open-settings="openSettings"
+      @open-diagnostics="showDiagnostics = true"
     />
     <AmbientStatus
       :mode="experienceMode"
@@ -892,4 +895,5 @@ onUnmounted(() => {
       <button type="button" @click="scanDesktop"><RefreshCcw :size="15" />刷新文件信息</button>
     </div>
   </main>
+  <CrashLogManager v-if="showDiagnostics" @close="showDiagnostics = false" />
 </template>

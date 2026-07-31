@@ -16,6 +16,7 @@ import { registerRecoveryIpcHandlers, type RecoveryIpcDependencies } from "./rec
 import { registerUpdateIpcHandlers, type UpdateIpcDependencies } from "./update-ipc.js";
 import { registerRuntimeIpcHandlers, type RuntimeIpcDependencies } from "./runtime-ipc.js";
 import { registerWallpaperIpcHandlers, type WallpaperIpcDependencies } from "./wallpaper-ipc.js";
+import { registerCrashIpcHandlers, type CrashIpcDependencies } from "./crash-ipc.js";
 import { createIpcHandlerRegistry } from "./handler-registry.js";
 
 type HandlerDependencies<T> = Omit<T, "ipc" | "assertTrustedSender">;
@@ -38,6 +39,7 @@ export interface ServiceDeps {
   updates: HandlerDependencies<UpdateIpcDependencies>;
   runtime: HandlerDependencies<RuntimeIpcDependencies>;
   wallpaper: HandlerDependencies<WallpaperIpcDependencies>;
+  crash: HandlerDependencies<CrashIpcDependencies>;
 }
 
 export function registerAllIpcHandlers(deps: ServiceDeps): () => void {
@@ -61,6 +63,7 @@ export function registerAllIpcHandlers(deps: ServiceDeps): () => void {
     registerUpdateIpcHandlers({ ipc, assertTrustedSender, ...deps.updates });
     registerRuntimeIpcHandlers({ ipc, assertTrustedSender, ...deps.runtime });
     registerWallpaperIpcHandlers({ ipc, assertTrustedSender, ...deps.wallpaper });
+    registerCrashIpcHandlers({ ipc, assertTrustedSender, ...deps.crash });
     return registry.dispose;
   } catch (error) {
     registry.dispose();

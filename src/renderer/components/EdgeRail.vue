@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { EyeOff, FolderKanban, Search, Settings, Sparkles, Waypoints } from "lucide-vue-next";
+import { Activity, EyeOff, FolderKanban, Search, Settings, Sparkles, Waypoints } from "lucide-vue-next";
 import type { DesktopExperienceMode, DesktopTaskSurface } from "@shared/desktop-experience";
 
 defineProps<{
@@ -12,6 +12,7 @@ const emit = defineEmits<{
   openSurface: [surface: Exclude<DesktopTaskSurface, null>];
   enterClean: [];
   openSettings: [];
+  openDiagnostics: [];
 }>();
 
 const entries = [
@@ -57,6 +58,9 @@ const entries = [
         <EyeOff :size="18" />
       </button>
     </template>
+    <button type="button" title="诊断" aria-label="诊断" @click="emit('openDiagnostics')">
+      <Activity :size="18" />
+    </button>
     <button type="button" title="打开设置" aria-label="打开设置" @click="emit('openSettings')">
       <Settings :size="18" />
     </button>

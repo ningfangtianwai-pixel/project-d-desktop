@@ -189,7 +189,14 @@ const api: ProjectDApi = {
     return () => {
       ipcRenderer.off(IPC_CHANNELS.RUNTIME_STATE_CHANGED, listener);
     };
-  }
+  },
+  // Crash log API
+  addCrashLog: (entry) => ipcRenderer.invoke(IPC_CHANNELS.CRASH_LOG_ADD, entry),
+  getCrashLogs: (filter) => ipcRenderer.invoke(IPC_CHANNELS.CRASH_LOGS_GET, filter),
+  deleteCrashLog: (id) => ipcRenderer.invoke(IPC_CHANNELS.CRASH_LOG_DELETE, id),
+  clearCrashLogs: () => ipcRenderer.invoke(IPC_CHANNELS.CRASH_LOGS_CLEAR),
+  uploadCrashLogs: (ids) => ipcRenderer.invoke(IPC_CHANNELS.CRASH_LOGS_UPLOAD, ids),
+  getUnuploadedCrashCount: () => ipcRenderer.invoke(IPC_CHANNELS.CRASH_UNUPLOADED_COUNT)
 };
 
 contextBridge.exposeInMainWorld("projectD", api);

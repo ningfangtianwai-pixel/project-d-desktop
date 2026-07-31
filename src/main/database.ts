@@ -35,7 +35,7 @@ export interface UpsertDesktopFileInput {
   fingerprint: string;
 }
 
-const LATEST_SCHEMA_VERSION = 6;
+const LATEST_SCHEMA_VERSION = 7;
 const WALLPAPER_STYLES = new Set(["anime", "landscape", "cinematic", "cyberpunk", "minimalist", "seasonal"]);
 
 function isWallpaperStyle(value: string): value is WallpaperLibraryItem["style"] {
@@ -314,6 +314,25 @@ CREATE TABLE IF NOT EXISTS runtime_metrics (
 );
 
 CREATE INDEX IF NOT EXISTS idx_runtime_metrics_sampled ON runtime_metrics(sampled_at DESC);
+
+CREATE TABLE IF NOT EXISTS crash_logs (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    type            TEXT NOT NULL,
+    message         TEXT NOT NULL,
+    stack           TEXT,
+    crashed_at      TEXT NOT NULL,
+    app_version     TEXT NOT NULL,
+    os_info         TEXT NOT NULL,
+    memory_info     TEXT NOT NULL,
+    breadcrumbs     TEXT,
+    renderer_pid    INTEGER,
+    uploaded        INTEGER NOT NULL DEFAULT 0,
+    created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_crash_logs_crashed_at ON crash_logs(crashed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_crash_logs_type ON crash_logs(type);
+CREATE INDEX IF NOT EXISTS idx_crash_logs_uploaded ON crash_logs(uploaded);
 `;
 
 const DEFAULT_CONTAINERS = [
@@ -1494,6 +1513,29 @@ export class DatabaseService {
         }
       }
 
+      if (currentVersion < 7) {
+        tempDb.run("BEGIN");
+        try {
+          tempDb.run(`CREATE TABLE IF NOT EXISTS crash_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, message TEXT NOT NULL,
+            stack TEXT, crashed_at TEXT NOT NULL, app_version TEXT NOT NULL,
+            os_info TEXT NOT NULL, memory_info TEXT NOT NULL, breadcrumbs TEXT,
+            renderer_pid INTEGER, uploaded INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+          )`);
+          tempDb.run("CREATE INDEX IF NOT EXISTS idx_crash_logs_crashed_at ON crash_logs(crashed_at DESC)");
+          tempDb.run("CREATE INDEX IF NOT EXISTS idx_crash_logs_type ON crash_logs(type)");
+          tempDb.run("CREATE INDEX IF NOT EXISTS idx_crash_logs_uploaded ON crash_logs(uploaded)");
+          tempDb.run("INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (7, ?)", [new Date().toISOString()]);
+          tempDb.run("INSERT OR REPLACE INTO app_state(key, value) VALUES ('schema_version', '7')");
+          tempDb.run("COMMIT");
+          modified = true;
+        } catch {
+          tempDb.run("ROLLBACK");
+          throw new Error("v7 migration failed");
+        }
+      }
+
       const integrity = tempDb.exec("PRAGMA integrity_check");
       const integrityOk = integrity.length === 1
         && integrity[0].values.length === 1
@@ -1518,6 +1560,73 @@ export class DatabaseService {
     } finally {
       try { tempDb.close(); } catch { /* ok */ }
     }
+  }
+
+  /** 崩溃日志 */
+
+  insertCrashLog(entry: {
+    type: string; message: string; stack: string | null; crashedAt: string;
+    appVersion: string; osInfo: string; memoryInfo: string; breadcrumbs: string | null;
+    rendererPid: number | null;
+  }): number {
+    if (!this.db) throw new Error("database unavailable");
+    this.db.run(
+      `INSERT INTO crash_logs (type, message, stack, crashed_at, app_version, os_info, memory_info, breadcrumbs, renderer_pid, uploaded)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+      [entry.type, entry.message, entry.stack, entry.crashedAt, entry.appVersion, entry.osInfo, entry.memoryInfo, entry.breadcrumbs, entry.rendererPid]
+    );
+    const result = this.db.exec("SELECT last_insert_rowid()");
+    const id = Number(result[0].values[0][0]);
+    this.persist();
+    return id;
+  }
+
+  getCrashLogs(filter?: { type?: string; startDate?: string; endDate?: string; uploaded?: number; limit?: number; offset?: number }): Array<Record<string, unknown>> {
+    if (!this.db) return [];
+    const clauses: string[] = [];
+    const params: unknown[] = [];
+    if (filter?.type) { clauses.push("type = ?"); params.push(filter.type); }
+    if (filter?.startDate) { clauses.push("crashed_at >= ?"); params.push(filter.startDate); }
+    if (filter?.endDate) { clauses.push("crashed_at <= ?"); params.push(filter.endDate); }
+    if (filter?.uploaded !== undefined && filter.uploaded >= 0) { clauses.push("uploaded = ?"); params.push(filter.uploaded); }
+    const where = clauses.length > 0 ? ` WHERE ${clauses.join(" AND ")}` : "";
+    const limit = filter?.limit ?? 200;
+    const offset = filter?.offset ?? 0;
+    const results = this.db.exec(
+      `SELECT * FROM crash_logs${where} ORDER BY crashed_at DESC LIMIT ? OFFSET ?`, [...params, limit, offset]
+    );
+    if (results.length === 0) return [];
+    const { columns, values } = results[0];
+    return values.map((row) => {
+      const obj: Record<string, unknown> = {};
+      columns.forEach((col, i) => { obj[col] = row[i]; });
+      return obj;
+    });
+  }
+
+  deleteCrashLog(id: number): void {
+    if (!this.db) return;
+    this.db.run("DELETE FROM crash_logs WHERE id = ?", [id]);
+    this.persist();
+  }
+
+  clearCrashLogs(): void {
+    if (!this.db) return;
+    this.db.run("DELETE FROM crash_logs");
+    this.persist();
+  }
+
+  markCrashLogsUploaded(ids: number[]): void {
+    if (!this.db || ids.length === 0) return;
+    const placeholders = ids.map(() => "?").join(",");
+    this.db.run(`UPDATE crash_logs SET uploaded = 1 WHERE id IN (${placeholders})`, ids);
+    this.persist();
+  }
+
+  getUnuploadedCrashCount(): number {
+    if (!this.db) return 0;
+    const result = this.db.exec("SELECT COUNT(*) as cnt FROM crash_logs WHERE uploaded = 0");
+    return result.length > 0 ? Number(result[0].values[0][0]) : 0;
   }
 
   private columnExistsInDb(db: Database, table: string, column: string): boolean {

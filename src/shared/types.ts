@@ -609,6 +609,43 @@ export interface InterruptedActionRecovery {
   }>;
 }
 
+/** 单条崩溃日志 */
+export interface CrashLogEntry {
+  id: number;
+  /** uncaughtException | unhandledRejection | renderer-crash | renderer-error | gpu-crash | utility-crash */
+  type: string;
+  /** 异常消息 */
+  message: string;
+  /** 堆栈跟踪 */
+  stack: string | null;
+  /** 崩溃发生时间 */
+  crashedAt: string;
+  /** 应用版本 */
+  appVersion: string;
+  /** 操作系统信息 */
+  osInfo: string;
+  /** 内存状态 MB（格式："free:XXX / total:YYY"） */
+  memoryInfo: string;
+  /** 崩溃前的用户操作路径 (JSON array) */
+  breadcrumbs: string | null;
+  /** 渲染进程 ID（仅 renderer-crash） */
+  rendererPid: number | null;
+  /** 是否已上传 */
+  uploaded: number;
+  /** 创建时间 */
+  createdAt: string;
+}
+
+/** 崩溃日志筛选参数 */
+export interface CrashLogFilter {
+  type?: string;
+  startDate?: string;
+  endDate?: string;
+  uploaded?: number;  // -1=全部, 0=未上传, 1=已上传
+  limit?: number;
+  offset?: number;
+}
+
 export interface ProjectDApi {
   getAppInfo: () => Promise<AppInfo>;
   showMain: () => Promise<void>;
@@ -652,6 +689,13 @@ export interface ProjectDApi {
   updateSuggestionPolicy: (policy: SuggestionPolicy) => Promise<SuggestionDeliveryControls>;
   getDiagnosticsReport: () => Promise<SupportDiagnosticsReport>;
   exportDiagnosticsReport: (selection: DiagnosticsExportSelection) => Promise<DiagnosticsExportResult>;
+  // Crash logs
+  addCrashLog: (entry: Omit<CrashLogEntry, "id" | "createdAt" | "uploaded">) => Promise<CrashLogEntry>;
+  getCrashLogs: (filter?: CrashLogFilter) => Promise<CrashLogEntry[]>;
+  deleteCrashLog: (id: number) => Promise<void>;
+  clearCrashLogs: () => Promise<void>;
+  uploadCrashLogs: (ids: number[]) => Promise<{ uploaded: number }>;
+  getUnuploadedCrashCount: () => Promise<number>;
   getWorkspaceScenes: () => Promise<WorkspaceScene[]>;
   saveWorkspaceScene: (name: string) => Promise<WorkspaceScene>;
   applyWorkspaceScene: (sceneId: string) => Promise<WorkspaceScene>;

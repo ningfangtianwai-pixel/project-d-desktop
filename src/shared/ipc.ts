@@ -110,7 +110,15 @@ export const IPC_CHANNELS = {
   RUNTIME_SET_MANUAL_PAUSED: "runtime:set-manual-paused",
   RUNTIME_STATE_CHANGED: "runtime:state-changed",
   RUNTIME_GET_METRICS: "runtime:get-metrics",
-  RUNTIME_REPORT_FPS: "runtime:report-fps"
+  RUNTIME_REPORT_FPS: "runtime:report-fps",
+
+  // Crash logs
+  CRASH_LOG_ADD: "crash:log-add",
+  CRASH_LOGS_GET: "crash:logs-get",
+  CRASH_LOG_DELETE: "crash:log-delete",
+  CRASH_LOGS_CLEAR: "crash:logs-clear",
+  CRASH_LOGS_UPLOAD: "crash:logs-upload",
+  CRASH_UNUPLOADED_COUNT: "crash:unuploaded-count"
 } as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];
