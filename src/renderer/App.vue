@@ -1,40 +1,11 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
-import {
-  AppWindow,
-  Archive,
-  ArrowRight,
-  Code2,
-  ExternalLink,
-  EyeOff,
-  FileQuestion,
-  FileText,
-  Film,
-  Folder,
-  FolderOpen,
-  Image as ImageIcon,
-  Palette,
-  Pencil,
-  RefreshCcw,
-  Sparkles,
-  X
-} from "lucide-vue-next";
 import SettingsPage from "@settings/SettingsPage.vue";
-import WallpaperStage from "./components/WallpaperStage.vue";
 import PetPage from "./views/PetPage.vue";
 import WallpaperPage from "./views/WallpaperPage.vue";
-import OnboardingFlow from "./components/OnboardingFlow.vue";
-import EdgeRail from "./components/EdgeRail.vue";
-import AmbientStatus from "./components/AmbientStatus.vue";
-import SceneSurface from "./components/SceneSurface.vue";
-import SearchSurface from "./components/SearchSurface.vue";
-import AssistantSurface from "./components/AssistantSurface.vue";
-import OrganizerSurface from "./components/OrganizerSurface.vue";
-import AmbientFileSpace from "./components/AmbientFileSpace.vue";
-import CompatibilitySurface from "./components/CompatibilitySurface.vue";
+import AmbientDesktopShell from "./components/AmbientDesktopShell.vue";
 import CrashLogManager from "./components/CrashLogManager.vue";
 import { wallpaperDisplayLabel } from "@shared/wallpaper-library";
-import { containerAccentOption } from "@shared/container-accents";
 import { getPetCharacter } from "@shared/pet-characters";
 import { readOnboardingState, shouldShowOnboarding } from "@shared/onboarding";
 import {
@@ -75,8 +46,6 @@ const workspaceSearchQuery = ref("");
 const workspaceSearchResults = ref<WorkspaceSearchResult[]>([]);
 const workspaceSearchStatus = ref("");
 const searchActionResultId = ref<string | null>(null);
-const searchSurfaceRef = ref<InstanceType<typeof SearchSurface> | null>(null);
-const compatibilitySurfaceRef = ref<InstanceType<typeof CompatibilitySurface> | null>(null);
 const searchScenes = ref<WorkspaceScene[]>([]);
 const searchScenePickerResultId = ref<string | null>(null);
 const desktopStatus = ref<DesktopStatus>({
@@ -89,17 +58,6 @@ const showDiagnostics = ref(false);
 const activityLog = ref<string[]>(["Project D shell ready"]);
 const experienceMode = ref<DesktopExperienceMode>(DEFAULT_DESKTOP_EXPERIENCE.mode);
 const activeTaskSurface = ref<DesktopTaskSurface>(DEFAULT_DESKTOP_EXPERIENCE.activeSurface);
-const fileIconMap = {
-  program: AppWindow,
-  document: FileText,
-  image: ImageIcon,
-  media: Film,
-  code: Code2,
-  archive: Archive,
-  folder: Folder,
-  design: Palette,
-  other: FileQuestion
-};
 let unsubscribeMenu: (() => void) | null = null;
 let unsubscribeDesktopUpdate: (() => void) | null = null;
 let unsubscribeSettingsUpdate: (() => void) | null = null;
@@ -162,10 +120,6 @@ const searchActionNotice = computed(() => {
       : "success";
   return { resultId, tone, message };
 });
-function containerVisualStyle(container: ContainerWithFiles): Record<string, string> {
-  return { "--container-accent": containerAccentOption(container.accentColor).rgb };
-}
-
 function pushLog(message: string): void {
   activityLog.value = [message, ...activityLog.value].slice(0, 5);
 }
@@ -393,11 +347,6 @@ async function focusWorkspaceSearch(): Promise<void> {
     route.value = "";
   }
   await nextTick();
-  if (experienceMode.value === "safe") {
-    await compatibilitySurfaceRef.value?.focusSearch();
-  } else {
-    await searchSurfaceRef.value?.focus();
-  }
 }
 
 async function searchWorkspace(): Promise<void> {
@@ -579,23 +528,6 @@ function showFileMenu(event: MouseEvent, file: DesktopFileRecord): void {
   contextMenu.value = { file, x: event.clientX, y: event.clientY };
 }
 
-function fileIcon(file: DesktopFileRecord) {
-  return fileIconMap[file.category] ?? FileQuestion;
-}
-
-function fileKindLabel(file: DesktopFileRecord): string {
-  if (file.category === "folder") {
-    return "文件夹";
-  }
-  return file.extension?.replace(".", "").toUpperCase() || file.category;
-}
-
-function formatBytes(sizeBytes: number): string {
-  if (sizeBytes < 1024) return `${sizeBytes} B`;
-  if (sizeBytes < 1024 * 1024) return `${(sizeBytes / 1024).toFixed(1)} KB`;
-  return `${(sizeBytes / 1024 / 1024).toFixed(1)} MB`;
-}
-
 function handleHashChange(): void {
   route.value = window.location.hash;
 }
@@ -663,237 +595,86 @@ onUnmounted(() => {
   <PetPage v-else-if="isPetRoute" />
   <WallpaperPage v-else-if="isWallpaperRoute" />
 
-  <main v-else class="app-shell" :data-experience-mode="experienceMode" :data-task-surface="activeTaskSurface || undefined">
-    <OnboardingFlow v-if="showOnboarding" @completed="dismissOnboarding" @skipped="dismissOnboarding" />
-    <WallpaperStage />
-    <EdgeRail
-      :mode="experienceMode"
-      :active-surface="activeTaskSurface"
-      @wake="wakeImmersive"
-      @open-surface="openDesktopSurface"
-      @enter-clean="enterCleanDesktop"
-      @open-settings="openSettings"
-      @open-diagnostics="showDiagnostics = true"
-    />
-    <AmbientStatus
-      :mode="experienceMode"
-      :wallpaper-label="currentWallpaperLabel"
-      :city="currentWeather?.city || '自动定位'"
-      :host-label="wallpaperHostLabel"
-      :task-label="taskSurfaceLabel"
-      :active-surface="activeTaskSurface"
-      :weather-label="currentWeatherLabel"
-      :pet-label="currentPetLabel"
-      :pet-visible="settings?.pet.isVisible ?? false"
-      @wake="wakeImmersive"
-      @close-task="closeDesktopSurface"
-      @leave-immersive="leaveImmersive"
-    />
-    <AmbientFileSpace
-      v-if="experienceMode === 'immersive' && !activeTaskSurface"
-      :containers="containers"
-      :file-icon="fileIcon"
-      :file-kind-label="fileKindLabel"
-      :container-visual-style="containerVisualStyle"
-      @select-file="selectFile"
-      @open-file="openFile"
-      @show-file-menu="showFileMenu"
-      @open-organizer="openDesktopSurface('organize')"
-    />
-    <section v-if="latestSuggestion && experienceMode === 'immersive' && !activeTaskSurface" class="ambient-suggestion" aria-live="polite">
-      <span class="ambient-suggestion-icon"><Sparkles :size="16" /></span>
-      <div>
-        <span>桌宠提醒</span>
-        <strong>{{ latestSuggestion.title }}</strong>
-        <small>{{ latestSuggestion.detail }}</small>
-      </div>
-      <button type="button" @click="openLatestSuggestionTask">查看整理</button>
-      <button type="button" class="ambient-suggestion-dismiss" title="收起提醒" aria-label="收起提醒" @click="dismissLatestSuggestion"><X :size="15" /></button>
-    </section>
-    <section class="desktop-band" :data-visible="Boolean(activeTaskSurface || !['native', 'immersive', 'clean'].includes(experienceMode))">
-      <div v-if="activeTaskSurface" class="task-surface-heading">
-        <div>
-          <span>当前任务面</span>
-          <strong>{{ taskSurfaceLabel }}</strong>
-        </div>
-      </div>
-      <header class="topbar">
-        <div class="brand-lockup">
-          <span class="brand-mark">D</span>
-          <div>
-            <strong>Project D</strong>
-            <span>桌面空间</span>
-          </div>
-        </div>
-        <div class="topbar-state">
-          <span class="host-state">{{ wallpaperHostLabel }}</span>
-          <div class="status-pill" :data-mode="experienceMode">
-            <span></span>
-            {{ experienceModeLabel }}
-          </div>
-        </div>
-      </header>
-      <button class="wallpaper-pull-cord" type="button" title="切换到下一张壁纸" @click="switchWallpaperStyle">
-        <span></span>
-        {{ currentWallpaperLabel }}
-      </button>
-      <div v-if="desktopStatus.message && desktopStatus.mode !== 'idle'" class="recovery-banner">
-        {{ desktopStatus.message }}
-      </div>
-      <div v-if="recoveryNotice" class="recovery-banner recovery-banner-persistent">
-        <span>{{ recoveryNotice }}</span>
-        <button type="button" @click="dismissRecoveryNotice">知道了</button>
-      </div>
+  <AmbientDesktopShell
+    v-else
+    :experience-mode="experienceMode"
+    :active-task-surface="activeTaskSurface"
+    :show-onboarding="showOnboarding"
+    :containers="containers"
+    :total-files="totalFiles"
+    :selected-file="selectedFile"
+    :settings="settings"
+    :context-menu="contextMenu"
+    :recovery-notice="recoveryNotice"
+    :current-wallpaper-label="currentWallpaperLabel"
+    :current-wallpaper-id="currentWallpaper?.id ?? null"
+    :current-wallpaper="currentWallpaper"
+    :wallpaper-library="wallpaperLibrary"
+    :current-weather="currentWeather"
+    :current-weather-label="currentWeatherLabel"
+    :weather-source-label="weatherSourceLabel"
+    :wallpaper-host-label="wallpaperHostLabel"
+    :task-surface-label="taskSurfaceLabel"
+    :current-pet-label="currentPetLabel"
+    :effective-performance-profile="effectivePerformanceProfile"
+    :desktop-status="desktopStatus"
+    :inbox-plan="inboxPlan"
+    :movable-inbox-items="movableInboxItems"
+    :action-message="actionMessage"
+    :action-busy="actionBusy"
+    :latest-undoable-execution="latestUndoableExecution"
+    :latest-suggestion="latestSuggestion"
+    :app-info="appInfo"
+    :database-status="databaseStatus"
+    :app-version="appVersionFallback"
+    :workspace-search-query="workspaceSearchQuery"
+    :workspace-search-results="workspaceSearchResults"
+    :workspace-search-status="workspaceSearchStatus"
+    :search-scenes="searchScenes"
+    :search-scene-picker-result-id="searchScenePickerResultId"
+    :search-action-notice="searchActionNotice"
+    :experience-mode-label="experienceModeLabel"
+    :action-history="actionHistory"
+    @wake="wakeImmersive"
+    @open-surface="openDesktopSurface"
+    @enter-clean="enterCleanDesktop"
+    @open-settings="openSettings"
+    @open-diagnostics="showDiagnostics = true"
+    @close-surface="closeDesktopSurface"
+    @leave-immersive="leaveImmersive"
+    @dismiss-onboarding="dismissOnboarding"
+    @select-file="selectFile"
+    @open-file="openFile"
+    @show-file-menu="(payload: { file: DesktopFileRecord; event: MouseEvent }) => showFileMenu(payload.event, payload.file)"
+    @open-file-location="openFileLocation"
+    @move-file-to-container="moveFileToContainer"
+    @rename-file-alias="renameFileAlias"
+    @hide-file="hideFile"
+    @switch-wallpaper="switchWallpaperStyle"
+    @open-wallpaper-page="openWallpaperPage"
+    @refresh-status="refreshStatus"
+    @scan-desktop="scanDesktop"
+    @deactivate-desktop="deactivateDesktop"
+    @activate-desktop="activateDesktop"
+    @enter-clean-desktop="enterCleanDesktop"
+    @prepare-desktop-inbox="prepareDesktopInbox"
+    @execute-inbox-plan="executeInboxPlan"
+    @undo-latest-action="undoLatestAction"
+    @cancel-inbox="inboxPlan = null"
+    @dismiss-recovery-notice="dismissRecoveryNotice"
+    @open-latest-suggestion-task="openLatestSuggestionTask"
+    @dismiss-latest-suggestion="dismissLatestSuggestion"
+    @snooze-suggestion="snoozeSuggestion"
+    @disable-suggestions="disableSuggestions"
+    @search-workspace="(q: string) => { workspaceSearchQuery = q; searchWorkspace(); }"
+    @clear-workspace-search="clearWorkspaceSearch"
+    @open-search-result="openSearchResult"
+    @reveal-search-result="revealSearchResult"
+    @copy-search-result-path="copySearchResultPath"
+    @add-search-result-to-portal="addSearchResultToPortal"
+    @toggle-search-scene-picker="toggleSearchScenePicker"
+    @pin-search-result-to-scene="pinSearchResultToScene"
+  />
 
-      <AssistantSurface
-        v-if="activeTaskSurface === 'assistant'"
-        :wallpaper-label="currentWallpaperLabel"
-        :weather-label="currentWeather?.condition || settings?.weather.manualWeather || 'clear'"
-        :city="currentWeather?.city || settings?.weather.city || '自动定位'"
-        :performance-mode="effectivePerformanceProfile"
-        :pet-character-id="settings?.pet.characterId || 'luna-q'"
-        :pet-personality="settings?.pet.personality || 'gentle'"
-        :pet-visible="settings?.pet.isVisible ?? false"
-        :provider-label="settings?.ai.provider || 'AI provider'"
-        :provider-configured="Boolean(settings?.ai.enabled && settings?.ai.apiKeyConfigured)"
-        @request-inbox-plan="prepareDesktopInbox"
-      />
-      <SearchSurface
-        v-if="activeTaskSurface === 'search'"
-        ref="searchSurfaceRef"
-        :query="workspaceSearchQuery"
-        :results="workspaceSearchResults"
-        :status="workspaceSearchStatus"
-        :scenes="searchScenes"
-        :picker-result-id="searchScenePickerResultId"
-        :action-notice="searchActionNotice"
-        @update:query="workspaceSearchQuery = $event"
-        @search="searchWorkspace"
-        @clear="clearWorkspaceSearch"
-        @open="openSearchResult"
-        @reveal="revealSearchResult"
-        @copy="copySearchResultPath"
-        @portal="addSearchResultToPortal"
-        @toggle-scene="toggleSearchScenePicker"
-        @pin-scene="pinSearchResultToScene"
-      />
-      <OrganizerSurface
-        v-if="activeTaskSurface === 'organize'"
-        :containers="containers"
-        :total-files="totalFiles"
-        :selected-file="selectedFile"
-        :action-message="actionMessage"
-        :action-busy="actionBusy"
-        :inbox-plan="inboxPlan"
-        :movable-inbox-items="movableInboxItems"
-        :latest-undoable-execution="latestUndoableExecution"
-        :file-icon="fileIcon"
-        :file-kind-label="fileKindLabel"
-        :container-visual-style="containerVisualStyle"
-        :format-bytes="formatBytes"
-        @select-file="selectFile"
-        @open-file="openFile"
-        @show-file-menu="showFileMenu"
-        @restore="deactivateDesktop"
-        @scan="scanDesktop"
-        @clean="enterCleanDesktop"
-        @settings="openSettings"
-        @prepare-inbox="prepareDesktopInbox"
-        @execute-inbox="executeInboxPlan"
-        @undo-latest="undoLatestAction"
-        @cancel-inbox="inboxPlan = null"
-      />
-
-      <CompatibilitySurface
-        v-if="experienceMode === 'safe'"
-        ref="compatibilitySurfaceRef"
-        :containers="containers"
-        :total-files="totalFiles"
-        :selected-file="selectedFile"
-        :action-message="actionMessage"
-        :action-busy="actionBusy"
-        :inbox-plan="inboxPlan"
-        :movable-inbox-items="movableInboxItems"
-        :latest-undoable-execution="latestUndoableExecution"
-        :app-info="appInfo"
-        :database-status="databaseStatus"
-        :app-version="appVersionFallback"
-        :wallpaper-host-label="wallpaperHostLabel"
-        :current-weather="currentWeather"
-        :weather-source-label="weatherSourceLabel"
-        :latest-suggestion="latestSuggestion"
-        :workspace-search-query="workspaceSearchQuery"
-        :workspace-search-results="workspaceSearchResults"
-        :workspace-search-status="workspaceSearchStatus"
-        :search-scenes="searchScenes"
-        :search-scene-picker-result-id="searchScenePickerResultId"
-        :file-icon="fileIcon"
-        :file-kind-label="fileKindLabel"
-        :container-visual-style="containerVisualStyle"
-        :format-bytes="formatBytes"
-        @select-file="selectFile"
-        @open-file="openFile"
-        @show-file-menu="showFileMenu"
-        @activate="activateDesktop"
-        @restore="deactivateDesktop"
-        @clean="enterCleanDesktop"
-        @scan="scanDesktop"
-        @settings="openSettings"
-        @update:query="workspaceSearchQuery = $event"
-        @search="searchWorkspace"
-        @clear="clearWorkspaceSearch"
-        @open="openSearchResult"
-        @reveal="revealSearchResult"
-        @copy="copySearchResultPath"
-        @portal="addSearchResultToPortal"
-        @toggle-scene="toggleSearchScenePicker"
-        @pin-scene="pinSearchResultToScene"
-        @prepare-inbox="prepareDesktopInbox"
-        @execute-inbox="executeInboxPlan"
-        @undo-latest="undoLatestAction"
-        @cancel-inbox="inboxPlan = null"
-        @snooze-suggestion="snoozeSuggestion"
-        @disable-suggestions="disableSuggestions"
-      />
-      <SceneSurface
-        v-if="activeTaskSurface === 'scene'"
-        :wallpaper-label="currentWallpaperLabel"
-        :wallpaper-id="currentWallpaper?.id ?? null"
-        :city="currentWeather?.city || '自动定位'"
-        :host-label="wallpaperHostLabel"
-        :weather-mode="settings?.weather.mode || 'auto'"
-        :weather-label="currentWeather?.condition || settings?.weather.manualWeather || 'clear'"
-        :weather-intensity="settings?.weather.particleIntensity ?? 0.55"
-        :performance-mode="effectivePerformanceProfile"
-        :pet-position="{ x: settings?.pet.positionX ?? 36, y: settings?.pet.positionY ?? 36 }"
-        :pet-visible="settings?.pet.isVisible ?? false"
-        :pet-character-id="settings?.pet.characterId ?? 'luna-q'"
-        :pet-outfit="settings?.pet.currentOutfit ?? 'default'"
-        :pet-personality="settings?.pet.personality ?? 'gentle'"
-        :pet-talk-frequency="settings?.pet.talkFrequency ?? 'normal'"
-        :safe-region="currentWallpaper?.safeRegion"
-        :wallpapers="wallpaperLibrary"
-        @next-wallpaper="switchWallpaperStyle"
-        @open-library="openWallpaperPage"
-        @applied="refreshStatus"
-      />
-    </section>
-
-    <div v-if="contextMenu" class="context-menu" :style="{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }">
-      <button type="button" @click="openFile(contextMenu.file.id)"><ExternalLink :size="15" />打开</button>
-      <button type="button" @click="openFileLocation(contextMenu.file.id)"><FolderOpen :size="15" />打开所在位置</button>
-      <button
-        v-for="container in containers"
-        :key="container.id"
-        type="button"
-        @click="moveFileToContainer(contextMenu!.file.id, container.id)"
-      >
-        <ArrowRight :size="15" />移动到：{{ container.name }}
-      </button>
-      <button type="button" @click="renameFileAlias(contextMenu.file)"><Pencil :size="15" />重命名显示名</button>
-      <button type="button" @click="hideFile(contextMenu.file.id)"><EyeOff :size="15" />从 Project D 隐藏</button>
-      <button type="button" @click="scanDesktop"><RefreshCcw :size="15" />刷新文件信息</button>
-    </div>
-  </main>
   <CrashLogManager v-if="showDiagnostics" @close="showDiagnostics = false" />
 </template>
