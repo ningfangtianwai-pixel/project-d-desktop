@@ -40,22 +40,36 @@ async function run() {
       status: "completed",
       updatedAt: new Date().toISOString()
     })));
-    await page.goto(`http://127.0.0.1:${port}/#/overlay`, { waitUntil: "networkidle" });
+    await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "networkidle" });
+    await page.locator(".app-shell").waitFor();
 
+    // V6.0 starts in Native and requires an explicit wake before task surfaces appear.
+    await page.locator('.ambient-edge-rail button[title="进入沉浸空间"]').click();
+
+    // Save a scene via SceneSurface (replaces the retired OverlayPage scene flow).
+    await page.locator('.ambient-edge-rail button[title="场景与壁纸"]').click();
+    await page.locator(".scene-surface").waitFor();
     page.once("dialog", (dialog) => dialog.accept("视觉验收场景"));
-    await page.getByTitle("保存当前场景").click();
-    await page.getByTitle("搜索桌面与门户").click();
-    const searchInput = page.locator(".desktop-search-form input");
+    await page.locator('button[title="保存当前场景"]').click();
+    // Close SceneSurface back to immersive shell.
+    const closeSceneButton = page.locator('.ambient-status-capsule button[title="返回沉浸空间"]');
+    if (await closeSceneButton.count()) await closeSceneButton.click();
+    await page.locator(".wallpaper-stage").waitFor();
+
+    // Search and pin via SearchSurface (replaces the old overlay search).
+    await page.locator('.ambient-edge-rail button[title="搜索工作区"]').click();
+    await page.locator(".search-surface").waitFor();
+    const searchInput = page.locator(".workspace-search input");
     await searchInput.fill("ProjectD");
     await searchInput.press("Enter");
     await page.locator(".search-result-main").getByText("ProjectD需求.md", { exact: true }).waitFor();
-    await page.getByTitle("钉到场景").click();
+    await page.locator('button[title="钉到场景"]').click();
     const picker = page.locator(".search-scene-picker");
     await picker.getByText("视觉验收场景", { exact: true }).waitFor();
     const scenePickerVisible = await picker.isVisible();
-    await page.screenshot({ path: path.join(output, "overlay-scene-picker.png"), fullPage: true });
+    await page.screenshot({ path: path.join(output, "scene-picker.png"), fullPage: true });
     await picker.getByRole("menuitem", { name: /视觉验收场景/ }).click();
-    await page.getByText(/已将.*钉到场景“视觉验收场景”/).waitFor();
+    await page.locator(".search-result-feedback[data-tone='success']").waitFor();
 
     await page.evaluate(() => { globalThis.location.hash = "#/settings"; });
     await page.getByText("最近抑制", { exact: true }).waitFor();

@@ -56,17 +56,15 @@ async function run() {
     await page.locator('.ambient-edge-rail button[title="AI 助手"]').click();
     captures.push(await capture(page, "02-task-assistant"));
 
-    await page.evaluate(() => { globalThis.location.hash = "#/overlay"; });
-    await page.locator(".overlay-page").waitFor();
-    await page.locator(".pull-cord-group button").last().click();
-    await page.locator(".overlay-wallpaper-backdrop").waitFor();
+    // The retired OverlayPage (#/overlay) was replaced by OrganizerSurface, opened
+    // from the EdgeRail "桌面整理" entry inside the immersive shell.
+    await page.locator('.ambient-edge-rail button[title="桌面整理"]').click();
+    await page.locator(".organizer-surface").waitFor();
     captures.push(await capture(page, "03-task-organizer"));
 
-    await page.evaluate(() => { globalThis.location.hash = "#/"; });
-    await page.locator(".overlay-page").waitFor({ state: "hidden" });
-    await page.locator(".wallpaper-stage").waitFor();
     const closeTaskButton = page.locator('.ambient-status-capsule button[title="返回沉浸空间"]');
     if (await closeTaskButton.count()) await closeTaskButton.click();
+    await page.locator(".wallpaper-stage").waitFor();
     const cleanButton = page.locator('.ambient-edge-rail button[title="纯净桌面"]');
     await cleanButton.waitFor();
     await cleanButton.click();
@@ -125,9 +123,7 @@ async function setWallpaper(page, wallpaperId) {
 
 async function capture(page, name) {
   const mode = await page.locator(".app-shell").getAttribute("data-experience-mode").catch(() => null);
-  const stageVisible = await page.locator(".wallpaper-stage").isVisible().catch(() => false);
-  const backdropVisible = await page.locator(".overlay-wallpaper-backdrop").isVisible().catch(() => false);
-  const wallpaperVisible = stageVisible || backdropVisible;
+  const wallpaperVisible = await page.locator(".wallpaper-stage").isVisible().catch(() => false);
   const statusBox = await optionalBox(page, ".ambient-status-capsule");
   const railBox = await optionalBox(page, ".ambient-edge-rail");
   const bandBox = await optionalBox(page, ".desktop-band");

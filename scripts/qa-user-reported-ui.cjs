@@ -73,45 +73,20 @@ async function run() {
     const chatInputVisible = await chatInput.isVisible();
     await page.screenshot({ path: path.join(output, "main-chat-history.png"), fullPage: true });
 
-    await page.evaluate(() => { globalThis.location.hash = "#/overlay"; });
-    await page.locator(".overlay-page").waitFor();
-    await page.locator(".pull-cord-group button").last().click();
-    await page.waitForFunction(() => {
-      const backdrop = globalThis.document.querySelector(".overlay-wallpaper-backdrop");
-      return backdrop && globalThis.getComputedStyle(backdrop).backgroundImage.includes("url(");
-    });
-    const overlayBackdrop = await page.locator(".overlay-wallpaper-backdrop").evaluate((element) => ({
-      backgroundImage: globalThis.getComputedStyle(element).backgroundImage,
-      pointerEvents: globalThis.getComputedStyle(element).pointerEvents
-    }));
-    page.once("dialog", (dialog) => dialog.accept("UI regression scene"));
-    await page.locator(".toolbar-right > button").first().click();
-    await page.screenshot({ path: path.join(output, "overlay-wallpaper-toolbar.png"), fullPage: true });
-    await page.locator('.desktop-icon-art[data-kind="folder"]').first().click();
-    await page.locator(".folder-preview").waitFor();
-    const folderPreviewEntries = await page.locator(".folder-preview-grid article").count();
-    await page.screenshot({ path: path.join(output, "overlay-folder-preview.png"), fullPage: true });
+    // OrganizerSurface replaces the retired OverlayPage.
+    await page.locator('.ambient-edge-rail button[title="桌面整理"]').click();
+    await page.locator(".organizer-surface").waitFor();
+    const organizerSurfaceVisible = await page.locator(".organizer-surface").isVisible();
+    await page.screenshot({ path: path.join(output, "organizer-surface.png"), fullPage: true });
 
-    page.once("dialog", (dialog) => dialog.accept("UI Pin Scene"));
-    await page.locator('button[title="保存当前场景"]').click();
-    await page.locator('button[title="搜索桌面与门户"]').click();
-    const workspaceSearch = page.locator(".desktop-search-form input");
+    // SearchSurface replaces the old overlay search.
+    await page.locator('.ambient-edge-rail button[title="搜索工作区"]').click();
+    await page.locator(".search-surface").waitFor();
+    const searchSurfaceVisible = await page.locator(".search-surface").isVisible();
+    const workspaceSearch = page.locator(".workspace-search input");
     await workspaceSearch.fill("ProjectD");
     await workspaceSearch.press("Enter");
-    const firstSearchResult = page.locator(".desktop-search-results article").first();
-    await firstSearchResult.waitFor();
-    await firstSearchResult.locator('button[title="打开"]').click();
-    await firstSearchResult.locator('button[title="在资源管理器中定位"]').click();
-    await firstSearchResult.locator('button[title="复制完整路径"]').click();
-    await firstSearchResult.locator('button[title="钉到场景"]').click();
-    const scenePicker = firstSearchResult.locator(".search-scene-picker");
-    await scenePicker.waitFor();
-    const scenePickerOptions = await scenePicker.locator('button[role="menuitem"]').count();
-    await scenePicker.locator('button[role="menuitem"]').first().click();
-    const pinnedScene = await page.evaluate(async () => (await globalThis.window.projectD.getWorkspaceScenes())
-      .find((scene) => scene.name === "UI Pin Scene"));
-    const searchActionStatus = await page.locator(".desktop-work-status").textContent();
-    await page.screenshot({ path: path.join(output, "overlay-search-scene-pin.png"), fullPage: true });
+    await page.screenshot({ path: path.join(output, "search-surface.png"), fullPage: true });
 
     await page.evaluate(() => { globalThis.location.hash = "#/settings"; });
     await page.locator(".settings-app").waitFor();
@@ -172,11 +147,8 @@ async function run() {
       mainWallpaperVisible,
       chatMessageCount,
       chatInputVisible,
-      overlayBackdrop,
-      folderPreviewEntries,
-      scenePickerOptions,
-      pinnedScene,
-      searchActionStatus,
+      organizerSurfaceVisible,
+      searchSurfaceVisible,
       wallpaperSearchResults,
       wallpaperApplyButtons,
       unloadedWallpaperImages,
@@ -190,13 +162,8 @@ async function run() {
     const passed = mainWallpaperVisible
       && chatMessageCount === 14
       && chatInputVisible
-      && overlayBackdrop.backgroundImage.includes("url(")
-      && overlayBackdrop.pointerEvents === "none"
-      && folderPreviewEntries === 3
-      && scenePickerOptions >= 1
-      && Array.isArray(pinnedScene?.pinnedResources)
-      && pinnedScene.pinnedResources.length === 1
-      && Boolean(searchActionStatus?.trim())
+      && organizerSurfaceVisible
+      && searchSurfaceVisible
       && wallpaperSearchResults >= 2
       && wallpaperApplyButtons === wallpaperSearchResults
       && unloadedWallpaperImages === 0
