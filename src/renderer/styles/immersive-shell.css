@@ -67,6 +67,11 @@
   border-radius: 50%;
   background: #9cc9d6;
   box-shadow: 0 0 0 3px rgba(156, 201, 214, 0.16);
+  animation: status-dot-breathe 3s ease-in-out infinite;
+}
+@keyframes status-dot-breathe {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.15); }
 }
 .ambient-status-dot[data-mode="immersive"],
 .ambient-status-dot[data-mode="task"] { background: #f2d47d; }
