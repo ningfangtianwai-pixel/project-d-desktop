@@ -163,6 +163,7 @@ pnpm build
 
 - [产品案例：问题、角色、决策与结果](https://ningfangtianwai-pixel.github.io/#/project/project-d)
 - [无需安装的交互 Demo](https://ningfangtianwai-pixel.github.io/#/demo/project-d)
+- [公开文档导航](./docs/README.md)
 - [用户指南](./docs/USER_GUIDE.md)
 - [发布与稳定性手册](./docs/RELEASE_AND_STABILITY_RUNBOOK.md)
 - [壁纸与媒体署名](./docs/WALLPAPER_CREDITS.md)

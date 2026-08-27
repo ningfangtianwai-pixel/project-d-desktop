@@ -9,6 +9,9 @@ artifacts/
 *_err.txt
 *.bak
 recordings/*.png
+recordings/*.mp4
+rendered_*/
+human_ai_love_sentences_*.docx
 vite_log.txt
 public/pet/**/_grid.*
 public/pet/**/_preview.*
