@@ -84,17 +84,9 @@ Windows 桌面承载了真实工作，但文件检索、归档、上下文切换
 
 ## 工程架构
 
-```mermaid
-flowchart LR
-    UI[Vue Renderer] -->|typed IPC| PRELOAD[Electron Preload]
-    PRELOAD --> MAIN[Electron Main]
-    MAIN --> SEARCH[Search / Portal / Scene]
-    MAIN --> ACTION[Action Engine / Recovery]
-    MAIN --> AMBIENT[Wallpaper / Weather / Pet]
-    MAIN --> DATA[(Local SQLite)]
-    MAIN --> PROVIDERS[Optional AI & Weather Providers]
-    MAIN --> OPS[Local Diagnostics & Update Controls]
-```
+![Project D 系统架构](./docs/architecture.svg)
+
+[查看进程分层与动作安全边界 →](./docs/ARCHITECTURE.md)
 
 | 层 | 技术与职责 |
 | --- | --- |

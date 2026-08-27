@@ -14,6 +14,7 @@
 - [发布与稳定性手册](./RELEASE_AND_STABILITY_RUNBOOK.md)：构建、恢复和发布验证流程。
 - [运营手册](./OPERATIONS_RUNBOOK.md)：诊断、运行状态和异常处置。
 - [Windows 窗口分层笔记](./WINDOW_LAYERING_NOTES.md)：桌面宿主与窗口层级实现说明。
+- [系统架构与安全边界](./ARCHITECTURE.md)：Electron 进程、类型化 IPC、桌面服务与恢复链路。
 - [资产台账](./ASSET_LEDGER.json)：仓库媒体资产的来源与哈希记录。
 - [壁纸与媒体署名](./WALLPAPER_CREDITS.md)：壁纸来源和使用说明。
 

@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="660" viewBox="0 0 1200 660" role="img" aria-labelledby="title desc">
+  <title id="title">Project D system architecture</title>
+  <desc id="desc">Electron desktop architecture with Vue renderer, typed preload IPC, main-process services, local data, optional providers and Windows recovery boundaries.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#82b956"/></marker>
+    <style>
+      .bg{fill:#0c120e}.panel{fill:#131c16;stroke:#2b3a30;stroke-width:1.5}.accent{fill:#b7f768}.soft{fill:#19271e;stroke:#42604b;stroke-width:1.5}.title{fill:#f4f7f3;font:700 30px 'Segoe UI','Microsoft YaHei',sans-serif}.eyebrow{fill:#b7f768;font:700 12px ui-monospace,monospace;letter-spacing:2px}.label{fill:#f0f4ef;font:700 16px 'Segoe UI','Microsoft YaHei',sans-serif}.sub{fill:#91a095;font:400 12px 'Segoe UI','Microsoft YaHei',sans-serif}.tiny{fill:#718077;font:600 11px ui-monospace,monospace}.line{fill:none;stroke:#82b956;stroke-width:2;marker-end:url(#arrow)}.dash{fill:none;stroke:#597064;stroke-width:1.5;stroke-dasharray:6 6;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect class="bg" width="1200" height="660" rx="24"/>
+  <text class="eyebrow" x="54" y="48">MANNY · PRODUCT CASE 03 / 03</text>
+  <text class="title" x="54" y="88">Project D · Recoverable Windows AI workspace</text>
+  <text class="sub" x="54" y="116">渲染界面不直接触碰系统能力；所有桌面动作通过类型化 IPC、预览、授权与恢复日志。</text>
+
+  <rect class="soft" x="55" y="175" width="205" height="120" rx="15"/>
+  <text class="tiny" x="80" y="206">RENDERER</text><text class="label" x="80" y="239">Vue 工作空间</text>
+  <text class="sub" x="80" y="264">搜索 · 场景 · 设置</text><text class="sub" x="80" y="283">行动计划预览</text>
+
+  <rect class="panel" x="315" y="175" width="205" height="120" rx="15"/>
+  <text class="tiny" x="340" y="206">TRUST BOUNDARY</text><text class="label" x="340" y="239">Electron Preload</text>
+  <text class="sub" x="340" y="264">Typed IPC · allowlist</text><text class="sub" x="340" y="283">Sandboxed bridge</text>
+
+  <rect class="soft" x="575" y="160" width="245" height="150" rx="16"/>
+  <text class="tiny" x="602" y="192">DESKTOP RUNTIME</text><text class="label" x="602" y="227">Electron Main</text>
+  <text class="sub" x="602" y="253">窗口 · 托盘 · 生命周期</text><text class="sub" x="602" y="275">权限 · 隐私 · 更新策略</text>
+  <rect class="accent" x="602" y="291" width="130" height="5" rx="2.5"/>
+
+  <rect class="panel" x="875" y="175" width="270" height="120" rx="15"/>
+  <text class="tiny" x="900" y="206">WINDOWS HOST</text><text class="label" x="900" y="239">真实桌面环境</text>
+  <text class="sub" x="900" y="264">Explorer · 文件 · 多显示器</text><text class="sub" x="900" y="283">壁纸宿主 · 系统状态</text>
+
+  <path class="line" d="M260 235 H307"/><path class="line" d="M520 235 H567"/><path class="line" d="M820 235 H867"/>
+
+  <rect class="panel" x="55" y="390" width="205" height="105" rx="14"/>
+  <text class="tiny" x="80" y="420">CONTEXT</text><text class="label" x="80" y="451">Search / Portal / Scene</text><text class="sub" x="80" y="475">受限句柄与授权目录</text>
+  <rect class="panel" x="315" y="390" width="205" height="105" rx="14"/>
+  <text class="tiny" x="340" y="420">EXECUTION</text><text class="label" x="340" y="451">Action Engine</text><text class="sub" x="340" y="475">Plan-first · 冲突处理</text>
+  <rect class="panel" x="575" y="390" width="205" height="105" rx="14"/>
+  <text class="tiny" x="600" y="420">SAFETY</text><text class="label" x="600" y="451">Recovery Services</text><text class="sub" x="600" y="475">日志 · 回滚 · 安全归位</text>
+  <rect class="panel" x="835" y="390" width="310" height="105" rx="14"/>
+  <text class="tiny" x="860" y="420">AMBIENT LAYER</text><text class="label" x="860" y="451">Wallpaper / Weather / Pet</text><text class="sub" x="860" y="475">暂停策略与显示恢复</text>
+  <path class="line" d="M655 310 C600 355 220 345 160 382"/><path class="line" d="M685 310 C630 355 470 345 420 382"/><path class="line" d="M715 310 C720 350 690 360 680 382"/><path class="line" d="M755 310 C820 345 960 350 985 382"/>
+
+  <rect class="soft" x="190" y="560" width="300" height="64" rx="12"/>
+  <text class="label" x="215" y="588">Local SQLite &amp; Journals</text><text class="sub" x="215" y="609">设置、场景、操作与恢复证据</text>
+  <rect class="soft" x="670" y="560" width="340" height="64" rx="12"/>
+  <text class="label" x="695" y="588">Optional AI / Weather</text><text class="sub" x="695" y="609">网络暂停时桌面核心仍可工作</text>
+  <path class="dash" d="M420 495 C420 530 380 540 350 553"/><path class="dash" d="M990 495 C980 530 900 540 850 553"/>
+  <text class="tiny" x="55" y="625">PRINCIPLE · PLAN FIRST · TYPED BOUNDARIES · RECOVERY IS A FEATURE</text>
+</svg>
