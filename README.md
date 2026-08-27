@@ -1,5 +1,7 @@
 <div align="center">
 
+**MANNY · PRODUCT CASE 03 / 03**
+
 # Project D
 
 ### Local-first Windows AI workspace
@@ -171,5 +173,9 @@ pnpm build
 ---
 
 <div align="center">
+  <a href="https://github.com/ningfangtianwai-pixel/talentflow-showcase">01 TalentFlow</a> ·
+  <a href="https://github.com/ningfangtianwai-pixel/enterprise-evaluation-showcase">02 Enterprise Evaluation</a> ·
+  <a href="https://github.com/ningfangtianwai-pixel/project-d-desktop"><strong>03 Project D</strong></a>
+  <br/><br/>
   <strong>Built by Manny — AI products for real work.</strong>
 </div>
